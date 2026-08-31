@@ -1,0 +1,189 @@
+"""Capture a bounded read-only HDM report from an Ally over SSH."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PAYLOAD = Path(__file__).with_name("remote_capture_payload.py")
+MAX_CAPTURE_BYTES = 512 * 1024
+HOST_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
+USER_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+FORBIDDEN_KEYS = frozenset(
+    {
+        "address",
+        "argv",
+        "bdf",
+        "command",
+        "command_line",
+        "environment",
+        "hostname",
+        "ip",
+        "mac",
+        "path",
+        "pid",
+        "ssid",
+        "username",
+    }
+)
+
+
+def validate_destination(host: str, user: str, port: int) -> str:
+    if not HOST_RE.fullmatch(host):
+        raise ValueError("host must be a DNS name or IPv4 address without options")
+    if not USER_RE.fullmatch(user):
+        raise ValueError("SSH user is invalid")
+    if port < 1 or port > 65535:
+        raise ValueError("SSH port is invalid")
+    return f"{user}@{host}"
+
+
+def build_ssh_argv(
+    *,
+    host: str,
+    user: str,
+    port: int,
+    timeout_seconds: int,
+    identity_file: Path | None = None,
+) -> list[str]:
+    destination = validate_destination(host, user, port)
+    if timeout_seconds < 1 or timeout_seconds > 60:
+        raise ValueError("SSH timeout must be between 1 and 60 seconds")
+    argv = [
+        "ssh",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        f"ConnectTimeout={timeout_seconds}",
+        "-p",
+        str(port),
+    ]
+    if identity_file is not None:
+        if not identity_file.is_file():
+            raise ValueError("SSH identity file does not exist")
+        argv.extend(("-i", str(identity_file.resolve())))
+    argv.extend((destination, "python3", "-"))
+    return argv
+
+
+def _validate_safe_shape(value: Any) -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            normalized = str(key).casefold()
+            if (
+                normalized in FORBIDDEN_KEYS
+                or normalized.endswith("_path")
+                or normalized.endswith("_pid")
+                or normalized.endswith("_bdf")
+            ):
+                raise ValueError(f"capture contains forbidden field: {normalized}")
+            _validate_safe_shape(item)
+    elif isinstance(value, list):
+        for item in value:
+            _validate_safe_shape(item)
+
+
+def parse_capture(stdout: str, payload_sha256: str) -> dict[str, Any]:
+    if len(stdout.encode("utf-8")) > MAX_CAPTURE_BYTES:
+        raise ValueError("remote capture exceeds its size bound")
+    try:
+        value = json.loads(stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError("remote capture did not return one JSON object") from error
+    if not isinstance(value, dict) or value.get("schema_version") != 1:
+        raise ValueError("remote capture schema is unsupported")
+    collector = value.get("collector")
+    if not isinstance(collector, dict):
+        raise ValueError("remote capture collector metadata is missing")
+    collector["payload_sha256"] = payload_sha256
+    _validate_safe_shape(value)
+    return value
+
+
+def collect_remote(
+    *,
+    host: str,
+    user: str = "deck",
+    port: int = 22,
+    timeout_seconds: int = 10,
+    identity_file: Path | None = None,
+) -> dict[str, Any]:
+    payload = PAYLOAD.read_text(encoding="utf-8")
+    payload_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    result = subprocess.run(
+        build_ssh_argv(
+            host=host,
+            user=user,
+            port=port,
+            timeout_seconds=timeout_seconds,
+            identity_file=identity_file,
+        ),
+        input=payload,
+        text=True,
+        capture_output=True,
+        timeout=timeout_seconds + 20,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"read-only SSH capture failed with status {result.returncode}")
+    return parse_capture(result.stdout, payload_hash)
+
+
+def save_capture(value: dict[str, Any], output: Path | None = None) -> Path:
+    if output is None:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        output = ROOT / "out" / "remote-captures" / f"capture-{stamp}.json"
+    output = output.resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(value, indent=2, sort_keys=True, ensure_ascii=True) + "\n"
+    if len(text.encode("utf-8")) > MAX_CAPTURE_BYTES:
+        raise ValueError("encoded remote capture exceeds its size bound")
+    with output.open("x", encoding="utf-8", newline="\n") as target:
+        target.write(text)
+    return output
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--user", default="deck")
+    parser.add_argument("--port", type=int, default=22)
+    parser.add_argument("--timeout", type=int, default=10)
+    parser.add_argument("--identity-file", type=Path)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    try:
+        value = collect_remote(
+            host=args.host,
+            user=args.user,
+            port=args.port,
+            timeout_seconds=args.timeout,
+            identity_file=args.identity_file,
+        )
+        output = save_capture(value, args.output)
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        print(f"Capture failed: {error}", file=sys.stderr)
+        return 1
+    diagnostics = value.get("diagnostics") or {}
+    snapshot = diagnostics.get("snapshot") or {}
+    print(f"Saved read-only capture: {output}")
+    print(
+        "Observed: "
+        f"support={snapshot.get('support_tier', 'unknown')} "
+        f"game={snapshot.get('game_state', 'unknown')} "
+        f"errors={len(value.get('errors', []))}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

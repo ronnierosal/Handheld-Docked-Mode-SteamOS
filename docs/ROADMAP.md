@@ -35,7 +35,9 @@ No broader label may be inferred from a narrower one.
 | Display/GPU transitions | Designed only | Transaction engine, rollback, simulation, then supervised hardware proof. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
-| Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Replay engine, fake clock/mechanisms, and durable storage adapter remain. |
+| Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Durable storage adapter remains gated with live transitions. |
+| Transition snapshot replay and failure injection | Implemented and simulated | No production mechanism adapter or mutation endpoint exists. |
+| Remote read-only capture harness | Implemented and hardware tested | It cannot observe the Decky-owned sleep lease and must not be used to claim lease state. |
 
 ## Required architecture corrections
 
@@ -91,8 +93,10 @@ mutation, process signaling, or eGPU removal.
 
 ### R1 — Read-only control-plane foundation
 
-**Status:** IN PROGRESS — typed contracts and bounded journal schema implemented;
-replay and remote capture remain.
+**Status:** IMPLEMENTED AND SIMULATED — typed contracts, bounded journal schema,
+fake clock/mechanisms, snapshot replay, asynchronous-event policy, and remote
+read-only capture are implemented. The installed-device capture path has a
+read-only hardware proof; no transition mechanism is enabled.
 
 - Add typed placement state, workflow state, request intent, capability records,
   transition plans, deadlines, structured failures, and recovery outcomes.

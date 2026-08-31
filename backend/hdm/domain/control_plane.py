@@ -143,6 +143,7 @@ class PlannedStep:
     code: str
     deadline_ms: int
     requires_consent: bool = False
+    expected_placement: PlacementState | None = None
 
     def __post_init__(self) -> None:
         if not self.code:
@@ -160,10 +161,13 @@ class TransitionPlan:
     target_placement: PlacementState
     workflow_state: WorkflowState
     steps: tuple[PlannedStep, ...] = field(default_factory=tuple)
+    recovery_deadline_ms: int = 10_000
 
     def __post_init__(self) -> None:
         if not self.plan_id or not self.request_id or not self.observed_generation:
             raise ValueError("transition plan identity and generation are required")
+        if self.recovery_deadline_ms <= 0:
+            raise ValueError("transition recovery deadline must be positive")
         codes = tuple(step.code for step in self.steps)
         if len(codes) != len(set(codes)):
             raise ValueError("planned step codes must be unique")
@@ -227,4 +231,3 @@ def compose_capabilities(
         sleep_behavior=egpu.sleep_behavior,
         removal_behavior=egpu.removal_behavior,
     )
-

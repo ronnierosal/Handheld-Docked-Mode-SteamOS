@@ -43,6 +43,7 @@ Start with:
 - [Privacy-safe support bundle](docs/SUPPORT_BUNDLE.md)
 - [Authoritative roadmap](docs/ROADMAP.md)
 - [Deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md)
+- [Remote read-only validation](docs/REMOTE_VALIDATION.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
@@ -61,6 +62,12 @@ On SteamOS, emit a read-only diagnostic snapshot with:
 
 ```text
 PYTHONPATH=backend python -m hdm.cli
+```
+
+Capture an installed Ally's redacted state without writing remote files:
+
+```text
+python scripts/remote_capture.py --host <ally-ip> --identity-file <ssh-key>
 ```
 
 The Decky package uses a root delivery adapter because SteamOS protects the

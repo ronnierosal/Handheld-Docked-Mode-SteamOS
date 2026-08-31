@@ -243,3 +243,21 @@ installed frontend SHA-256 matched the corrective local bundle, the backend
 restarted cleanly, and the root inhibitor reacquired. One later supervised
 visible-dialog proof remains pending; the two accepted blocker results do not
 count as warning acceptance.
+
+## Remote read-only capture harness proof
+
+The fixed SSH-stdin collector was run against the Ally without installing an
+agent or writing a remote file. The local bounded report declared its collector
+hash and no-write behavior and returned without collection errors. Its redacted
+observations showed:
+
+- installed HDM version `0.2.0` and present critical plugin files
+- one Gamescope process and one Decky plugin-loader process, without PIDs
+- certified Ally X/G1 profile, idle game state, and attached-G1 disconnect scan
+- disconnect readiness blocked
+
+The standalone collector cannot observe the Decky process's login1 inhibitor.
+The corrected capture therefore reports that check as `not_observed` and does
+not classify the lease as active or inactive. No sleep request, process signal,
+service restart, display/GPU change, hardware removal, or remote file write was
+performed.

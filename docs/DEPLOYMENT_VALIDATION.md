@@ -137,9 +137,12 @@ The current Ally X/G1 profile may not enter a live-removal experiment merely
 because software clients are gone. AMDGPU teardown safety is an independent
 hardware gate.
 
-## Remote-safe harness contract
+## Remote-safe harness
 
-The planned harness should provide two command families:
+The read-only `capture` family is implemented in
+[Remote read-only validation](REMOTE_VALIDATION.md). It streams a fixed Python
+collector over SSH stdin, writes no remote file, and saves one bounded redacted
+JSON result locally. The future harness may provide two command families:
 
 - `capture`: read-only snapshot, bounded health checks, package provenance, and
   redacted log/result retrieval.

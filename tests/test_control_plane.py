@@ -108,6 +108,18 @@ class TransitionContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "positive"):
             PlannedStep("observe", 0)
 
+    def test_recovery_deadline_must_be_positive(self):
+        with self.assertRaisesRegex(ValueError, "recovery deadline"):
+            TransitionPlan(
+                plan_id="plan-1",
+                request_id="request-1",
+                observed_generation="generation-1",
+                from_placement=PlacementState.PORTABLE,
+                target_placement=PlacementState.DOCKED_EGPU,
+                workflow_state=WorkflowState.CONNECTING,
+                recovery_deadline_ms=0,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
