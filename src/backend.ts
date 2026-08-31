@@ -157,6 +157,34 @@ export const acknowledgeDockedIgpuStatus = callable<
   DockedIgpuAcknowledgementPayload
 >("acknowledge_docked_igpu_status");
 
+export type DiagnosticLoggingDuration =
+  | "30_minutes"
+  | "1_hour"
+  | "2_hours"
+  | "until_reboot";
+
+export interface DiagnosticLoggingStatusPayload {
+  schema_version: number;
+  enabled: boolean;
+  mode: "off" | "ttl" | "until_reboot";
+  duration: DiagnosticLoggingDuration | "";
+  remaining_seconds: number | null;
+  code: string;
+}
+
+export const getDiagnosticLoggingStatus = callable<
+  [],
+  DiagnosticLoggingStatusPayload
+>("get_diagnostic_logging_status");
+export const enableDiagnosticLogging = callable<
+  [DiagnosticLoggingDuration, boolean],
+  DiagnosticLoggingStatusPayload
+>("enable_diagnostic_logging");
+export const disableDiagnosticLogging = callable<
+  [],
+  DiagnosticLoggingStatusPayload
+>("disable_diagnostic_logging");
+
 export interface SupportBundlePreviewPayload {
   schema_version: number;
   preview_token: string;

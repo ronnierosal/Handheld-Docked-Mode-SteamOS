@@ -21,6 +21,9 @@ from hdm.application.docked_igpu_lifecycle import (  # noqa: E402
     DockedIgpuLifecycleStage,
     DockedIgpuLifecycleStatus,
 )
+from hdm.application.diagnostic_logging import (  # noqa: E402
+    DiagnosticLoggingController,
+)
 from hdm.application.game_evidence_support import (  # noqa: E402
     SupportGameEvidence,
     SupportRenderEvidence,
@@ -212,6 +215,15 @@ class MainProcessDeliveryTests(unittest.TestCase):
         plugin._process_release = service
         return plugin, service
 
+    def plugin_with_diagnostic_logging(self):
+        plugin, service = self.plugin()
+        plugin._diagnostic_logging = DiagnosticLoggingController(
+            plugin._events,
+            monotonic=lambda: 100.0,
+            boot_session_id=lambda: "boot-session-test",
+        )
+        return plugin, service
+
     def test_preview_and_approval_use_enum_and_opaque_receipt_only(self):
         plugin, service = self.plugin()
         inspection = asyncio.run(plugin.preview_process_release("graceful"))
@@ -321,6 +333,81 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertTrue(observed["acknowledgement_required"])
         for private in ("watch_id", "appid", "scope", "generation", "private"):
             self.assertNotIn(private, encoded.lower())
+
+    def test_diagnostic_logging_requires_confirmation_and_allowlisted_duration(self):
+        plugin, _service = self.plugin_with_diagnostic_logging()
+
+        initial = asyncio.run(plugin.get_diagnostic_logging_status())
+        unconfirmed = asyncio.run(
+            plugin.enable_diagnostic_logging("2_hours", False)
+        )
+        invalid = asyncio.run(
+            plugin.enable_diagnostic_logging("forever", True)
+        )
+        enabled = asyncio.run(
+            plugin.enable_diagnostic_logging("30_minutes", True)
+        )
+        disabled = asyncio.run(plugin.disable_diagnostic_logging())
+
+        self.assertFalse(initial["enabled"])
+        self.assertEqual(
+            unconfirmed["code"], "diagnostics.verbose_enable_rejected"
+        )
+        self.assertEqual(invalid["code"], "diagnostics.verbose_enable_rejected")
+        self.assertTrue(enabled["enabled"])
+        self.assertEqual(enabled["duration"], "30_minutes")
+        self.assertEqual(enabled["remaining_seconds"], 1800)
+        self.assertFalse(disabled["enabled"])
+        self.assertEqual(disabled["code"], "diagnostics.verbose_disabled")
+
+    def test_verbose_snapshot_event_is_opt_in_bounded_and_identity_free(self):
+        plugin, _service = self.plugin_with_diagnostic_logging()
+        sample = {
+            "snapshot": {
+                "game_state": "running",
+                "support_tier": "certified",
+                "blockers": [{"code": "test.blocker", "pid": 1234}],
+                "gpus": [{"stable_id": "private-gpu"}],
+            },
+            "inference": {"mode": "docked_igpu"},
+            "diagnostics": {"timings_ms": [{"stage": "snapshot_total"}]},
+        }
+
+        plugin._record_verbose_snapshot(sample)
+        self.assertNotIn(
+            "diagnostics.snapshot_observed",
+            {event.code for event in plugin._events.snapshot()},
+        )
+        asyncio.run(plugin.enable_diagnostic_logging("2_hours", True))
+        plugin._record_verbose_snapshot(sample)
+        events = plugin._events.snapshot()
+        verbose = [
+            event for event in events if event.code == "diagnostics.snapshot_observed"
+        ]
+        encoded = json.dumps([event.details for event in verbose], sort_keys=True)
+
+        self.assertEqual(len(verbose), 1)
+        self.assertIn("test.blocker", encoded)
+        self.assertIn("docked_igpu", encoded)
+        for private in ("1234", "private-gpu", "stable_id", "pid"):
+            self.assertNotIn(private, encoded)
+
+    def test_audit_failure_cannot_hide_committed_logging_state(self):
+        plugin, _service = self.plugin_with_diagnostic_logging()
+
+        def audit_failure(**_kwargs):
+            raise RuntimeError("private audit failure")
+
+        plugin._diagnostic_logging.append = audit_failure
+        enabled = asyncio.run(
+            plugin.enable_diagnostic_logging("30_minutes", True)
+        )
+        self.assertTrue(enabled["enabled"])
+        self.assertTrue(plugin._diagnostic_logging.status().enabled)
+
+        disabled = asyncio.run(plugin.disable_diagnostic_logging())
+        self.assertFalse(disabled["enabled"])
+        self.assertFalse(plugin._diagnostic_logging.status().enabled)
 
     def test_docked_igpu_acknowledgement_wakes_only_after_acceptance(self):
         plugin, _service = self.plugin()

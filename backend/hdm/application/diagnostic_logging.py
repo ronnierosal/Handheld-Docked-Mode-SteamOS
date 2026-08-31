@@ -76,11 +76,11 @@ class DiagnosticLoggingController:
             raise ValueError("verbose diagnostics require explicit user confirmation")
         if not isinstance(duration, DiagnosticLoggingDuration):
             raise ValueError("verbose diagnostics duration is invalid")
-        boot = self._read_boot_session()
-        if boot is None:
-            raise ValueError("boot session identity is unavailable")
-        now = self._read_monotonic()
         with self._lock:
+            boot = self._read_boot_session()
+            if boot is None:
+                raise ValueError("boot session identity is unavailable")
+            now = self._read_monotonic()
             self._enabled_boot = boot
             self._duration = duration
             self._expires_at = (
@@ -92,9 +92,9 @@ class DiagnosticLoggingController:
             return self._status_locked(now, boot)
 
     def disable(self) -> DiagnosticLoggingStatus:
-        now = self._read_monotonic()
-        boot = self._read_boot_session()
         with self._lock:
+            now = self._read_monotonic()
+            boot = self._read_boot_session()
             self._disable_locked("diagnostics.verbose_disabled")
             return self._status_locked(now, boot)
 

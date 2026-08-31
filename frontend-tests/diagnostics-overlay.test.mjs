@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { diagnosticOverlayRows } from "../src/diagnostics-overlay.ts";
+import {
+  diagnosticLoggingLabel,
+  diagnosticOverlayRows,
+} from "../src/diagnostics-overlay.ts";
 
 
 function payload() {
@@ -139,4 +142,32 @@ test("overlay exposes useful categorical state without raw identities", () => {
   ]) {
     assert.doesNotMatch(text, new RegExp(forbidden.replaceAll(":", "\\:")));
   }
+});
+
+test("verbose logging status exposes a bounded countdown without private state", () => {
+  assert.equal(diagnosticLoggingLabel(null), "unavailable");
+  assert.equal(diagnosticLoggingLabel({
+    schema_version: 1,
+    enabled: false,
+    mode: "off",
+    duration: "",
+    remaining_seconds: null,
+    code: "diagnostics.verbose_default_off",
+  }), "off · diagnostics verbose default off");
+  assert.equal(diagnosticLoggingLabel({
+    schema_version: 1,
+    enabled: true,
+    mode: "ttl",
+    duration: "2_hours",
+    remaining_seconds: 3661,
+    code: "diagnostics.verbose_enabled",
+  }), "on · 1h 2m remaining");
+  assert.equal(diagnosticLoggingLabel({
+    schema_version: 1,
+    enabled: true,
+    mode: "until_reboot",
+    duration: "until_reboot",
+    remaining_seconds: null,
+    code: "diagnostics.verbose_enabled",
+  }), "on · until reboot");
 });

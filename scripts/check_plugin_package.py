@@ -29,6 +29,7 @@ REQUIRED_FILES = (
     "backend/hdm/delivery/process_release.py",
     "backend/hdm/delivery/docked_igpu_lifecycle.py",
     "backend/hdm/delivery/docked_igpu_scheduler.py",
+    "backend/hdm/delivery/diagnostic_logging.py",
     "backend/hdm/delivery/runtime_state.py",
     "backend/hdm/delivery/transition_journal_store.py",
     "backend/hdm/ports/presentation_activation.py",
@@ -86,6 +87,9 @@ def main() -> int:
             "get_snapshot",
             "get_docked_igpu_status",
             "acknowledge_docked_igpu_status",
+            "get_diagnostic_logging_status",
+            "enable_diagnostic_logging",
+            "disable_diagnostic_logging",
             "preview_support_bundle",
             "save_support_bundle",
             "preview_presentation_preparation",
@@ -99,7 +103,7 @@ def main() -> int:
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky RPCs must remain limited to diagnostics, read-only watcher status, approved support export, supervised preparation, and guarded process release"
+                "Decky RPCs must remain limited to diagnostics/logging, read-only watcher status, approved support export, supervised preparation, and guarded process release"
             )
 
     delivery_sources = "\n".join(
@@ -117,7 +121,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics, read-only watcher status, support export, sleep guard, supervised preparation, and guarded process release only."
+        "Plugin package check passed: diagnostics/logging, read-only watcher status, support export, sleep guard, supervised preparation, and guarded process release only."
     )
     return 0
 

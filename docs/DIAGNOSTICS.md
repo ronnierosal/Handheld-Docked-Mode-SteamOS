@@ -20,8 +20,9 @@ Delivery adapters call `DiagnosticsApi.get_snapshot()` to receive the same
 versioned dictionary without parsing CLI output. The Decky plugin is a thin
 root-privileged wrapper around this API. Its explicit public allowlist also
 covers support preview/export, reversible presentation preparation, guarded
-process release, and categorical Docked-iGPU watcher status/acknowledgement.
-Transition approval or execution is not public.
+process release, categorical Docked-iGPU watcher status/acknowledgement, and
+explicit temporary verbose-logging controls. Transition approval or execution
+is not public.
 
 Build the Decky package from a source checkout with:
 
@@ -189,5 +190,14 @@ session also checks the current boot identity on every status/event operation;
 a changed or unreadable identity disables the session fail closed. Boot identity
 is used only for equality and is never exported.
 
-This controller is implemented and unit tested but is not wired to Decky RPC or
-the UI. No durable consent, arbitrary system log collection, or upload exists.
+Decky now exposes the four allowlisted durations, a Steam-native confirmation,
+an identity-free status/countdown, and an immediate disable action inside the
+opt-in troubleshooting section. While enabled, normal snapshot refresh records
+one additional sanitized categorical event containing only mode, game state,
+support tier, blocker codes, and a timing-count value. The existing 128-event
+rotation remains authoritative. No raw snapshot, arbitrary system log, durable
+consent, path, process identity, hardware identity, or upload is introduced.
+
+Logging consent and support-export consent remain separate. Verbose events stay
+in memory unless the player later creates and reviews a support bundle. The
+controller-visible flow and expiry countdown remain unverified on hardware.

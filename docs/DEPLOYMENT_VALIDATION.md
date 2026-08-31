@@ -119,6 +119,10 @@ For a blocked-Sleep warning test, success requires all of:
 - login1 never enters PreparingForSleep
 - Gamescope and the internal display remain usable
 - backend and Steam preflight leases remain active
+- verbose diagnostics require a visible confirmation, show the selected bounded
+  countdown, disable immediately, and return to off after the selected expiry
+- support export remains a separate explicit preview/save action; enabling
+  logging alone creates no file or upload
 
 Enforcement without a visible warning is a failed UX acceptance result, not a
 pass.

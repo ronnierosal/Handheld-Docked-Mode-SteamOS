@@ -48,7 +48,7 @@ No broader label may be inferred from a narrower one.
 | Exact-recipe verified game-save child | Implemented and simulated, proof/mechanism-injected | Reviewed production recipes, proof/mechanism adapters, Decky delivery, and per-game hardware proof remain. |
 | Backend-owned canonical sleep delivery facade | Implemented and unit tested, dormant | Decky RPC/UI wiring, physical-button interception, all directive mechanisms, and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
-| Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
+| Temporary verbose diagnostic logging | Policy and Decky controller flow implemented and simulated; explicit consent, four bounded durations, status/countdown, disable, sanitization, rotation, and reboot reset are wired | Controller-visible and expiry acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
 | Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Steam title/version and consumer wiring remain. |
 | Private active-game process/runtime evidence | Implemented and unit tested, dormant read-only | Exact Proton version, consumers, Decky wiring, and hardware proof remain. |
@@ -314,11 +314,12 @@ Exit: rollback and disconnect-loss tests pass before certification.
 
 ### R8 — Diagnostics, compatibility, and support expansion
 
-**Status:** PARTIAL POLICY IMPLEMENTED — independent eGPU-handoff and save/sleep
+**Status:** PARTIAL DELIVERY IMPLEMENTED — independent eGPU-handoff and save/sleep
 dimensions, exact-profile evidence, and intentional human-reviewed promotion
 gates are unit tested. Explicit opt-in verbose logging durations, expiry,
-rotation, and reboot/reset behavior are also unit tested. No collection UI,
-persistence, publication, or verbose RPC is enabled.
+rotation, reboot/reset behavior, Decky status/countdown, confirmation, and
+disable controls are implemented and simulated. No catalog collection UI,
+persistence, publication, or support upload is enabled.
 
 - Add an opt-in overlay and bounded verbose logging with a maximum TTL that
   cannot survive reboot.

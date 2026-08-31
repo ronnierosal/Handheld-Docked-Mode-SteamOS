@@ -297,6 +297,13 @@ support-report, approval, replay, and guarded transition services share the
 same authoritative observations and journal vocabulary. Manual and automatic
 delivery still need one request facade before production wiring.
 
+The root backend also owns one in-memory diagnostic-logging controller over the
+same bounded support event log. Decky can request only an allowlisted duration
+after a visible confirmation, read an identity-free countdown, or disable it.
+Verbose snapshot events are reduced and sanitized before retention. Consent,
+events, and the boot-session comparison are never persisted; reboot or plugin
+restart therefore fails back to normal logging.
+
 ## Ports and adapters
 
 Ports are narrow protocols defined by the application. The first SteamOS

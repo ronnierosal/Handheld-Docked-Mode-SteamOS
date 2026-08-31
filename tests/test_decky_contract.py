@@ -43,6 +43,9 @@ class DeckyContractTests(unittest.TestCase):
                 "get_snapshot",
                 "get_docked_igpu_status",
                 "acknowledge_docked_igpu_status",
+                "get_diagnostic_logging_status",
+                "enable_diagnostic_logging",
+                "disable_diagnostic_logging",
                 "preview_support_bundle",
                 "save_support_bundle",
                 "preview_presentation_preparation",
@@ -91,6 +94,9 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
         self.assertIn('"get_docked_igpu_status"', source)
         self.assertIn('"acknowledge_docked_igpu_status"', source)
+        self.assertIn('"get_diagnostic_logging_status"', source)
+        self.assertIn('"enable_diagnostic_logging"', source)
+        self.assertIn('"disable_diagnostic_logging"', source)
         self.assertIn('"preview_support_bundle"', source)
         self.assertIn('"preview_presentation_preparation"', source)
         self.assertIn('"approve_presentation_preparation"', source)
@@ -116,6 +122,19 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("callable<[string], SupportBundleSavePayload>", source)
         self.assertNotIn("saveSupportBundle = callable<[string, string]", source)
 
+    def test_verbose_logging_ui_has_only_bounded_confirmed_choices(self):
+        source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")
+        backend = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
+
+        self.assertIn('strTitle="Enable verbose HDM diagnostics?"', source)
+        self.assertIn('strOKButtonText="Enable"', source)
+        self.assertIn("Logs stay on this handheld unless you separately preview", source)
+        for duration in ("30_minutes", "1_hour", "2_hours", "until_reboot"):
+            self.assertIn(f'"{duration}"', source)
+            self.assertIn(f'"{duration}"', backend)
+        self.assertNotIn('"forever"', source)
+        self.assertNotIn('"forever"', backend)
+
     def test_attempted_sleep_warning_requires_acknowledgement(self):
         source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")
         self.assertIn("<ConfirmModal", source)
@@ -130,7 +149,7 @@ class DeckyContractTests(unittest.TestCase):
         self.assertNotIn("    window,\n    { strTitle", source)
         self.assertEqual(
             source.count('    undefined,\n    { strTitle: "Handheld Dock Mode"'),
-            4,
+            5,
         )
         self.assertIn('strOKButtonText={force ? "Force close" : "Close gracefully"}', source)
         self.assertIn("Clearing software clients does not authorize physical G1 removal", source)

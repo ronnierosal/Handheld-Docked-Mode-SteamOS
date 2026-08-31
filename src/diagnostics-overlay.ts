@@ -1,5 +1,6 @@
 import type {
   DockedIgpuStatusPayload,
+  DiagnosticLoggingStatusPayload,
   HardwareCapabilityAxis,
   SnapshotPayload,
 } from "./backend";
@@ -11,7 +12,7 @@ export interface DiagnosticOverlayRow {
 }
 
 function humanize(value: string): string {
-  return value.replaceAll("_", " ");
+  return value.replaceAll("_", " ").replaceAll(".", " ");
 }
 
 function yesNoUnknown(value: boolean | null): string {
@@ -21,6 +22,7 @@ function yesNoUnknown(value: boolean | null): string {
 export function diagnosticOverlayRows(
   payload: SnapshotPayload | null,
   dockedIgpuStatus: DockedIgpuStatusPayload | null = null,
+  loggingStatus: DiagnosticLoggingStatusPayload | null = null,
 ): DiagnosticOverlayRow[] {
   if (!payload) {
     return [];
@@ -110,7 +112,7 @@ export function diagnosticOverlayRows(
     },
     {
       name: "Verbose logging",
-      value: "off · control not enabled in this build",
+      value: diagnosticLoggingLabel(loggingStatus),
     },
   ];
   rows.push(
@@ -141,4 +143,25 @@ export function diagnosticOverlayRows(
     });
   });
   return rows;
+}
+
+export function diagnosticLoggingLabel(
+  status: DiagnosticLoggingStatusPayload | null,
+): string {
+  if (!status) {
+    return "unavailable";
+  }
+  if (!status.enabled) {
+    return `off · ${humanize(status.code)}`;
+  }
+  if (status.mode === "until_reboot") {
+    return "on · until reboot";
+  }
+  const remaining = Math.max(0, status.remaining_seconds ?? 0);
+  const hours = Math.floor(remaining / 3600);
+  const minutes = Math.ceil((remaining % 3600) / 60);
+  const countdown = hours > 0
+    ? `${hours}h ${minutes}m remaining`
+    : `${minutes}m remaining`;
+  return `on · ${countdown}`;
 }

@@ -56,6 +56,11 @@ from hdm.application.game_gpu_client import GameEgpuClientEvidenceService  # noq
 from hdm.application.game_render_activity import (  # noqa: E402
     GameRenderActivityComparisonService,
 )
+from hdm.application.diagnostic_logging import (  # noqa: E402
+    DiagnosticLoggingController,
+    DiagnosticLoggingDuration,
+    DiagnosticVerbosity,
+)
 from hdm.application.docked_igpu_exit import DockedIgpuGameExitWatcher  # noqa: E402
 from hdm.application.docked_igpu_lifecycle import DockedIgpuWatchLifecycle  # noqa: E402
 from hdm.application.docked_igpu_promotion import DockedIgpuPromotionFacade  # noqa: E402
@@ -90,6 +95,9 @@ from hdm.delivery.process_release import (  # noqa: E402
 from hdm.delivery.game_evidence_support import (  # noqa: E402
     game_evidence_to_event_details,
 )
+from hdm.delivery.diagnostic_logging import (  # noqa: E402
+    diagnostic_logging_status_to_payload,
+)
 from hdm.delivery.docked_igpu_lifecycle import lifecycle_status_to_payload  # noqa: E402
 from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
     DockedIgpuLifecycleScheduler,
@@ -114,6 +122,10 @@ class Plugin:
         self._last_docked_igpu_lifecycle_code = ""
         self._last_sleep_guard_log: tuple[str, bool, str] | None = None
         self._events = BoundedEventLog()
+        self._diagnostic_logging = DiagnosticLoggingController(
+            self._events,
+            boot_session_id=self._boot_session_id,
+        )
         self._support_bundles = SupportBundleService()
         self._support_previews = SupportBundlePreviewStore()
         self._support_writer = SupportBundleFileWriter()
@@ -125,7 +137,125 @@ class Plugin:
 
     async def get_snapshot(self) -> dict[str, object]:
         """Return the existing privacy-safe, read-only diagnostics payload."""
-        return await asyncio.to_thread(self._api.get_snapshot)
+        payload = await asyncio.to_thread(self._api.get_snapshot)
+        await asyncio.to_thread(self._record_verbose_snapshot, payload)
+        return payload
+
+    async def get_diagnostic_logging_status(self) -> dict[str, object]:
+        """Return bounded, identity-free status for the opt-in verbose session."""
+
+        try:
+            status = await asyncio.to_thread(self._diagnostic_logging.status)
+            return diagnostic_logging_status_to_payload(status)
+        except Exception:
+            return self._diagnostic_logging_unavailable()
+
+    async def enable_diagnostic_logging(
+        self, duration: str, user_confirmed: bool
+    ) -> dict[str, object]:
+        """Enable only one allowlisted, explicitly confirmed ephemeral duration."""
+
+        try:
+            selected = DiagnosticLoggingDuration(duration)
+            status = await asyncio.to_thread(
+                self._diagnostic_logging.enable,
+                selected,
+                user_confirmed=user_confirmed is True,
+            )
+            try:
+                self._diagnostic_logging.append(
+                    verbosity=DiagnosticVerbosity.NORMAL,
+                    severity="info",
+                    code="diagnostics.verbose_enabled",
+                    component="diagnostics",
+                    stage="consent",
+                    details={"duration": selected.value},
+                )
+            except Exception:
+                pass
+            return diagnostic_logging_status_to_payload(status)
+        except Exception:
+            return self._diagnostic_logging_unavailable(
+                "diagnostics.verbose_enable_rejected"
+            )
+
+    async def disable_diagnostic_logging(self) -> dict[str, object]:
+        """Disable verbose collection immediately without deleting normal events."""
+
+        try:
+            status = await asyncio.to_thread(self._diagnostic_logging.disable)
+            try:
+                self._diagnostic_logging.append(
+                    verbosity=DiagnosticVerbosity.NORMAL,
+                    severity="info",
+                    code="diagnostics.verbose_disabled",
+                    component="diagnostics",
+                    stage="consent",
+                )
+            except Exception:
+                pass
+            return diagnostic_logging_status_to_payload(status)
+        except Exception:
+            return self._diagnostic_logging_unavailable()
+
+    def _record_verbose_snapshot(self, payload: dict[str, object]) -> None:
+        snapshot = payload.get("snapshot")
+        inference = payload.get("inference")
+        diagnostics = payload.get("diagnostics")
+        if not isinstance(snapshot, dict):
+            return
+        blocker_codes = []
+        blockers = snapshot.get("blockers")
+        if isinstance(blockers, list):
+            blocker_codes = [
+                str(item.get("code", "unknown"))
+                for item in blockers[:32]
+                if isinstance(item, dict)
+            ]
+        mode = (
+            str(inference.get("mode", "unknown"))
+            if isinstance(inference, dict)
+            else "unknown"
+        )
+        timing_count = (
+            len(diagnostics.get("timings_ms", ()))
+            if isinstance(diagnostics, dict)
+            and isinstance(diagnostics.get("timings_ms"), list)
+            else 0
+        )
+        self._diagnostic_logging.append(
+            verbosity=DiagnosticVerbosity.VERBOSE,
+            severity="info",
+            code="diagnostics.snapshot_observed",
+            component="diagnostics",
+            stage="snapshot",
+            details={
+                "mode": mode,
+                "game_state": str(snapshot.get("game_state", "unknown")),
+                "support_tier": str(snapshot.get("support_tier", "unknown")),
+                "blocker_codes": blocker_codes,
+                "timing_count": timing_count,
+            },
+        )
+
+    @staticmethod
+    def _diagnostic_logging_unavailable(
+        code: str = "diagnostics.verbose_status_unavailable",
+    ) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "enabled": False,
+            "mode": "off",
+            "duration": "",
+            "remaining_seconds": None,
+            "code": code,
+        }
+
+    @staticmethod
+    def _boot_session_id() -> str:
+        return Path("/proc/sys/kernel/random/boot_id").read_text(
+            encoding="ascii"
+        ).strip()
 
     async def get_docked_igpu_status(self) -> dict[str, object]:
         """Return only categorical state from the read-only natural-exit watch."""

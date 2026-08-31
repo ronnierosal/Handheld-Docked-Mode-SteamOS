@@ -2,6 +2,7 @@ import { definePlugin, toaster } from "@decky/api";
 import {
   ButtonItem,
   ConfirmModal,
+  DropdownItem,
   PanelSection,
   PanelSectionRow,
   ScrollPanel,
@@ -19,6 +20,9 @@ import {
   executeProcessRelease,
   getProcessReleaseStatus,
   getDockedIgpuStatus,
+  getDiagnosticLoggingStatus,
+  enableDiagnosticLogging,
+  disableDiagnosticLogging,
   preparePresentationIntegration,
   previewPresentationPreparation,
   previewProcessRelease,
@@ -26,6 +30,8 @@ import {
   saveSupportBundle,
   type SnapshotPayload,
   type DockedIgpuStatusPayload,
+  type DiagnosticLoggingDuration,
+  type DiagnosticLoggingStatusPayload,
   type ProcessReleasePhase,
   type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
@@ -62,6 +68,12 @@ const LABELS: Record<string, string> = {
 const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
 const SNAPSHOT_STALE_AFTER_MS = 10_000;
 const BLOCKED_ATTEMPT_MODAL_DELAY_MS = 750;
+const DIAGNOSTIC_LOGGING_OPTIONS = [
+  { data: "30_minutes", label: "30 minutes" },
+  { data: "1_hour", label: "1 hour" },
+  { data: "2_hours", label: "2 hours" },
+  { data: "until_reboot", label: "Until reboot" },
+] satisfies Array<{ data: DiagnosticLoggingDuration; label: string }>;
 
 function label(value: string): string {
   return LABELS[value] ?? value.replaceAll("_", " ").replaceAll(".", " ");
@@ -206,6 +218,46 @@ function showProcessReleaseConfirmation(
   return modal;
 }
 
+function showDiagnosticLoggingConfirmation(
+  durationLabel: string,
+  onConfirm: () => void,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle="Enable verbose HDM diagnostics?"
+      strOKButtonText="Enable"
+      strCancelButtonText="Cancel"
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={() => {
+        close();
+        onConfirm();
+      }}
+      onCancel={close}
+    >
+      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
+        <p>
+          HDM will retain additional sanitized, HDM-only events for {durationLabel}.
+          Storage remains capped and verbose logging will not survive a reboot.
+        </p>
+        <p>
+          Logs stay on this handheld unless you separately preview, save, and share a
+          support bundle.
+        </p>
+      </div>
+    </ConfirmModal>,
+    undefined,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
 function MonitorIcon() {
   return (
     <svg
@@ -240,6 +292,10 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [dockedIgpuStatus, setDockedIgpuStatus] = useState<DockedIgpuStatusPayload | null>(null);
   const [dockedIgpuMessage, setDockedIgpuMessage] = useState("");
+  const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = useState<DiagnosticLoggingStatusPayload | null>(null);
+  const [diagnosticLoggingDuration, setDiagnosticLoggingDuration] = useState<DiagnosticLoggingDuration>("2_hours");
+  const [diagnosticLoggingBusy, setDiagnosticLoggingBusy] = useState(false);
+  const [diagnosticLoggingMessage, setDiagnosticLoggingMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [preflightStatus, setPreflightStatus] = useState(() => preflight.status());
@@ -263,6 +319,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
   const processModal = useRef<ReturnType<typeof showModal> | null>(null);
+  const diagnosticLoggingModal = useRef<ReturnType<typeof showModal> | null>(null);
 
   useEffect(() => () => {
     supportModal.current?.Close();
@@ -271,6 +328,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     presentationModal.current = null;
     processModal.current?.Close();
     processModal.current = null;
+    diagnosticLoggingModal.current?.Close();
+    diagnosticLoggingModal.current = null;
   }, []);
 
   useEffect(() => {
@@ -307,12 +366,14 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
     }
     try {
-      const [nextPayload, nextDockedIgpuStatus] = await Promise.all([
+      const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus] = await Promise.all([
         getSnapshot(),
         getDockedIgpuStatus().catch(() => null),
+        getDiagnosticLoggingStatus().catch(() => null),
       ]);
       setPayload(nextPayload);
       setDockedIgpuStatus(nextDockedIgpuStatus);
+      setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -378,7 +439,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         : disconnect.ready
           ? "Ready"
           : "Blocked";
-  const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus);
+  const overlayRows = diagnosticOverlayRows(
+    payload,
+    dockedIgpuStatus,
+    diagnosticLoggingStatus,
+  );
 
   const acknowledgeDockedIgpuWatch = useCallback(async () => {
     setDockedIgpuMessage("");
@@ -393,6 +458,55 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setDockedIgpuMessage("Watcher state acknowledged. Observation will resume.");
     } catch {
       setDockedIgpuMessage("Watcher acknowledgement is unavailable.");
+    }
+  }, []);
+
+  const applyDiagnosticLogging = useCallback(async () => {
+    setDiagnosticLoggingBusy(true);
+    setDiagnosticLoggingMessage("");
+    try {
+      const status = await enableDiagnosticLogging(
+        diagnosticLoggingDuration,
+        true,
+      );
+      setDiagnosticLoggingStatus(status);
+      setDiagnosticLoggingMessage(
+        status.enabled
+          ? "Verbose diagnostics enabled. They remain local until separately exported."
+          : "Verbose diagnostics were not enabled.",
+      );
+    } catch {
+      setDiagnosticLoggingMessage("Verbose diagnostics could not be enabled.");
+    } finally {
+      setDiagnosticLoggingBusy(false);
+    }
+  }, [diagnosticLoggingDuration]);
+
+  const requestDiagnosticLogging = useCallback(() => {
+    const option = DIAGNOSTIC_LOGGING_OPTIONS.find(
+      (value) => value.data === diagnosticLoggingDuration,
+    );
+    diagnosticLoggingModal.current?.Close();
+    diagnosticLoggingModal.current = showDiagnosticLoggingConfirmation(
+      option?.label ?? "the selected duration",
+      () => void applyDiagnosticLogging(),
+      () => {
+        diagnosticLoggingModal.current = null;
+      },
+    );
+  }, [applyDiagnosticLogging, diagnosticLoggingDuration]);
+
+  const stopDiagnosticLogging = useCallback(async () => {
+    setDiagnosticLoggingBusy(true);
+    setDiagnosticLoggingMessage("");
+    try {
+      const status = await disableDiagnosticLogging();
+      setDiagnosticLoggingStatus(status);
+      setDiagnosticLoggingMessage("Verbose diagnostics disabled.");
+    } catch {
+      setDiagnosticLoggingMessage("Verbose diagnostics status is unavailable.");
+    } finally {
+      setDiagnosticLoggingBusy(false);
     }
   }, []);
 
@@ -880,6 +994,32 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           )}
           {dockedIgpuMessage && (
             <PanelSectionRow>{dockedIgpuMessage}</PanelSectionRow>
+          )}
+          <DropdownItem
+            label="Verbose logging duration"
+            description="Temporary, sanitized, capped, and off by default"
+            rgOptions={DIAGNOSTIC_LOGGING_OPTIONS}
+            selectedOption={diagnosticLoggingDuration}
+            disabled={diagnosticLoggingBusy || diagnosticLoggingStatus?.enabled === true}
+            onChange={(option) => {
+              setDiagnosticLoggingDuration(option.data as DiagnosticLoggingDuration);
+            }}
+          />
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={diagnosticLoggingStatus?.enabled
+                ? () => void stopDiagnosticLogging()
+                : requestDiagnosticLogging}
+              disabled={diagnosticLoggingBusy}
+            >
+              {diagnosticLoggingStatus?.enabled
+                ? "Disable verbose diagnostics"
+                : "Enable verbose diagnostics"}
+            </ButtonItem>
+          </PanelSectionRow>
+          {diagnosticLoggingMessage && (
+            <PanelSectionRow>{diagnosticLoggingMessage}</PanelSectionRow>
           )}
           <PanelSectionRow>
             <ButtonItem

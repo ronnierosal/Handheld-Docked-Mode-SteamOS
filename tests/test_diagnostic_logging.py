@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import sys
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -134,6 +136,35 @@ class DiagnosticLoggingTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "clock"):
             broken.enable(user_confirmed=True)
+
+    def test_later_disable_cannot_be_overtaken_by_delayed_enable(self):
+        entered = threading.Event()
+        release = threading.Event()
+        boot_calls = 0
+
+        def boot_session():
+            nonlocal boot_calls
+            boot_calls += 1
+            if boot_calls == 1:
+                entered.set()
+                self.assertTrue(release.wait(1))
+            return "boot-session-1"
+
+        controller = DiagnosticLoggingController(
+            self.log,
+            monotonic=lambda: self.now[0],
+            boot_session_id=boot_session,
+        )
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            enabled = executor.submit(controller.enable, user_confirmed=True)
+            self.assertTrue(entered.wait(1))
+            disabled = executor.submit(controller.disable)
+            self.assertFalse(disabled.done())
+            release.set()
+            self.assertTrue(enabled.result(timeout=1).enabled)
+            self.assertFalse(disabled.result(timeout=1).enabled)
+
+        self.assertFalse(controller.status().enabled)
 
 
 if __name__ == "__main__":

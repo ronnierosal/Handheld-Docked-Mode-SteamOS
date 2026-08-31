@@ -70,6 +70,7 @@ between production-safe features and dormant or simulated transition work.
 | G1 sleep inhibitor and Steam preflight | Implemented and hardware tested | Available; persistent warning needs one final supervised visible proof |
 | Redacted support preview, one-shot game/GPU evidence, and approved save | Implemented and simulated | Available; new evidence and controller-visible save acceptance are pending hardware proof |
 | Docked-iGPU natural-exit observer | Implemented and simulated | Read-only categorical status available in troubleshooting; hardware proof pending |
+| Temporary verbose diagnostics | Implemented and simulated | Explicit controller consent, bounded countdown, disable control, and reboot reset available; visible acceptance pending |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
 | Portable ↔ TV Docked transition engine | Implemented and simulated | Not wired to Decky; no transition RPC exists |
 | Guarded process release | Implemented and simulated | Decky-native experimental flow; supervised disposable-process proof pending |
