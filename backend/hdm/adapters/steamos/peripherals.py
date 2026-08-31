@@ -7,6 +7,7 @@ change the default output, manipulate Steam Input, or retain raw paths/names.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -131,18 +132,74 @@ class SteamOsPeripheralObservationAdapter:
     ) -> None:
         self._inventory = inventory or SteamOsPeripheralInventory()
         self._hints = hints
-        self._generation_factory = generation_factory or (lambda: "peripheral-unknown")
-        self._sample_factory = sample_factory or (lambda: "peripheral-sample-unknown")
+        self._generation_factory = generation_factory
+        self._sample_factory = sample_factory
+        self._sample_counter = 0
 
     def observe(self) -> PeripheralObservation:
         inventory = self._inventory.scan()
+        controller = self._controller(inventory)
+        audio = self._audio(inventory)
+        generation = (
+            self._generation_factory()
+            if self._generation_factory is not None
+            else self._generation(inventory, controller, audio)
+        )
+        self._sample_counter += 1
+        sample = (
+            self._sample_factory()
+            if self._sample_factory is not None
+            else hashlib.sha256(
+                f"{generation}|sample:{self._sample_counter}".encode("ascii")
+            ).hexdigest()
+        )
         return PeripheralObservation(
             schema_version=1,
-            generation=self._generation_factory(),
-            sample_id=self._sample_factory(),
-            controller=self._controller(inventory),
-            audio=self._audio(inventory),
+            generation=generation,
+            sample_id=sample,
+            controller=controller,
+            audio=audio,
         )
+
+    @staticmethod
+    def _generation(
+        inventory: PeripheralInventory,
+        controller: ControllerPeripheralState,
+        audio: AudioPeripheralState,
+    ) -> str:
+        semantic = {
+            "inventory": {
+                "controller_complete": inventory.controller_complete,
+                "controller_bindings": inventory.controller_bindings,
+                "controller_error": inventory.controller_error,
+                "audio_complete": inventory.audio_complete,
+                "audio_bindings": inventory.audio_bindings,
+                "audio_error": inventory.audio_error,
+            },
+            "controller": {
+                "complete": controller.complete,
+                "exact": controller.exact,
+                "failure": controller.failure_code,
+                "builtin": controller.builtin_binding,
+                "builtin_available": controller.builtin_available,
+                "external": controller.external_binding,
+                "external_connected": controller.external_connected,
+            },
+            "audio": {
+                "complete": audio.complete,
+                "exact": audio.exact,
+                "failure": audio.failure_code,
+                "current": audio.current_output.value,
+                "current_binding": audio.current_output_binding,
+                "external": audio.external_output_binding,
+                "external_available": audio.external_output_available,
+                "portable": audio.portable_output_binding,
+                "portable_available": audio.portable_output_available,
+            },
+        }
+        return hashlib.sha256(
+            json.dumps(semantic, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
 
     def _controller(self, inventory: PeripheralInventory) -> ControllerPeripheralState:
         if not inventory.controller_complete:

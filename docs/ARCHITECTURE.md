@@ -270,6 +270,10 @@ session command. Unmapped controller identity and unobserved default audio both
 remain non-exact and non-actionable. Profile-specific mapping, delivery, and
 mechanisms remain absent.
 
+Its semantic generation includes the complete private hashed inventory and its
+collection sample changes every scan. This lets a future transaction reject
+topology changes without treating timestamp-only refresh as a semantic change.
+
 Exact Steam scope identity can now be enriched by a dormant read-only cgroup
 and procfs adapter. It binds PID plus start time, captures private parent and
 executable-basename evidence, and classifies native versus Proton only from

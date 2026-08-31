@@ -82,6 +82,20 @@ class PeripheralInventoryTests(unittest.TestCase):
             self.assertFalse(observed.controller.builtin_input_verified)
             self.assertFalse(observed.controller.builtin_restore_verified)
 
+    def test_default_semantic_generation_is_stable_but_samples_are_fresh(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write(root / "input" / "event1" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
+            (root / "sound" / "card0").mkdir(parents=True)
+            adapter = SteamOsPeripheralObservationAdapter(self._inventory(root))
+            first = adapter.observe()
+            second = adapter.observe()
+            self.assertEqual(first.generation, second.generation)
+            self.assertNotEqual(first.sample_id, second.sample_id)
+            write(root / "input" / "event9" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
+            changed = adapter.observe()
+            self.assertNotEqual(first.generation, changed.generation)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,11 @@ cannot authorize a handoff. Exact private hints may be supplied only after a
 supervised mapping test; even then the adapter never claims input verification
 or audio-output verification.
 
+The adapter hashes the complete private inventory into a semantic generation
+and issues a distinct sample ID on every collection. Timestamp-only collection
+does not invalidate a plan, but any candidate, mapping, completeness, or
+categorical-error change does.
+
 There is no mechanism adapter, Decky RPC, or live handoff authority. The Ally X
 and GPD G1 profile values remain Unknown or Experimental and authorize no
 unsupervised controller/audio change.
