@@ -36,7 +36,9 @@ verified Portable recovery, and clean kernel evidence.
 Known Issue and Unsupported remain first-class outcomes rather than being
 silently translated into support. The schema and tests now have a dormant,
 fixed-path atomic local store for already validated catalog records; it cannot
-collect evidence, expose a Decky write path, or promote a claim. Existing
+collect evidence or expose a Decky write path. Its backend-only transaction
+service can apply only the existing domain promotion rules under the store lock;
+it neither creates/reviews evidence nor runs in the production plugin. Existing
 claims remain limited to the evidence in this document and dated validation
 records.
 

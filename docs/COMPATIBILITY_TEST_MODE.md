@@ -56,5 +56,6 @@ different title.
 
 No production test-mode construction, Decky RPC, or UI is enabled. A dormant
 fixed-path atomic catalog store is available only for already domain-validated
-records; it has no production writer yet and cannot promote simulation or
-unreviewed results.
+records; a backend-only transaction service can write through it only after the
+existing domain promotion gates pass. Neither is constructed by the production
+plugin, and neither can promote simulation or unreviewed results.

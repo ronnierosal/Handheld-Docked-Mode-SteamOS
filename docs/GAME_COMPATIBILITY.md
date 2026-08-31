@@ -40,7 +40,11 @@ pure policy plus a dormant fixed-path local store: it does not collect tests,
 expose a Decky RPC, publish results, or modify launch behavior. The store
 accepts only domain-validated records, rejects corrupt/unknown schemas and
 catalog-history regression, writes atomically beneath an application-owned
-state root, and never accepts a frontend-selected path or raw JSON.
+state root, and never accepts a frontend-selected path or raw JSON. A
+backend-only transaction service can register an untested entry or apply one
+domain-approved reviewed-evidence promotion under the store lock. It neither
+constructs evidence nor performs review, and is not instantiated by the
+production Decky plugin.
 
 Evidence cannot be reused across games: both the catalog record identity and
 Steam AppID (when present) must match the reviewed test evidence exactly.

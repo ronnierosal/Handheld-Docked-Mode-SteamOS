@@ -71,6 +71,27 @@ class FileCompatibilityCatalogStore:
             self._validate_game_progress(current, normalized)
             self._save(GAME_CATALOG_FILENAME, {"schema_version": SCHEMA_VERSION, "records": [self._game_to_dict(item) for item in normalized]})
 
+    def update_games(
+        self,
+        update: Callable[
+            [tuple[GameCompatibilityRecord, ...]], Iterable[GameCompatibilityRecord]
+        ],
+    ) -> tuple[GameCompatibilityRecord, ...]:
+        """Apply one validated catalog update while this store owns the lock."""
+        with self._lock:
+            current = self.load_games()
+            replacement = self._normalize_games(update(current))
+            self._validate_game_progress(current, replacement)
+            if replacement != current:
+                self._save(
+                    GAME_CATALOG_FILENAME,
+                    {
+                        "schema_version": SCHEMA_VERSION,
+                        "records": [self._game_to_dict(item) for item in replacement],
+                    },
+                )
+            return replacement
+
     def load_hardware(self) -> tuple[HardwareCompatibilityRecord, ...]:
         with self._lock:
             value = self._load(HARDWARE_CATALOG_FILENAME)
@@ -84,6 +105,27 @@ class FileCompatibilityCatalogStore:
             current = self.load_hardware()
             self._validate_hardware_progress(current, normalized)
             self._save(HARDWARE_CATALOG_FILENAME, {"schema_version": SCHEMA_VERSION, "records": [self._hardware_to_dict(item) for item in normalized]})
+
+    def update_hardware(
+        self,
+        update: Callable[
+            [tuple[HardwareCompatibilityRecord, ...]], Iterable[HardwareCompatibilityRecord]
+        ],
+    ) -> tuple[HardwareCompatibilityRecord, ...]:
+        """Apply one validated catalog update while this store owns the lock."""
+        with self._lock:
+            current = self.load_hardware()
+            replacement = self._normalize_hardware(update(current))
+            self._validate_hardware_progress(current, replacement)
+            if replacement != current:
+                self._save(
+                    HARDWARE_CATALOG_FILENAME,
+                    {
+                        "schema_version": SCHEMA_VERSION,
+                        "records": [self._hardware_to_dict(item) for item in replacement],
+                    },
+                )
+            return replacement
 
     def _load(self, filename: str) -> dict[str, Any] | None:
         self._validate_root()
