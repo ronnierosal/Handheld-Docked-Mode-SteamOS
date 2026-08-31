@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   acknowledgeDockedIgpuStatus,
   getSnapshot,
+  getPeripheralStatus,
   acknowledgeProcessRelease,
   approveProcessRelease,
   approvePresentationPreparation,
@@ -32,6 +33,7 @@ import {
   type DockedIgpuStatusPayload,
   type DiagnosticLoggingDuration,
   type DiagnosticLoggingStatusPayload,
+  type PeripheralStatusPayload,
   type ProcessReleasePhase,
   type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
@@ -290,6 +292,7 @@ function preflightObservation(payload: SnapshotPayload): PreflightObservation {
 
 function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
+  const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
   const [dockedIgpuStatus, setDockedIgpuStatus] = useState<DockedIgpuStatusPayload | null>(null);
   const [dockedIgpuMessage, setDockedIgpuMessage] = useState("");
   const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = useState<DiagnosticLoggingStatusPayload | null>(null);
@@ -366,14 +369,16 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
     }
     try {
-      const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus] = await Promise.all([
+      const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus] = await Promise.all([
         getSnapshot(),
         getDockedIgpuStatus().catch(() => null),
         getDiagnosticLoggingStatus().catch(() => null),
+        getPeripheralStatus().catch(() => null),
       ]);
       setPayload(nextPayload);
       setDockedIgpuStatus(nextDockedIgpuStatus);
       setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
+      setPeripheralStatus(nextPeripheralStatus);
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -443,6 +448,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     payload,
     dockedIgpuStatus,
     diagnosticLoggingStatus,
+    peripheralStatus,
   );
 
   const acknowledgeDockedIgpuWatch = useCallback(async () => {

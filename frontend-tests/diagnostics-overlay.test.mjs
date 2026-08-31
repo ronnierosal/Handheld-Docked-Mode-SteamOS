@@ -130,6 +130,7 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /Docked-iGPU watch/);
   assert.match(text, /promotion ready/);
   assert.match(text, /Promotion inspection/);
+  assert.match(text, /Peripheral observation/);
   assert.match(text, /unavailable/);
   for (const forbidden of [
     "private-gpu-id",

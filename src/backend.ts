@@ -128,6 +128,14 @@ export interface SnapshotPayload {
 
 export const getSnapshot = callable<[], SnapshotPayload>("get_snapshot");
 
+export interface PeripheralStatusPayload {
+  schema_version: number;
+  controller: { complete: boolean; exact: boolean; builtin_available: boolean | null; external_connected: boolean | null; code: string };
+  audio: { complete: boolean; exact: boolean; external_available: boolean | null; portable_available: boolean | null; code: string };
+}
+
+export const getPeripheralStatus = callable<[], PeripheralStatusPayload>("get_peripheral_status");
+
 export type DockedIgpuLifecycleStage =
   | "idle"
   | "watching"

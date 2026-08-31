@@ -2,6 +2,7 @@ import type {
   DockedIgpuStatusPayload,
   DiagnosticLoggingStatusPayload,
   HardwareCapabilityAxis,
+  PeripheralStatusPayload,
   SnapshotPayload,
 } from "./backend";
 
@@ -23,6 +24,7 @@ export function diagnosticOverlayRows(
   payload: SnapshotPayload | null,
   dockedIgpuStatus: DockedIgpuStatusPayload | null = null,
   loggingStatus: DiagnosticLoggingStatusPayload | null = null,
+  peripheralStatus: PeripheralStatusPayload | null = null,
 ): DiagnosticOverlayRow[] {
   if (!payload) {
     return [];
@@ -113,6 +115,18 @@ export function diagnosticOverlayRows(
     {
       name: "Verbose logging",
       value: diagnosticLoggingLabel(loggingStatus),
+    },
+    {
+      name: "Peripheral observation",
+      value: peripheralStatus
+        ? `controller ${peripheralStatus.controller.exact ? "mapped" : "unmapped"} · audio ${peripheralStatus.audio.exact ? "mapped" : "unmapped"}`
+        : "unavailable",
+    },
+    {
+      name: "Peripheral evidence",
+      value: peripheralStatus
+        ? `${humanize(peripheralStatus.controller.code)} · ${humanize(peripheralStatus.audio.code)}`
+        : "unavailable",
     },
   ];
   rows.push(
