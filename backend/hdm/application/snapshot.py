@@ -8,6 +8,10 @@ from ..domain.inference import infer_operating_mode
 from ..domain.models import ModeInference, ObservedSnapshot
 from ..domain.serialization import snapshot_to_dict
 from ..ports.discovery import DiscoveryPort, DiscoveryTiming
+from ..profiles.registry import (
+    resolve_runtime_profiles,
+    runtime_profile_diagnostics_to_dict,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +40,7 @@ class SnapshotService:
 
 
 def report_to_dict(report: SnapshotReport) -> dict[str, object]:
+    profiles = resolve_runtime_profiles(report.snapshot)
     return {
         "snapshot": snapshot_to_dict(report.snapshot),
         "inference": {
@@ -43,7 +48,7 @@ def report_to_dict(report: SnapshotReport) -> dict[str, object]:
             "reasons": list(report.inference.reasons),
         },
         "diagnostics": {
-            "schema_version": 1,
+            "schema_version": 2,
             "timings_ms": [
                 {
                     "stage": timing.stage,
@@ -51,6 +56,9 @@ def report_to_dict(report: SnapshotReport) -> dict[str, object]:
                 }
                 for timing in report.timings
             ],
+            "hardware_profiles": runtime_profile_diagnostics_to_dict(
+                profiles.diagnostics()
+            ),
         },
     }
 
@@ -79,5 +87,5 @@ def report_to_public_dict(report: SnapshotReport) -> dict[str, object]:
         client.pop("instance_id", None)
         client.pop("pid", None)
         client.pop("process_start_time", None)
-    payload["delivery_schema_version"] = 1
+    payload["delivery_schema_version"] = 2
     return payload

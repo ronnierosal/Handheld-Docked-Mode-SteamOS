@@ -27,10 +27,10 @@ def snapshot():
 def binding(**changes: str) -> TransitionBinding:
     values = {
         "host_profile_id": "asus-rog-ally-x",
-        "egpu_profile_id": "gpd-g1-rx-7600m-xt",
-        "egpu_stable_id": "gpd-g1-redacted-hash",
+        "egpu_profile_id": "gpd-g1-rx7600mxt-titan-ridge",
+        "egpu_stable_id": "gpd-g1:0123456789abcdef",
         "internal_gpu_stable_id": "internal-gpu",
-        "external_gpu_stable_id": "gpd-g1-redacted-hash",
+        "external_gpu_stable_id": "gpd-g1:0123456789abcdef",
         "internal_display_stable_id": "internal-panel",
         "external_display_stable_id": "external-tv",
     }

@@ -25,7 +25,7 @@ No broader label may be inferred from a narrower one.
 | Capability | Current evidence | Remaining gate |
 |---|---|---|
 | Decky-native plugin lifecycle and typed RPC | Implemented and hardware tested | Release packaging/publishing is separate. |
-| Read-only host, DRM, Gamescope, game-scope, PCI, USB4, and G1 discovery | Implemented and hardware tested on Ally X/G1 | Revalidate after material SteamOS/kernel changes. |
+| Read-only host, DRM, Gamescope, game-scope, PCI, USB4, and G1 discovery | Implemented and hardware tested on Ally X/G1; exact DMI tuple, bound-driver topology, backend identity binding, and typed capability diagnostics are locally regression tested | Revalidate the stricter matcher and diagnostic presentation on hardware after material firmware/SteamOS/kernel changes. |
 | Exact G1 DRM/audio clients and storage blockers | Implemented and hardware tested read-only | Guarded signaling remains simulated and requires supervised proof. |
 | Portable inference | Implemented and hardware tested | Other presentation modes remain unverified in native HDM. |
 | Backend login1 sleep inhibitor | Implemented and hardware tested | It prevents suspend but cannot alone preserve Steam presentation. |

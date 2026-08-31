@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "observed_at": "2026-08-30T19:11:00-07:00",
   "host_profile": "asus-rog-ally-x",
   "support_tier": "certified",
@@ -14,7 +14,7 @@
       "confidence": "verified"
     },
     {
-      "stable_id": "gpd-g1-redacted-hash",
+      "stable_id": "gpd-g1:0123456789abcdef",
       "role": "external",
       "vendor_device": "1002:7480",
       "present": true,
@@ -49,6 +49,23 @@
     "render_gpu_stable_id": "internal-gpu",
     "render_vendor_device": "1002:0000",
     "confidence": "verified"
+  },
+  "disconnect_readiness": {
+    "applicable": true,
+    "scan_complete": true,
+    "ready": true,
+    "egpu_stable_id": "gpd-g1:0123456789abcdef",
+    "clients": [],
+    "storage_devices": 0,
+    "storage_in_use": false,
+    "error": ""
+  },
+  "sleep_guard": {
+    "required": true,
+    "active": true,
+    "confidence": "verified",
+    "reason": "Certified G1 fixture",
+    "error": ""
   },
   "expected_mode": "portable"
 }

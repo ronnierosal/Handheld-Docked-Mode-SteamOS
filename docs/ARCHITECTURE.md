@@ -223,10 +223,20 @@ Hardware profiles classify observations and quirks. They do not select devices
 by enumeration order. The runtime registry selects a known profile only from
 the exact current snapshot; ambiguity receives unknown capabilities.
 
+Host recognition uses reviewed, normalized full DMI tuples rather than vendor,
+product, or board-name substring similarity. G1 recognition requires the full
+DRM/PCI/USB4 topology, expected bound drivers, one privacy-preserving USB4
+identity, and an exact backend-only binding between the external GPU and its
+disconnect scan. A profile-like name or matching GPU PCI ID cannot resolve a
+runtime profile.
+
 Profiles will expose conservative capabilities for eGPU transport, presentation,
 audio, controller handoff, sleep behavior, and removal. A capability must be
 supported by mechanism and evidence; unknown hardware receives no mutation
 capability. Host and eGPU capabilities compose instead of forking the core.
+The read-only diagnostic contract serializes these axes independently with a
+typed value, confidence, and categorical evidence basis. It does not expose the
+stable eGPU identity used for backend revalidation.
 
 ## Privilege boundary
 

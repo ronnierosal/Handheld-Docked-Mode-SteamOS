@@ -70,7 +70,13 @@ def match_gpd_g1(
     card = candidates[0]
     by_bdf = {record.bdf: record for record in pci_devices}
     gpu = by_bdf.get(card.pci_bdf)
-    if gpu is None or _identity(gpu) != GPU_ID or not gpu.class_code.startswith("0x0300"):
+    if (
+        gpu is None
+        or _identity(gpu) != GPU_ID
+        or not gpu.class_code.startswith("0x0300")
+        or gpu.driver != "amdgpu"
+        or card.driver != "amdgpu"
+    ):
         return GpdG1Match(True, False, gpu_bdf=card.pci_bdf, reason="GPU PCI record is incomplete")
 
     root_candidates = [
@@ -87,7 +93,11 @@ def match_gpd_g1(
             for ancestor in record.ancestry
         )
     ]
-    if len(top_level_roots) != 1 or not top_level_roots[0].removable:
+    if (
+        len(top_level_roots) != 1
+        or not top_level_roots[0].removable
+        or top_level_roots[0].driver != "pcieport"
+    ):
         return GpdG1Match(
             True,
             False,
@@ -108,7 +118,13 @@ def match_gpd_g1(
         for record in subtree
         if record.bdf not in allowed and not record.class_code.startswith("0x0604")
     ]
-    if len(audio) != 1 or len(xhci) != 1 or unexpected:
+    if (
+        len(audio) != 1
+        or len(xhci) != 1
+        or audio[0].driver != "snd_hda_intel"
+        or xhci[0].driver != "xhci_hcd"
+        or unexpected
+    ):
         return GpdG1Match(
             True,
             False,

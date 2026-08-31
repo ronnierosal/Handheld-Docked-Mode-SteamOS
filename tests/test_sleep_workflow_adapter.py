@@ -24,18 +24,6 @@ FIXTURES = ROOT / "tests" / "fixtures"
 
 def snapshot(name):
     value = json.loads((FIXTURES / name).read_text(encoding="utf-8"))
-    if name == "connected-internal.json":
-        value["gpus"][1]["stable_id"] = "gpd-g1:exact-test-identity"
-        value["disconnect_readiness"] = {
-            "applicable": True,
-            "scan_complete": True,
-            "ready": True,
-            "egpu_stable_id": "gpd-g1:exact-test-identity",
-            "clients": [],
-            "storage_devices": 0,
-            "storage_in_use": False,
-            "error": "",
-        }
     return snapshot_from_dict(value)
 
 

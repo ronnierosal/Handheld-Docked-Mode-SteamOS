@@ -53,6 +53,47 @@ export interface SleepGuardPayload {
   error: string;
 }
 
+export type ProfileResolutionStatus = "exact" | "absent" | "unknown";
+
+export type HardwareCapabilityAxis =
+  | "egpu_support"
+  | "egpu_transport"
+  | "external_display_output"
+  | "display_handoff"
+  | "external_audio_output"
+  | "audio_handoff"
+  | "internal_controller_suppression"
+  | "external_controller_promotion"
+  | "external_controller_disconnect"
+  | "external_controller_power_off"
+  | "power_button_interception"
+  | "sleep_behavior"
+  | "removal_behavior";
+
+export interface HardwareCapabilityDiagnostic {
+  axis: HardwareCapabilityAxis;
+  value: string;
+  confidence: "unknown" | "observed" | "verified";
+  basis:
+    | "exact_host_profile"
+    | "exact_egpu_profile"
+    | "composed_exact_profiles"
+    | "incomplete_profile_set";
+}
+
+export interface HardwareProfileDiagnostics {
+  schema_version: number;
+  host: {
+    status: ProfileResolutionStatus;
+    profile_id: string;
+  };
+  egpu: {
+    status: ProfileResolutionStatus;
+    profile_id: string;
+  };
+  capabilities: HardwareCapabilityDiagnostic[];
+}
+
 export interface SnapshotPayload {
   delivery_schema_version: number;
   snapshot: {
@@ -81,6 +122,7 @@ export interface SnapshotPayload {
       stage: string;
       duration_ms: number;
     }>;
+    hardware_profiles: HardwareProfileDiagnostics;
   };
 }
 

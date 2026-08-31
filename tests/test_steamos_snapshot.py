@@ -175,7 +175,15 @@ class SteamOsSnapshotTests(unittest.TestCase):
         self.assertTrue(report.snapshot.sleep_guard.active)
         payload = report_to_dict(report)
         self.assertEqual(payload["inference"]["mode"], "tv_docked")
-        self.assertEqual(payload["diagnostics"]["schema_version"], 1)
+        self.assertEqual(payload["diagnostics"]["schema_version"], 2)
+        self.assertEqual(
+            payload["diagnostics"]["hardware_profiles"]["host"]["status"],
+            "exact",
+        )
+        self.assertEqual(
+            payload["diagnostics"]["hardware_profiles"]["egpu"]["status"],
+            "exact",
+        )
         self.assertEqual(
             [row["stage"] for row in payload["diagnostics"]["timings_ms"]],
             [
@@ -292,6 +300,48 @@ class SteamOsSnapshotTests(unittest.TestCase):
             "gamescope_environment_unreadable",
             {blocker.code for blocker in snapshot.blockers},
         )
+
+    def test_similar_host_name_never_receives_ally_capabilities(self):
+        internal = DrmCardRecord(
+            "card0",
+            "0000:01:00.0",
+            "0x1002",
+            "0x0001",
+            True,
+            "amdgpu",
+            (DrmConnectorRecord("card0", "eDP-1", "connected", "enabled"),),
+        )
+        process = GamescopeProcessRecord(
+            40,
+            ("gamescope", "-e", "-O", "*,eDP-1"),
+            ("*", "eDP-1"),
+            "",
+            "",
+            True,
+        )
+        discovery = SteamOsDiscovery(
+            drm=Fixed((internal,)),
+            gamescope=Fixed(GamescopeScan(process, 1)),
+            game_scopes=Fixed(GameScopeScan(GameState.IDLE)),
+            pci_usb4=FixedTopology((), ()),
+            host=Fixed(HostRecord("ASUS Compatible", "ROG Ally X Pro RC72LA", "RC72LA")),
+            clock=lambda: datetime(2026, 8, 31, tzinfo=timezone.utc),
+        )
+
+        report = SnapshotService(discovery).observe()
+        payload = report_to_public_dict(report)
+        profiles = payload["diagnostics"]["hardware_profiles"]
+        capabilities = {item["axis"]: item for item in profiles["capabilities"]}
+
+        self.assertEqual(report.snapshot.host_profile, "unknown")
+        self.assertEqual(report.snapshot.support_tier, SupportTier.UNKNOWN)
+        self.assertIn(
+            "host_profile_unknown",
+            {blocker.code for blocker in report.snapshot.blockers},
+        )
+        self.assertEqual(profiles["host"]["status"], "unknown")
+        self.assertEqual(capabilities["egpu_transport"]["value"], "unknown")
+        self.assertEqual(capabilities["display_handoff"]["value"], "unknown")
 
 
 if __name__ == "__main__":

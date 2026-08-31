@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import sys
 import unittest
 from pathlib import Path
@@ -11,7 +12,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from hdm.adapters.steamos.drm import DrmCardRecord  # noqa: E402
 from hdm.adapters.steamos.host import HostRecord  # noqa: E402
 from hdm.adapters.steamos.pci import PciDeviceRecord, Usb4DeviceRecord  # noqa: E402
-from hdm.profiles.ally_x import matches_ally_x  # noqa: E402
+from hdm.profiles.ally_x import match_ally_x, matches_ally_x  # noqa: E402
 from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
 
 
@@ -74,7 +75,24 @@ class HardwareProfileTests(unittest.TestCase):
             "ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "RC72LA"
         )
         self.assertTrue(matches_ally_x(host))
+        self.assertTrue(
+            matches_ally_x(
+                HostRecord(
+                    "  ASUSTeK   COMPUTER INC. ",
+                    "ROG Ally X RC72LA",
+                    "RC72LA",
+                )
+            )
+        )
         self.assertFalse(matches_ally_x(HostRecord("Valve", "Jupiter", "Steam Deck")))
+
+    def test_rejects_similar_or_incomplete_ally_identity(self):
+        similar = HostRecord("ASUS Compatible", "ROG Ally X Pro RC72LA", "RC72LA")
+        incomplete = HostRecord("ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "")
+        self.assertFalse(matches_ally_x(similar))
+        self.assertIn("exact", match_ally_x(similar).reason)
+        self.assertFalse(matches_ally_x(incomplete))
+        self.assertIn("incomplete", match_ally_x(incomplete).reason)
 
     def test_verifies_exact_g1_topology(self):
         card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")
@@ -108,6 +126,31 @@ class HardwareProfileTests(unittest.TestCase):
         result = match_gpd_g1((card,), g1_records(), usb4)
         self.assertFalse(result.verified)
         self.assertIn("USB4", result.reason)
+
+    def test_rejects_unbound_or_unexpected_profile_drivers(self):
+        card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "vfio-pci")
+        usb4 = (Usb4DeviceRecord("0-1", "Intel", "Tapex Creek", True, "a" * 64),)
+        result = match_gpd_g1((card,), g1_records(), usb4)
+        self.assertFalse(result.verified)
+        self.assertIn("GPU PCI record", result.reason)
+
+        records = tuple(
+            dataclasses.replace(record, driver="")
+            if (record.vendor, record.device) == ("0x1002", "0xab30")
+            else record
+            for record in g1_records()
+        )
+        result = match_gpd_g1(
+            (
+                DrmCardRecord(
+                    "card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu"
+                ),
+            ),
+            records,
+            usb4,
+        )
+        self.assertFalse(result.verified)
+        self.assertIn("subtree", result.reason)
 
 
 if __name__ == "__main__":

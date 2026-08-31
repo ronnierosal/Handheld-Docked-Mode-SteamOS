@@ -72,8 +72,24 @@ function payload() {
     },
     inference: { mode: "tv_docked", reasons: [] },
     diagnostics: {
-      schema_version: 1,
+      schema_version: 2,
       timings_ms: [{ stage: "snapshot_total", duration_ms: 25.4 }],
+      hardware_profiles: {
+        schema_version: 1,
+        host: { status: "exact", profile_id: "asus-rog-ally-x" },
+        egpu: { status: "exact", profile_id: "gpd-g1-rx7600mxt-titan-ridge" },
+        capabilities: [
+          { axis: "egpu_transport", value: "usb4", confidence: "verified", basis: "exact_host_profile" },
+          { axis: "external_display_output", value: "verified", confidence: "verified", basis: "exact_egpu_profile" },
+          { axis: "display_handoff", value: "experimental", confidence: "observed", basis: "composed_exact_profiles" },
+          { axis: "external_audio_output", value: "verified", confidence: "verified", basis: "exact_egpu_profile" },
+          { axis: "audio_handoff", value: "experimental", confidence: "observed", basis: "composed_exact_profiles" },
+          { axis: "external_controller_promotion", value: "unknown", confidence: "unknown", basis: "exact_host_profile" },
+          { axis: "internal_controller_suppression", value: "unknown", confidence: "unknown", basis: "exact_host_profile" },
+          { axis: "sleep_behavior", value: "disconnect_before_sleep_verified", confidence: "verified", basis: "exact_egpu_profile" },
+          { axis: "removal_behavior", value: "shutdown_before_disconnect", confidence: "verified", basis: "exact_egpu_profile" },
+        ],
+      },
     },
   };
 }
@@ -90,6 +106,9 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /sample-client/);
   assert.match(text, /drm render/);
   assert.match(text, /snapshot_total 25ms/);
+  assert.match(text, /host exact/);
+  assert.match(text, /usb4/);
+  assert.match(text, /shutdown before disconnect/);
   for (const forbidden of [
     "private-gpu-id",
     "private-display-id",

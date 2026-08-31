@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 3,
   "observed_at": "2026-08-30T19:10:00-07:00",
   "host_profile": "asus-rog-ally-x",
   "support_tier": "certified",

@@ -45,12 +45,29 @@ this document and dated validation records.
 | xHCI | Intel `8086:15f0` |
 | Observed USB4 device | Intel Tapex Creek |
 
+The certified host matcher accepts only the normalized full DMI tuple captured
+from the validated Ally X: `ASUSTeK COMPUTER INC.` / `ROG Ally X RC72LA` /
+`RC72LA`. Similar product names, partial fields, and substring matches remain
+Unknown. A firmware update that changes this tuple requires review and new
+read-only evidence before the profile matcher is expanded.
+
 The complete topology and privacy-preserving USB4 identity must be verified; the
 GPU PCI ID alone does not prove that the device is the certified G1. The live G1
 topology contains one top-level removable Titan Ridge bridge and multiple
 downstream `8086:15ef` bridge functions. The USB4 host-router record has no
 external-device identity and is not counted as a connected peripheral; any
 other unidentified authorized USB4 node remains a certification blocker.
+The GPU DRM and PCI functions must be bound to `amdgpu`, the removable bridge to
+`pcieport`, HDMI audio to `snd_hda_intel`, and xHCI to `xhci_hcd`. Runtime G1
+resolution also requires the exact hashed-identity form to match the backend
+disconnect-scan binding; neither value is delivered to the frontend.
+
+Read-only diagnostics report independent transport, display output/handoff,
+audio output/handoff, controller, power-button, sleep, and removal axes. For the
+current profile, output observation is Verified, display/audio handoff remains
+Experimental, controller capabilities remain Unknown, sleep requires the
+verified disconnect-first workflow, and removal remains
+`shutdown_before_disconnect`.
 
 ## eGPUBridge reference evidence
 

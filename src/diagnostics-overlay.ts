@@ -1,4 +1,4 @@
-import type { SnapshotPayload } from "./backend";
+import type { HardwareCapabilityAxis, SnapshotPayload } from "./backend";
 
 
 export interface DiagnosticOverlayRow {
@@ -25,11 +25,40 @@ export function diagnosticOverlayRows(
   const externalGpu = snapshot.gpus.find((gpu) => gpu.role === "external");
   const externalDisplay = snapshot.displays.find((display) => display.kind === "external");
   const disconnect = snapshot.disconnect_readiness;
+  const profiles = payload.diagnostics.hardware_profiles;
+  const capabilities = new Map(
+    profiles.capabilities.map((capability) => [capability.axis, capability]),
+  );
+  const capability = (axis: HardwareCapabilityAxis): string => {
+    const value = capabilities.get(axis);
+    return value ? `${humanize(value.value)} · ${humanize(value.confidence)}` : "unknown";
+  };
   const rows: DiagnosticOverlayRow[] = [
     { name: "Observed mode", value: humanize(payload.inference.mode) },
     { name: "Snapshot schema", value: String(snapshot.schema_version) },
     { name: "Device profile", value: snapshot.host_profile },
     { name: "Support tier", value: humanize(snapshot.support_tier) },
+    {
+      name: "Profile evidence",
+      value: `host ${humanize(profiles.host.status)} · eGPU ${humanize(profiles.egpu.status)}`,
+    },
+    { name: "eGPU transport", value: capability("egpu_transport") },
+    {
+      name: "Display capability",
+      value: `output ${capability("external_display_output")} · handoff ${capability("display_handoff")}`,
+    },
+    {
+      name: "Audio capability",
+      value: `output ${capability("external_audio_output")} · handoff ${capability("audio_handoff")}`,
+    },
+    {
+      name: "Controller capability",
+      value: `promote ${capability("external_controller_promotion")} · suppress ${capability("internal_controller_suppression")}`,
+    },
+    {
+      name: "Sleep and removal",
+      value: `${capability("sleep_behavior")} · ${capability("removal_behavior")}`,
+    },
     {
       name: "Gamescope",
       value: `${yesNoUnknown(snapshot.gamescope.running)} · ${humanize(snapshot.gamescope.confidence)}`,

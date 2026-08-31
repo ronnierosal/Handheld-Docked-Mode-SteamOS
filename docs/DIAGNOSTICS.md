@@ -96,11 +96,18 @@ and attached-storage usage can be inspected. Any exact resource holder or
 mounted/swap storage makes `ready` false. This is evidence only: HDM does not
 signal a process or remove hardware.
 
-The report also has a top-level diagnostics schema `1` with allowlisted stage
-names and millisecond durations for DRM, Gamescope, game state, PCI, USB4, host,
-eGPU identity, disconnect clients, and total snapshot collection. Timings carry
-no paths, device addresses, connector names, process identifiers, or command
-output.
+The report also has a top-level diagnostics schema `2`. It retains schema 1's
+allowlisted stage names and millisecond durations for DRM, Gamescope, game
+state, PCI, USB4, host, eGPU identity, disconnect clients, and total snapshot
+collection. Timings carry no paths, device addresses, connector names, process
+identifiers, or command output. Schema `2` adds the versioned
+`hardware_profiles` record. It reports exact/absent/unknown host and eGPU profile
+resolution plus independent typed capability rows for transport, display,
+audio, controller, power-button, sleep, and removal behavior. Each row contains
+only an axis, categorical value, confidence, and evidence basis. Delivery schema
+`2` carries this record to Decky without exposing DMI strings, PCI/DRM names,
+USB4 hashes, EDIDs, or stable device identities. Unknown or incomplete profile
+sets keep composed handoff capabilities Unknown.
 
 The CLI never acquires an inhibitor. The root Decky backend polls only the host,
 DRM, PCI, and USB4 identity needed for the sleep lease. Candidate G1 presence

@@ -68,7 +68,11 @@ class PublicSnapshotTests(unittest.TestCase):
         client = payload["snapshot"]["disconnect_readiness"]["clients"][0]
         self.assertEqual(client["name"], "ordinary-client")
         self.assertEqual(client["resources"], ["drm_render"])
-        self.assertEqual(payload["delivery_schema_version"], 1)
+        profiles = payload["diagnostics"]["hardware_profiles"]
+        self.assertEqual(profiles["schema_version"], 1)
+        self.assertEqual(profiles["host"]["status"], "exact")
+        self.assertEqual(profiles["egpu"]["status"], "unknown")
+        self.assertEqual(payload["delivery_schema_version"], 2)
 
 
 if __name__ == "__main__":
