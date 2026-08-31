@@ -123,3 +123,21 @@ serialized.
 
 Raw hardware evidence belongs in supervised, redacted test captures and is not
 part of this default payload.
+
+## Temporary verbose logging policy
+
+Normal bounded HDM events remain available for support bundles. Additional
+verbose events are off by default and require explicit player confirmation.
+The only allowed durations are 30 minutes, one hour, two hours (the default
+selection), and until reboot. There is no permanent option.
+
+The policy uses a monotonic deadline, returns automatically to normal logging at
+expiry, sanitizes details before in-memory retention, and retains the existing
+rotating event cap. Consent is held only in memory, so a plugin/service restart
+disables verbose logging. An until-reboot
+session also checks the current boot identity on every status/event operation;
+a changed or unreadable identity disables the session fail closed. Boot identity
+is used only for equality and is never exported.
+
+This controller is implemented and unit tested but is not wired to Decky RPC or
+the UI. No durable consent, arbitrary system log collection, or upload exists.

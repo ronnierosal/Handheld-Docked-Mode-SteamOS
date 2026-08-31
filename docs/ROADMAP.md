@@ -44,6 +44,7 @@ No broader label may be inferred from a narrower one.
 | Narrow POSIX process-signal adapter | Implemented and unit tested, dormant | Decky wiring/RPC and supervised disposable-process proof remain prohibited. |
 | Canonical sleep/disconnect reducer + durable journal projection | Implemented and unit tested, dormant policy only | Game/save/process/display/sleep mechanisms and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
+| Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 
 ## Required architecture corrections
 
@@ -196,7 +197,9 @@ Exit: rollback and disconnect-loss tests pass before certification.
 
 **Status:** PARTIAL POLICY IMPLEMENTED — independent eGPU-handoff and save/sleep
 dimensions, exact-profile evidence, and intentional human-reviewed promotion
-gates are unit tested. No collection, persistence, or publication is enabled.
+gates are unit tested. Explicit opt-in verbose logging durations, expiry,
+rotation, and reboot/reset behavior are also unit tested. No collection UI,
+persistence, publication, or verbose RPC is enabled.
 
 - Add an opt-in overlay and bounded verbose logging with a maximum TTL that
   cannot survive reboot.
