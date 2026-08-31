@@ -1,0 +1,268 @@
+"""Supervised exact-plan facade for the dormant presentation orchestrator."""
+
+from __future__ import annotations
+
+import re
+import secrets
+import threading
+from dataclasses import dataclass
+from typing import Callable, Protocol
+
+from ..domain.control_plane import (
+    ExperimentalTransitionPermit,
+    PlacementState,
+    TransitionOutcome,
+)
+from ..domain.inference import infer_placement
+from ..domain.manual_transition import evidence_from_snapshot, plan_manual_transition
+from ..ports.transition import TransitionObservationPort
+from ..ports.transition_journal import TransitionJournalPort
+from ..profiles.registry import resolve_runtime_profiles
+from .experimental_transition import ExperimentalTransitionApprovalStore
+from .transition_orchestrator import RuntimeTransitionResult, TransitionOrchestrator
+
+
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_.-]{8,64}$")
+
+
+class RuntimeOrchestratorPort(Protocol):
+    def run(self, plan) -> RuntimeTransitionResult: ...
+
+    def recover_interrupted(
+        self, *, recovery_deadline_ms: int = 15_000
+    ) -> RuntimeTransitionResult: ...
+
+
+@dataclass(frozen=True, slots=True)
+class SupervisedTransitionPreview:
+    target: PlacementState
+    current: PlacementState
+    approval_token: str = ""
+    blockers: tuple[str, ...] = ()
+
+    @property
+    def ready(self) -> bool:
+        return not self.blockers
+
+
+@dataclass(frozen=True, slots=True)
+class SupervisedTransitionExecution:
+    accepted: bool
+    code: str
+    operation_id: str = ""
+    outcome: TransitionOutcome | None = None
+    durable: bool = False
+
+
+class SupervisedPresentationTransitionService:
+    def __init__(
+        self,
+        *,
+        observations: TransitionObservationPort,
+        orchestrator: TransitionOrchestrator | RuntimeOrchestratorPort,
+        journal_store: TransitionJournalPort,
+        integration_ready: Callable[[], bool],
+        approvals: ExperimentalTransitionApprovalStore | None = None,
+        identifier_factory: Callable[[], str] | None = None,
+    ) -> None:
+        self._observations = observations
+        self._orchestrator = orchestrator
+        self._journal_store = journal_store
+        self._integration_ready = integration_ready
+        self._approvals = approvals or ExperimentalTransitionApprovalStore()
+        self._identifier_factory = identifier_factory or (
+            lambda: secrets.token_urlsafe(18)
+        )
+        self._lock = threading.Lock()
+
+    def preview(
+        self,
+        target: PlacementState,
+        *,
+        user_confirmed: bool,
+    ) -> SupervisedTransitionPreview:
+        if target not in {PlacementState.PORTABLE, PlacementState.DOCKED_EGPU}:
+            return SupervisedTransitionPreview(
+                target, PlacementState.UNKNOWN, blockers=("placement.target_unsupported",)
+            )
+        observed = self._observe()
+        if observed is None:
+            return SupervisedTransitionPreview(
+                target, PlacementState.UNKNOWN, blockers=("observation.unavailable",)
+            )
+        current = infer_placement(observed.snapshot)
+        resolved = resolve_runtime_profiles(observed.snapshot)
+        evidence = evidence_from_snapshot(
+            observed.snapshot,
+            observed_generation=observed.generation,
+            capabilities=resolved.capabilities,
+        )
+        plan_id = self._identifier()
+        request_id = self._identifier()
+        permit = self._preview_permit(
+            plan_id=plan_id,
+            target=target,
+            generation=observed.generation,
+            evidence=evidence,
+            capabilities=resolved.capabilities,
+        )
+        decision = plan_manual_transition(
+            plan_id=plan_id,
+            request_id=request_id,
+            current=current,
+            target=target,
+            capabilities=resolved.capabilities,
+            evidence=evidence,
+            experimental_permit=permit,
+        )
+        blockers = list(decision.blockers)
+        if not self._ready():
+            blockers.append("integration.not_ready")
+        journal_blocker = self._journal_blocker()
+        if journal_blocker:
+            blockers.append(journal_blocker)
+        if blockers:
+            return SupervisedTransitionPreview(
+                target, current, blockers=tuple(dict.fromkeys(blockers))
+            )
+        token = ""
+        if user_confirmed:
+            token = self._approvals.issue(
+                plan_id=plan_id,
+                observed_generation=observed.generation,
+                target_placement=target,
+                host_profile_id=resolved.capabilities.host_profile_id,
+                egpu_profile_id=resolved.capabilities.egpu_profile_id,
+                egpu_stable_id=evidence.egpu_stable_id,
+                user_confirmed=True,
+            )
+        return SupervisedTransitionPreview(target, current, token)
+
+    def execute(self, approval_token: str) -> SupervisedTransitionExecution:
+        if not self._lock.acquire(blocking=False):
+            return SupervisedTransitionExecution(False, "transition.concurrent_request")
+        try:
+            return self._execute_locked(approval_token)
+        finally:
+            self._lock.release()
+
+    def _execute_locked(self, approval_token: str) -> SupervisedTransitionExecution:
+        try:
+            permit = self._approvals.consume(approval_token)
+        except ValueError:
+            return SupervisedTransitionExecution(False, "transition.approval_invalid")
+        observed = self._observe()
+        if observed is None:
+            return SupervisedTransitionExecution(False, "transition.observation_unavailable")
+        if observed.generation != permit.observed_generation:
+            return SupervisedTransitionExecution(False, "transition.evidence_changed")
+        if not self._ready():
+            return SupervisedTransitionExecution(False, "transition.integration_not_ready")
+        current = infer_placement(observed.snapshot)
+        resolved = resolve_runtime_profiles(observed.snapshot)
+        evidence = evidence_from_snapshot(
+            observed.snapshot,
+            observed_generation=observed.generation,
+            capabilities=resolved.capabilities,
+        )
+        decision = plan_manual_transition(
+            plan_id=permit.plan_id,
+            request_id=f"request-{permit.plan_id}",
+            current=current,
+            target=permit.target_placement,
+            capabilities=resolved.capabilities,
+            evidence=evidence,
+            experimental_permit=permit,
+        )
+        if decision.plan is None:
+            return SupervisedTransitionExecution(False, "transition.preconditions_changed")
+        result = self._orchestrator.run(decision.plan)
+        code = (
+            result.outcome.failure.code
+            if result.outcome.failure is not None
+            else f"transition.{result.outcome.kind.value}"
+        )
+        return SupervisedTransitionExecution(
+            True,
+            code,
+            decision.plan.plan_id,
+            result.outcome,
+            result.durable,
+        )
+
+    def acknowledge(self, operation_id: str) -> bool:
+        if not IDENTIFIER_RE.fullmatch(operation_id):
+            return False
+        try:
+            current = self._journal_store.load_current()
+            if (
+                current is None
+                or not current.terminal
+                or current.operation_id != operation_id
+            ):
+                return False
+            self._journal_store.clear_terminal(operation_id)
+            return True
+        except (OSError, ValueError):
+            return False
+
+    def recover_interrupted(self) -> RuntimeTransitionResult:
+        return self._orchestrator.recover_interrupted()
+
+    @staticmethod
+    def _preview_permit(
+        *,
+        plan_id,
+        target,
+        generation,
+        evidence,
+        capabilities,
+    ):
+        if not all(
+            (
+                evidence.egpu_stable_id,
+                capabilities.host_profile_id,
+                capabilities.egpu_profile_id,
+            )
+        ):
+            return None
+        return ExperimentalTransitionPermit(
+            "preview-permit",
+            plan_id,
+            generation,
+            target,
+            capabilities.host_profile_id,
+            capabilities.egpu_profile_id,
+            evidence.egpu_stable_id,
+        )
+
+    def _identifier(self) -> str:
+        value = self._identifier_factory()
+        if not IDENTIFIER_RE.fullmatch(value):
+            raise ValueError("supervised transition identifier is invalid")
+        return value
+
+    def _ready(self) -> bool:
+        try:
+            return self._integration_ready() is True
+        except Exception:
+            return False
+
+    def _journal_blocker(self) -> str:
+        try:
+            current = self._journal_store.load_current()
+        except Exception:
+            return "journal.unavailable"
+        if current is None:
+            return ""
+        return (
+            "journal.acknowledgement_required"
+            if current.terminal
+            else "journal.recovery_required"
+        )
+
+    def _observe(self):
+        try:
+            return self._observations.observe()
+        except Exception:
+            return None

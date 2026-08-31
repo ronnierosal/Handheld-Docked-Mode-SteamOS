@@ -134,6 +134,15 @@ without promoting that capability. Docked-iGPU, Boosted Handheld, unknown, and
 degraded sources are not silently coerced into this path. See
 [Guarded experimental transitions](EXPERIMENTAL_TRANSITIONS.md).
 
+An unwired supervised facade now joins the planner, experimental approval
+store, durable orchestrator, and journal lifecycle. Read-only preview can model
+one exact Portable↔Docked-eGPU request without issuing consent. Explicit
+confirmation issues a maximum-two-minute single-use permit; execution consumes
+it, requires the same semantic generation and ready integration, reconstructs
+the exact plan, and delegates to the orchestrator. An incomplete journal blocks
+new approval until recovery; a terminal journal blocks until its exact random
+operation ID is acknowledged. No Decky RPC constructs this facade yet.
+
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is
 never planned without verified external input and a verified built-in recovery

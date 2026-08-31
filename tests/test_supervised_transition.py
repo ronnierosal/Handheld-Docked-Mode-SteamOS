@@ -1,0 +1,240 @@
+from __future__ import annotations
+
+import json
+import sys
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "backend"))
+
+from hdm.application.experimental_transition import (  # noqa: E402
+    ExperimentalTransitionApprovalStore,
+)
+from hdm.application.supervised_transition import (  # noqa: E402
+    SupervisedPresentationTransitionService,
+)
+from hdm.application.transition_orchestrator import RuntimeTransitionResult  # noqa: E402
+from hdm.domain.control_plane import (  # noqa: E402
+    PlacementState,
+    TransitionOutcome,
+    TransitionOutcomeKind,
+    WorkflowState,
+)
+from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
+from hdm.domain.transition_journal import (  # noqa: E402
+    JournalEventKind,
+    TransitionJournal,
+    append_journal_entry,
+)
+from hdm.ports.transition import VersionedObservation  # noqa: E402
+
+
+FIXTURES = ROOT / "tests" / "fixtures"
+
+
+def snapshot(name="connected-internal.json", *, game_state=None):
+    value = json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+    if game_state is not None:
+        value["game_state"] = game_state
+    old_ids = {gpu["stable_id"] for gpu in value["gpus"] if gpu["role"] == "external"}
+    for gpu in value["gpus"]:
+        if gpu["role"] == "external":
+            gpu["stable_id"] = "gpd-g1:0123456789abcdef"
+    if value["gamescope"].get("render_gpu_stable_id") in old_ids:
+        value["gamescope"]["render_gpu_stable_id"] = "gpd-g1:0123456789abcdef"
+    return snapshot_from_dict(value)
+
+
+class Observations:
+    def __init__(self, *values):
+        self.values = list(values)
+
+    def observe(self):
+        return self.values.pop(0) if self.values else None
+
+
+class FakeOrchestrator:
+    def __init__(self):
+        self.plans = []
+        self.recoveries = 0
+
+    def run(self, plan):
+        self.plans.append(plan)
+        return RuntimeTransitionResult(
+            None,
+            TransitionOutcome(
+                TransitionOutcomeKind.SUCCEEDED,
+                plan.target_placement,
+                WorkflowState.IDLE,
+            ),
+            True,
+        )
+
+    def recover_interrupted(self, **kwargs):
+        self.recoveries += 1
+        return RuntimeTransitionResult(
+            None,
+            TransitionOutcome(
+                TransitionOutcomeKind.NO_OP,
+                PlacementState.UNKNOWN,
+                WorkflowState.IDLE,
+            ),
+            True,
+        )
+
+
+class JournalStore:
+    def __init__(self, current=None):
+        self.current = current
+
+    def load_current(self):
+        return self.current
+
+    def save(self, journal):
+        self.current = journal
+
+    def clear_terminal(self, operation_id):
+        if self.current and self.current.operation_id == operation_id:
+            self.current = None
+
+
+def approvals():
+    return ExperimentalTransitionApprovalStore(
+        ttl_seconds=30,
+        monotonic=lambda: 10,
+        token_factory=lambda: "experimental_token_0001",
+    )
+
+
+def service(observed, *, ready=True, journal=None):
+    orchestrator = FakeOrchestrator()
+    store = JournalStore(journal)
+    value = SupervisedPresentationTransitionService(
+        observations=observed,
+        orchestrator=orchestrator,
+        journal_store=store,
+        integration_ready=lambda: ready,
+        approvals=approvals(),
+        identifier_factory=iter(("operation-0001", "request-0001")).__next__,
+    )
+    return value, orchestrator, store
+
+
+class SupervisedTransitionTests(unittest.TestCase):
+    def test_preview_requires_ready_integration_and_explicit_approval(self):
+        value, _, _ = service(
+            Observations(VersionedObservation("generation-1", snapshot())),
+            ready=False,
+        )
+        blocked = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=False
+        )
+        self.assertIn("integration.not_ready", blocked.blockers)
+
+        value, _, _ = service(
+            Observations(VersionedObservation("generation-1", snapshot()))
+        )
+        inspection = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=False
+        )
+        self.assertTrue(inspection.ready)
+        self.assertFalse(inspection.approval_token)
+
+    def test_approved_exact_plan_executes_once(self):
+        value, orchestrator, _ = service(
+            Observations(
+                VersionedObservation("generation-1", snapshot()),
+                VersionedObservation("generation-1", snapshot()),
+            )
+        )
+        token = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=True
+        ).approval_token
+        result = value.execute(token)
+        self.assertTrue(result.accepted)
+        self.assertTrue(result.durable)
+        self.assertEqual(result.operation_id, "operation-0001")
+        self.assertEqual(len(orchestrator.plans), 1)
+        self.assertTrue(orchestrator.plans[0].experimental)
+        self.assertEqual(
+            orchestrator.plans[0].target_placement, PlacementState.DOCKED_EGPU
+        )
+        self.assertEqual(value.execute(token).code, "transition.approval_invalid")
+
+    def test_changed_generation_or_game_blocks_without_orchestrator(self):
+        value, orchestrator, _ = service(
+            Observations(
+                VersionedObservation("generation-1", snapshot()),
+                VersionedObservation("generation-2", snapshot()),
+            )
+        )
+        token = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=True
+        ).approval_token
+        self.assertEqual(value.execute(token).code, "transition.evidence_changed")
+        self.assertEqual(orchestrator.plans, [])
+
+        value, _, _ = service(
+            Observations(
+                VersionedObservation(
+                    "generation-1", snapshot(game_state="running")
+                )
+            )
+        )
+        preview = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=True
+        )
+        self.assertIn("game.running", preview.blockers)
+
+    def test_only_exact_terminal_operation_can_be_acknowledged(self):
+        journal = append_journal_entry(
+            TransitionJournal("operation-0001", "request-0001"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="request.accepted",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.BLOCKED,
+            occurred_at="2026-08-31T12:00:01Z",
+            workflow_state=WorkflowState.ACTION_REQUIRED,
+            placement=PlacementState.PORTABLE,
+            code="transition.blocked",
+        )
+        value, _, store = service(Observations(), journal=journal)
+        self.assertFalse(value.acknowledge("operation-other"))
+        self.assertTrue(value.acknowledge("operation-0001"))
+        self.assertIsNone(store.current)
+
+    def test_pending_journal_blocks_new_approval(self):
+        journal = append_journal_entry(
+            TransitionJournal("operation-old", "request-old"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="request.accepted",
+        )
+        value, _, _ = service(
+            Observations(VersionedObservation("generation-1", snapshot())),
+            journal=journal,
+        )
+        preview = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=True
+        )
+        self.assertIn("journal.recovery_required", preview.blockers)
+        self.assertFalse(preview.approval_token)
+
+    def test_interrupted_recovery_delegates_to_orchestrator(self):
+        value, orchestrator, _ = service(Observations())
+        result = value.recover_interrupted()
+        self.assertEqual(result.outcome.kind, TransitionOutcomeKind.NO_OP)
+        self.assertEqual(orchestrator.recoveries, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
