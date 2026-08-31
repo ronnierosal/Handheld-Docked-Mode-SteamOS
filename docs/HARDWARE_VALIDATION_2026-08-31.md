@@ -237,6 +237,9 @@ Inspection found both HDM dialogs explicitly passed the plugin's global
 `window` to Decky's modal helper. HDM executes in the invisible
 SharedJSContext, while Decky's omitted-parent behavior resolves the visible SP
 window. The warning and support-preview call sites now omit that invalid parent
-and retain the non-popout option. The correction requires a fresh build and one
-later supervised visible-dialog proof; the two accepted blocker results do not
+and retain the non-popout option. Corrective commit `c49f01a` passed the full
+local and GitHub CI matrix and was installed through Decky's native flow. The
+installed frontend SHA-256 matched the corrective local bundle, the backend
+restarted cleanly, and the root inhibitor reacquired. One later supervised
+visible-dialog proof remains pending; the two accepted blocker results do not
 count as warning acceptance.
