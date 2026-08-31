@@ -73,6 +73,11 @@ bounded original-request deadline. It cannot show Safe to disconnect from
 software-client readiness alone and cannot continue the original sleep request
 before verified Portable recovery. See [Canonical sleep workflow](SLEEP_WORKFLOW.md).
 
+Asynchronous cable-loss policy can request Portable recovery but can never
+continue sleep. Even when the observed workflow is SleepPendingDisconnect, only
+the canonical reducer may continue the exact unexpired request after separate
+removal and Portable verification. Unknown placement fails closed.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

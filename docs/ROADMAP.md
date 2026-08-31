@@ -166,6 +166,11 @@ removal capability.
 
 ### R5 — Unexpected-undock recovery
 
+**Status:** PURE EVENT POLICY IMPLEMENTED — unsolicited and sleep-pending cable
+loss both route only to Portable recovery; no raw topology event can continue
+sleep. Duplicate Portable events observe stability and unknown placement fails
+closed. Display/audio/controller recovery mechanisms remain designed only.
+
 - Distinguish unsolicited loss from an expected SleepPendingDisconnect event.
 - Restore internal display, audio, and controls; verify Portable; never sleep
   after an unsolicited unplug.

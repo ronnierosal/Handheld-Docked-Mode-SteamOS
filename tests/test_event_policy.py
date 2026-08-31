@@ -26,12 +26,9 @@ class EventPolicyTests(unittest.TestCase):
         self.assertEqual(
             decision.directives, (RecoveryDirective.RECOVER_PORTABLE,)
         )
-        self.assertNotIn(
-            RecoveryDirective.CONTINUE_PENDING_SLEEP_AFTER_RECOVERY,
-            decision.directives,
-        )
+        self.assertEqual(decision.reason_code, "egpu.removed_unexpected_recover")
 
-    def test_expected_sleep_disconnect_continues_only_after_portable_recovery(self):
+    def test_sleep_pending_removal_only_starts_portable_recovery(self):
         decision = decide_topology_event(
             event=TopologyEvent.EGPU_REMOVED,
             placement=PlacementState.DOCKED_EGPU,
@@ -39,12 +36,48 @@ class EventPolicyTests(unittest.TestCase):
         )
         self.assertEqual(
             decision.directives,
-            (
-                RecoveryDirective.RECOVER_PORTABLE,
-                RecoveryDirective.CONTINUE_PENDING_SLEEP_AFTER_RECOVERY,
-            ),
+            (RecoveryDirective.RECOVER_PORTABLE,),
         )
         self.assertEqual(decision.next_workflow, WorkflowState.RETURNING_TO_PORTABLE)
+        self.assertEqual(
+            decision.reason_code,
+            "egpu.removed_sleep_pending_recover",
+        )
+
+    def test_raw_removal_event_never_authorizes_sleep_for_any_workflow(self):
+        for workflow in WorkflowState:
+            with self.subTest(workflow=workflow):
+                decision = decide_topology_event(
+                    event=TopologyEvent.EGPU_REMOVED,
+                    placement=PlacementState.DOCKED_EGPU,
+                    workflow=workflow,
+                )
+                self.assertEqual(
+                    decision.directives,
+                    (RecoveryDirective.RECOVER_PORTABLE,),
+                )
+
+    def test_duplicate_or_unverified_removal_does_not_guess_recovery(self):
+        portable = decide_topology_event(
+            event=TopologyEvent.EGPU_REMOVED,
+            placement=PlacementState.PORTABLE,
+            workflow=WorkflowState.IDLE,
+        )
+        self.assertEqual(
+            portable.directives,
+            (RecoveryDirective.OBSERVE_STABILITY,),
+        )
+        for placement in (PlacementState.UNKNOWN, PlacementState.DEGRADED):
+            with self.subTest(placement=placement):
+                unknown = decide_topology_event(
+                    event=TopologyEvent.EGPU_REMOVED,
+                    placement=placement,
+                    workflow=WorkflowState.SLEEP_PENDING_DISCONNECT,
+                )
+                self.assertEqual(
+                    unknown.directives,
+                    (RecoveryDirective.ACTION_REQUIRED,),
+                )
 
     def test_controller_loss_restores_builtin_only_when_verified_available(self):
         restored = decide_topology_event(

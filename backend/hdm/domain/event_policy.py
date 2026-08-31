@@ -19,7 +19,6 @@ class TopologyEvent(StrEnum):
 class RecoveryDirective(StrEnum):
     OBSERVE_STABILITY = "observe_stability"
     RECOVER_PORTABLE = "recover_portable"
-    CONTINUE_PENDING_SLEEP_AFTER_RECOVERY = "continue_pending_sleep_after_recovery"
     RESTORE_BUILTIN_CONTROLLER = "restore_builtin_controller"
     ACTION_REQUIRED = "action_required"
 
@@ -46,13 +45,26 @@ def decide_topology_event(
         )
 
     if event is TopologyEvent.EGPU_REMOVED:
-        directives = [RecoveryDirective.RECOVER_PORTABLE]
-        if workflow is WorkflowState.SLEEP_PENDING_DISCONNECT:
-            directives.append(RecoveryDirective.CONTINUE_PENDING_SLEEP_AFTER_RECOVERY)
+        if placement is PlacementState.PORTABLE:
+            return EventDecision(
+                (RecoveryDirective.OBSERVE_STABILITY,),
+                WorkflowState.IDLE,
+                "egpu.removed_already_portable",
+            )
+        if placement in {PlacementState.UNKNOWN, PlacementState.DEGRADED}:
+            return EventDecision(
+                (RecoveryDirective.ACTION_REQUIRED,),
+                WorkflowState.ACTION_REQUIRED,
+                "egpu.removed_placement_unverified",
+            )
         return EventDecision(
-            tuple(directives),
+            (RecoveryDirective.RECOVER_PORTABLE,),
             WorkflowState.RETURNING_TO_PORTABLE,
-            "egpu.removed_recover",
+            (
+                "egpu.removed_sleep_pending_recover"
+                if workflow is WorkflowState.SLEEP_PENDING_DISCONNECT
+                else "egpu.removed_unexpected_recover"
+            ),
         )
 
     if event is TopologyEvent.EXTERNAL_CONTROLLER_LOST:
@@ -83,4 +95,3 @@ def decide_topology_event(
         WorkflowState.ACTION_REQUIRED,
         "event.state_unverified",
     )
-

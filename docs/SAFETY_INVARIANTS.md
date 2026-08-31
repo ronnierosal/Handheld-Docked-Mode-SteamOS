@@ -48,6 +48,9 @@ These invariants are release gates, not preferences.
 21. A pending original sleep request is continued only after expected removal
     and Portable recovery are verified and before its deadline. Expired,
     cancelled, unexpected, or out-of-order flows remain awake.
+22. A raw eGPU/display topology event never authorizes sleep. It may start
+    recovery; only the exact canonical sleep transaction may later continue its
+    bound, unexpired original request.
 
 The first milestone is read-only. The approved 0.2 sleep guard is an ephemeral,
 crash-released lease governed by its documented lifecycle state machine. Durable
