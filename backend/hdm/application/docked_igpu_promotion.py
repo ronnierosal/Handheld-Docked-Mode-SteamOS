@@ -116,7 +116,7 @@ class DockedIgpuPromotionFacade:
                 return DockedIgpuPromotionPrepareResult(
                     False, "docked_igpu.placement_changed", preview
                 )
-            if preview.approval_token:
+            if user_confirmed and preview.approval_token:
                 self._current = None
             return DockedIgpuPromotionPrepareResult(
                 True, "docked_igpu.preview_ready", preview

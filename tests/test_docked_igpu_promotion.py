@@ -64,9 +64,10 @@ class Watcher:
 
 
 class Transitions:
-    def __init__(self, *, blockers=(), token=""):
+    def __init__(self, *, blockers=(), token="", return_token_unconfirmed=False):
         self.blockers = blockers
         self.token = token
+        self.return_token_unconfirmed = return_token_unconfirmed
         self.calls = []
 
     def preview(self, target, *, user_confirmed, expected_generation=""):
@@ -74,7 +75,7 @@ class Transitions:
         return SupervisedTransitionPreview(
             target,
             PlacementState.DOCKED_IGPU,
-            self.token if user_confirmed else "",
+            self.token if user_confirmed or self.return_token_unconfirmed else "",
             self.blockers,
         )
 
@@ -119,6 +120,22 @@ class DockedIgpuPromotionFacadeTests(unittest.TestCase):
         self.assertEqual(
             facade.poll(WATCH_ID).code, "docked_igpu.watch_changed"
         )
+
+    def test_unconfirmed_preview_never_consumes_watch_on_unexpected_token(self):
+        facade = DockedIgpuPromotionFacade(
+            watcher=Watcher(),
+            transitions=Transitions(
+                token="unexpected_token_0001", return_token_unconfirmed=True
+            ),
+        )
+        facade.arm()
+        facade.poll(WATCH_ID)
+
+        prepared = facade.prepare(WATCH_ID, user_confirmed=False)
+
+        self.assertTrue(prepared.accepted)
+        self.assertEqual(prepared.preview.approval_token, "unexpected_token_0001")
+        self.assertTrue(facade.cancel(WATCH_ID))
 
     def test_blocked_preview_retains_watch_for_explicit_cancel(self):
         facade = DockedIgpuPromotionFacade(

@@ -33,7 +33,7 @@ No broader label may be inferred from a narrower one.
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
 | Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, and unwired supervised transition facade implemented and simulated | Decky transition controls, startup recovery wiring, and hardware proof remain; preparation cannot restart Gamescope. |
-| Docked-iGPU promotion/recovery path | Implemented and simulated inside the existing durable supervised transition engine, with bounded natural-exit watcher and opaque generation-bound preview composition | Production watcher scheduling, Decky delivery/execution, and hardware proof remain. |
+| Docked-iGPU promotion/recovery path | Implemented and simulated inside the existing durable supervised transition engine, with bounded natural-exit watcher, serialized private lifecycle, and non-authorizing generation-bound inspection | Backend construction/scheduling, Decky delivery and separately gated confirmation/execution, and hardware proof remain. |
 | Process release/termination | Approval/classification, redacted Decky inspect/confirm flow, guarded facade, Linux pidfd adapter, mandatory re-scan runner, root-owned durable pre-signal journal, and no-repeat startup recovery implemented and simulated | Supervised disposable-process proof remains. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
@@ -268,10 +268,14 @@ review, promote, or publish the result.
 Exact idle Docked-iGPU can now be previewed and promoted to Docked-eGPU through
 the existing experimental approval and durable transition engine, with
 Docked-iGPU as the verified rollback target. Automatic natural-game-exit
-detection now exists as a bounded read-only one-shot watcher, but it has no
-scheduler or Decky delivery. An in-memory facade composes its private ready
-generation with the existing supervised preview and consumes the watch only
-after explicit approval-token issuance; it never executes the token. See
+detection now exists as a bounded read-only one-shot watcher. A serialized
+lifecycle owns its private watch, bounded polling, Action Required
+acknowledgement, and unload cleanup. Its identity-free inspection always uses
+an unconfirmed preview and rejects unexpected transition authority. The
+lower-level facade composes the private ready generation with the existing
+supervised preview and can consume the watch only after a separate explicit
+approval-token issuance; neither layer executes the token. Backend
+construction/scheduling and Decky delivery remain absent. See
 [Docked-iGPU workflow](DOCKED_IGPU.md).
 The support-preview comparison adds no scheduler, transition approval, or
 execution authority and never promotes a compatibility record.

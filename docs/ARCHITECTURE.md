@@ -224,6 +224,14 @@ binds preview to the stored generation, requires Docked-iGPU again, and consumes
 the watch only after an explicit approval token is issued. No RPC constructs
 the facade and it does not execute the token.
 
+A serialized lifecycle now owns exactly one facade watch and supplies bounded
+arm/poll timing, retained promotion readiness, Action Required acknowledgement,
+and idempotent unload cancellation. Its read-only inspection always calls the
+facade with `user_confirmed=False`, maps only categorical placement/readiness
+and sanitized blockers, and treats any unexpected approval token as Action
+Required. The lifecycle is implemented and simulated but is not yet constructed
+by the backend, scheduled, or exposed through Decky.
+
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is
 never planned without verified external input and a verified built-in recovery
