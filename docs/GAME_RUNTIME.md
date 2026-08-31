@@ -54,3 +54,28 @@ prove that engine counters are active, and absence from the G1 does not by
 itself identify which other GPU is rendering. The result therefore exposes an
 always-false `proves_rendering_gpu` property and cannot promote compatibility or
 claim Docked-eGPU by itself.
+
+## Bounded active-render evidence
+
+A second dormant read-only service can obtain stronger evidence from DRM
+`fdinfo`. A private binding provider must first resolve one exact GPU stable ID,
+PCI BDF, and render node from the same exact profile snapshot. The procfs
+adapter then requires, for every matching descriptor:
+
+- the exact bound render-node target
+- `amdgpu` as the DRM driver
+- the exact bound PCI identity from `drm-pdev`
+- a categorical DRM client ID
+- bounded engine counters
+- unchanged PID plus process start time around each scan
+
+The service brackets two complete counter samples inside an unchanged exact game
+runtime and waits 50-250 ms through an injected bounded waiter. A counter
+increase is `active`; unchanged counters are only `idle_window`; no matching
+descriptor is `no_client`. A changed client/engine set, decreased counter,
+runtime race, unreadable evidence, or binding conflict is `unknown`.
+
+`active` proves that an exact game process accumulated DRM engine time on that
+exact GPU during that bounded window. It does not prove exclusive use, future
+use, display placement, or broad compatibility. The binding provider is not yet
+implemented or wired, and the path has no Decky RPC or hardware proof.

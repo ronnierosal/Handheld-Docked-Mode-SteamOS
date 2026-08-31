@@ -230,6 +230,13 @@ render-node ownership. PID/start time, exact profile/eGPU identity, complete
 scan, and game classification must all agree. This evidence explicitly does not
 prove active rendering or authorize a placement transition.
 
+A stronger dormant read-only path samples bounded DRM `fdinfo` engine counters
+twice for an exact backend-resolved GPU binding. It requires stable game
+processes, exact render node and PCI identity, unchanged DRM client/engine sets,
+and monotonic counters. Only an observed counter increase proves activity on
+that GPU for the sample window. The private binding provider remains unwired;
+the evidence cannot authorize a transition or certify a game by itself.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. The snapshot,
