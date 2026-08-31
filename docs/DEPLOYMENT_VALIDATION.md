@@ -126,6 +126,21 @@ to idle transitions. Capture redacted before/live/after evidence.
 No automated suspend, reboot, live disconnect, USB4 reset, or destructive
 display/session action is permitted at this stage.
 
+For the presentation path, D5 begins with **preparation only** while the G1 is
+disconnected, the system is verified Portable/idle, and the player is watching:
+
+1. Preview the exact Gamescope user, integration fingerprint, conflicts, and
+   rollback status.
+2. Resolve any competing `PATH` owner explicitly. HDM must not overwrite an
+   eGPUBridge drop-in.
+3. Approve one short-lived preparation token.
+4. Install the exact HDM drop-in, daemon-reload the exact user manager, and
+   verify `gamescope-session.service` remains loaded.
+5. Confirm no Gamescope restart occurred and display, controls, SSH, Steam, and
+   Decky remain healthy.
+
+Preparation is not a display-transition test and does not authorize one.
+
 ### D6 — Physical and access-risk experiments
 
 Create a separate experiment plan with explicit player presence, acceptance
@@ -136,6 +151,14 @@ unplug, and eGPU teardown/removal.
 The current Ally X/G1 profile may not enter a live-removal experiment merely
 because software clients are gone. AMDGPU teardown safety is an independent
 hardware gate.
+
+The first presentation experiment must start G1-disconnected and Portable. It
+restarts Gamescope once through the shim with a Portable target, proves the
+internal display/control/SSH recovery, and proves rollback before any G1/TV
+target is attempted. The later G1/TV attempt requires the game to be idle,
+stable exact G1 and EDID evidence, a fresh single-use Experimental permit, and
+before/attempt/verified-or-rollback captures. A black display, lost input, lost
+SSH, unexpected process restart, or unknown placement stops the stage.
 
 ## Remote-safe harness
 
@@ -180,9 +203,14 @@ cause in source, rebuild one complete artifact, and repeat from D0.
 
 ## Immediate deployment queue
 
-1. With the player present, complete only the corrected persistent warning
-   proof on the already installed commit.
-2. Complete controller-visible support preview/save acceptance separately.
-3. Implement the R1 control-plane and simulator locally.
-4. Deploy R1 first with the G1 disconnected, then perform read-only attachment
-   checks. R1 must not add a mutation RPC.
+1. Build and provenance-record one clean candidate from the current transition
+   foundation; do not deploy mixed artifacts.
+2. With the player present and G1 disconnected, repeat D2 and the corrected
+   persistent-warning proof.
+3. Complete controller-visible support preview/save acceptance separately.
+4. Inspect for the known eGPUBridge/HDM `PATH` conflict before any presentation
+   preparation.
+5. Add and review the controller-facing supervised request facade; keep attach
+   automation disabled.
+6. Run D5 preparation, then schedule the first D6 Portable-only shim restart
+   with the player watching. Do not combine it with a G1/TV transition.

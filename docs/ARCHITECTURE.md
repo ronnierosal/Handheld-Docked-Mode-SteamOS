@@ -85,6 +85,17 @@ source config immediately; a rollback-write failure is reported separately.
 The orchestrator skips a redundant recovery restart when a fresh observation
 already proves the source placement. Neither component is constructed by Decky.
 
+A separate dormant preparation service owns reversible integration activation.
+It issues a maximum-two-minute, single-use approval only from a verified
+Portable, idle, healthy Gamescope observation and binds it to the semantic
+generation, exact Gamescope user, and SHA-256 of the shim plus expected drop-in.
+Execution re-observes all evidence, installs the fixed file, rechecks the
+fingerprint/user, reloads the fixed user manager, and verifies the fixed unit.
+It never restarts Gamescope. A reload/verification failure removes a newly
+installed drop-in and reloads again; incomplete rollback is Action Required.
+The application service depends only on narrow ports and is not exposed by
+Decky.
+
 A packaged but inactive Gamescope shim provides the first presentation
 mechanism boundary. It reads one strict, bounded, boot-scoped config from a
 fixed state root, removes inherited eGPU render selection, and applies an

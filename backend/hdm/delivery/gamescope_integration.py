@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import secrets
@@ -11,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from ..adapters.steamos.gamescope_user import GamescopeUserContext
+from ..ports.presentation_activation import GamescopeUserContext
 
 
 DROPIN_NAME = "90-handheld-dock-mode.conf"
@@ -104,6 +105,18 @@ class GamescopeIntegrationStore:
             f'Environment="PATH={path_value}"\n'
             f'Environment="HDM_STATE_ROOT={state_root}"\n'
         )
+
+    def activation_fingerprint(self) -> str:
+        if not self._shim_ready():
+            raise ValueError("Gamescope shim is unavailable")
+        data = self._shim.read_bytes()
+        if len(data) > MAX_DROPIN_BYTES:
+            raise ValueError("Gamescope shim exceeds its bound")
+        digest = hashlib.sha256()
+        digest.update(data)
+        digest.update(b"\0")
+        digest.update(self.expected_text().encode("utf-8"))
+        return digest.hexdigest()
 
     def status(self) -> GamescopeIntegrationStatus:
         try:

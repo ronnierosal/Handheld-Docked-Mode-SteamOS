@@ -85,6 +85,16 @@ immediately restores the config for the still-observed source placement. The
 orchestrator remains responsible for fresh placement verification and bounded
 recovery after an accepted queue operation.
 
+Integration preparation has its own approval boundary. A short-lived,
+single-use token is bound to a verified Portable/idle semantic observation, the
+exact Gamescope user, and the shim/drop-in fingerprint. Preparation may install
+the fixed reversible drop-in, daemon-reload the exact user manager, and verify
+the fixed service, but it never restarts Gamescope. Any evidence change consumes
+the token without mutation. A failure after a new install removes the HDM file
+and reloads the user manager; failure to complete that rollback is Action
+Required. This service is packaged for further validation work but remains
+unconstructed and has no public RPC.
+
 ## Certification boundary
 
 An approved Experimental plan authorizes one controlled attempt after the

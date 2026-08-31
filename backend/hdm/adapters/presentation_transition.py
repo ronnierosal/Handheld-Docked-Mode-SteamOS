@@ -6,9 +6,7 @@ from typing import Callable, Protocol
 
 from .steamos.commands import (
     UserServiceCommandRunner,
-    UserServiceOperation,
 )
-from .steamos.gamescope_user import GamescopeUserResolution
 from ..delivery.gamescope_integration import GamescopeIntegrationStore
 from ..delivery.presentation_config import PresentationConfigStore
 from ..domain.control_plane import (
@@ -26,6 +24,10 @@ from ..domain.models import (
     ObservedSnapshot,
 )
 from ..ports.transition import MechanismResult
+from ..ports.presentation_activation import (
+    GamescopeUserResolution,
+    UserServiceOperation,
+)
 from ..profiles.registry import resolve_runtime_profiles
 
 

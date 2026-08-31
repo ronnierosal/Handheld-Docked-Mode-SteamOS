@@ -6,9 +6,10 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass
-from enum import StrEnum
 from pathlib import Path
 from typing import Sequence
+
+from ...ports.presentation_activation import UserServiceOperation
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,12 +29,6 @@ class CommandResult:
 class ManagedProcessStatus:
     running: bool
     error: str = ""
-
-
-class UserServiceOperation(StrEnum):
-    DAEMON_RELOAD = "daemon_reload"
-    VERIFY_GAMESCOPE_UNIT = "verify_gamescope_unit"
-    RESTART_GAMESCOPE_SESSION = "restart_gamescope_session"
 
 
 @dataclass(frozen=True, slots=True)

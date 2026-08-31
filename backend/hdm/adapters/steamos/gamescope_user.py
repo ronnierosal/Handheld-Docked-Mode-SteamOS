@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import re
 import stat
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Protocol
 
+from ...ports.presentation_activation import (
+    GamescopeUserContext,
+    GamescopeUserResolution,
+)
 from .gamescope import GamescopeScan
 
 
@@ -19,26 +22,6 @@ class PasswordRecord(Protocol):
     pw_uid: int
     pw_gid: int
     pw_dir: str
-
-
-@dataclass(frozen=True, slots=True)
-class GamescopeUserContext:
-    username: str
-    uid: int
-    gid: int
-    home: Path
-    runtime_directory: Path
-    bus_path: Path
-
-
-@dataclass(frozen=True, slots=True)
-class GamescopeUserResolution:
-    context: GamescopeUserContext | None
-    error_code: str = ""
-
-    @property
-    def ok(self) -> bool:
-        return self.context is not None and not self.error_code
 
 
 def _password_for_uid(uid: int) -> PasswordRecord:
