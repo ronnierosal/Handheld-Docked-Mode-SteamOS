@@ -24,6 +24,7 @@ const definePlugin = (fn) => {
 };
 
 const getSnapshot = callable("get_snapshot");
+const getPeripheralStatus = callable("get_peripheral_status");
 const getDockedIgpuStatus = callable("get_docked_igpu_status");
 const acknowledgeDockedIgpuStatus = callable("acknowledge_docked_igpu_status");
 const getDiagnosticLoggingStatus = callable("get_diagnostic_logging_status");
@@ -100,7 +101,7 @@ function humanize(value) {
 function yesNoUnknown(value) {
     return value === true ? "yes" : value === false ? "no" : "unknown";
 }
-function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus = null) {
+function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus = null, peripheralStatus = null) {
     if (!payload) {
         return [];
     }
@@ -188,6 +189,18 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
         {
             name: "Verbose logging",
             value: diagnosticLoggingLabel(loggingStatus),
+        },
+        {
+            name: "Peripheral observation",
+            value: peripheralStatus
+                ? `controller ${peripheralStatus.controller.exact ? "mapped" : "unmapped"} · audio ${peripheralStatus.audio.exact ? "mapped" : "unmapped"}`
+                : "unavailable",
+        },
+        {
+            name: "Peripheral evidence",
+            value: peripheralStatus
+                ? `${humanize(peripheralStatus.controller.code)} · ${humanize(peripheralStatus.audio.code)}`
+                : "unavailable",
         },
     ];
     rows.push(...(dockedIgpuStatus
@@ -630,6 +643,7 @@ function preflightObservation(payload) {
 }
 function Content({ preflight }) {
     const [payload, setPayload] = SP_REACT.useState(null);
+    const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
     const [dockedIgpuStatus, setDockedIgpuStatus] = SP_REACT.useState(null);
     const [dockedIgpuMessage, setDockedIgpuMessage] = SP_REACT.useState("");
     const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = SP_REACT.useState(null);
@@ -699,14 +713,16 @@ function Content({ preflight }) {
             setError("");
         }
         try {
-            const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus] = await Promise.all([
+            const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus] = await Promise.all([
                 getSnapshot(),
                 getDockedIgpuStatus().catch(() => null),
                 getDiagnosticLoggingStatus().catch(() => null),
+                getPeripheralStatus().catch(() => null),
             ]);
             setPayload(nextPayload);
             setDockedIgpuStatus(nextDockedIgpuStatus);
             setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
+            setPeripheralStatus(nextPeripheralStatus);
             setError("");
             lastSnapshotAt.current = Date.now();
             setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -763,7 +779,7 @@ function Content({ preflight }) {
                 : disconnect.ready
                     ? "Ready"
                     : "Blocked";
-    const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus, diagnosticLoggingStatus);
+    const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus);
     const acknowledgeDockedIgpuWatch = SP_REACT.useCallback(async () => {
         setDockedIgpuMessage("");
         try {
