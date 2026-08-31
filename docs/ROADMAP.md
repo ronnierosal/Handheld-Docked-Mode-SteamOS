@@ -314,7 +314,10 @@ hashed private bindings; absent supervised mapping it reports controller
 identity/default audio as unverified and authorizes no steps. See
 [Controller and audio handoff foundation](PERIPHERAL_HANDOFF.md). The optional
 troubleshooting overlay exposes only the associated categorical mapped/unmapped
-diagnostics and remains non-authorizing.
+diagnostics and remains non-authorizing. Mapping evidence is now typed,
+reviewed, and bound to the complete opaque inventory fingerprint; a changed
+inventory makes it stale and still cannot verify controller input or audio
+output usability.
 
 - Add profile capabilities and independently observable input/audio state.
 - Preserve a usable fallback before suppressing built-in controls or changing

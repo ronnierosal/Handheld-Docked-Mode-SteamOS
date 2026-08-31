@@ -54,6 +54,10 @@ class PeripheralPlanStatus(StrEnum):
     ACTION_REQUIRED = "action_required"
 
 
+class PeripheralMappingEvidenceKind(StrEnum):
+    SUPERVISED_HARDWARE_TEST = "supervised_hardware_test"
+
+
 class PeripheralStepKind(StrEnum):
     PROMOTE_EXTERNAL_CONTROLLER = "promote_external_controller"
     SELECT_EXTERNAL_AUDIO = "select_external_audio"
@@ -127,6 +131,72 @@ class PeripheralObservation:
             self.sample_id
         ):
             raise ValueError("peripheral observation identity is invalid")
+
+
+@dataclass(frozen=True, slots=True)
+class PeripheralIdentityHints:
+    """Private opaque bindings from one explicitly reviewed mapping exercise."""
+
+    builtin_controller_binding: str = ""
+    external_controller_binding: str = ""
+    current_audio_binding: str = ""
+    external_audio_binding: str = ""
+    portable_audio_binding: str = ""
+
+    def __post_init__(self) -> None:
+        values = (
+            self.builtin_controller_binding,
+            self.external_controller_binding,
+            self.current_audio_binding,
+            self.external_audio_binding,
+            self.portable_audio_binding,
+        )
+        if any(value and not is_peripheral_token(value) for value in values):
+            raise ValueError("peripheral mapping binding must be opaque")
+        if (
+            self.builtin_controller_binding
+            and self.builtin_controller_binding == self.external_controller_binding
+        ):
+            raise ValueError("built-in and external controller bindings must differ")
+
+
+@dataclass(frozen=True, slots=True)
+class PeripheralMappingEvidence:
+    """Private reviewed mapping, bound to exactly one inventory fingerprint.
+
+    This is identity evidence only. It is deliberately insufficient to claim a
+    usable controller, a default audio output, or authority for a handoff.
+    """
+
+    mapping_id: str
+    inventory_generation: str
+    captured_at: str
+    kind: PeripheralMappingEvidenceKind
+    intentional_test: bool
+    reviewed: bool
+    hints: PeripheralIdentityHints
+
+    def __post_init__(self) -> None:
+        if not is_peripheral_token(self.mapping_id) or not is_peripheral_token(
+            self.inventory_generation
+        ):
+            raise ValueError("peripheral mapping evidence identity is invalid")
+        if not self.captured_at:
+            raise ValueError("peripheral mapping evidence timestamp is required")
+        if self.kind is not PeripheralMappingEvidenceKind.SUPERVISED_HARDWARE_TEST:
+            raise ValueError("peripheral mapping evidence kind is invalid")
+        if not self.intentional_test or not self.reviewed:
+            raise ValueError("peripheral mapping evidence requires intentional review")
+        if not any(
+            (
+                self.hints.builtin_controller_binding,
+                self.hints.external_controller_binding,
+                self.hints.current_audio_binding,
+                self.hints.external_audio_binding,
+                self.hints.portable_audio_binding,
+            )
+        ):
+            raise ValueError("peripheral mapping evidence requires a binding")
 
 
 def _validate_subsystem_status(complete: bool, exact: bool, failure_code: str) -> None:

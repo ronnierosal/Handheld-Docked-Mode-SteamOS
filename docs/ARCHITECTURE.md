@@ -270,6 +270,11 @@ session command. Unmapped controller identity and unobserved default audio both
 remain non-exact and non-actionable. Profile-specific mapping, delivery, and
 mechanisms remain absent.
 
+Any future profile-specific mapping is typed reviewed supervised evidence bound
+to the complete opaque inventory fingerprint. A changed inventory invalidates
+it for both subsystems. It remains identity evidence only and cannot verify a
+working controller/default output or authorize a handoff.
+
 Its semantic generation includes the complete private hashed inventory and its
 collection sample changes every scan. This lets a future transaction reject
 topology changes without treating timestamp-only refresh as a semantic change.

@@ -16,6 +16,8 @@ from ...domain.peripheral_handoff import (
     AudioOutput,
     AudioPeripheralState,
     ControllerPeripheralState,
+    PeripheralIdentityHints,
+    PeripheralMappingEvidence,
     PeripheralObservation,
 )
 
@@ -55,17 +57,6 @@ class PeripheralInventory:
     audio_complete: bool = False
     audio_bindings: tuple[str, ...] = field(default_factory=tuple)
     audio_error: str = ""
-
-
-@dataclass(frozen=True, slots=True)
-class PeripheralIdentityHints:
-    """Private backend-only bindings captured during a supervised mapping test."""
-
-    builtin_controller_binding: str = ""
-    external_controller_binding: str = ""
-    current_audio_binding: str = ""
-    external_audio_binding: str = ""
-    portable_audio_binding: str = ""
 
 
 class SteamOsPeripheralInventory:
@@ -125,21 +116,22 @@ class SteamOsPeripheralObservationAdapter:
     def __init__(
         self,
         inventory: SteamOsPeripheralInventory | None = None,
-        hints: PeripheralIdentityHints = PeripheralIdentityHints(),
+        mapping: PeripheralMappingEvidence | None = None,
         *,
         generation_factory=None,
         sample_factory=None,
     ) -> None:
         self._inventory = inventory or SteamOsPeripheralInventory()
-        self._hints = hints
+        self._mapping = mapping
         self._generation_factory = generation_factory
         self._sample_factory = sample_factory
         self._sample_counter = 0
 
     def observe(self) -> PeripheralObservation:
         inventory = self._inventory.scan()
-        controller = self._controller(inventory)
-        audio = self._audio(inventory)
+        hints, mapping_error = self._hints_for(inventory)
+        controller = self._controller(inventory, hints, mapping_error)
+        audio = self._audio(inventory, hints, mapping_error)
         generation = (
             self._generation_factory()
             if self._generation_factory is not None
@@ -160,6 +152,31 @@ class SteamOsPeripheralObservationAdapter:
             controller=controller,
             audio=audio,
         )
+
+    @staticmethod
+    def inventory_generation(inventory: PeripheralInventory) -> str:
+        """Return the opaque semantic inventory identity for mapping evidence."""
+        material = {
+            "controller_complete": inventory.controller_complete,
+            "controller_bindings": inventory.controller_bindings,
+            "controller_error": inventory.controller_error,
+            "audio_complete": inventory.audio_complete,
+            "audio_bindings": inventory.audio_bindings,
+            "audio_error": inventory.audio_error,
+        }
+        return hashlib.sha256(
+            json.dumps(material, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+
+    def _hints_for(
+        self, inventory: PeripheralInventory
+    ) -> tuple[PeripheralIdentityHints, str]:
+        mapping = self._mapping
+        if mapping is None:
+            return PeripheralIdentityHints(), ""
+        if mapping.inventory_generation != self.inventory_generation(inventory):
+            return PeripheralIdentityHints(), "peripheral.mapping_stale"
+        return mapping.hints, ""
 
     @staticmethod
     def _generation(
@@ -201,16 +218,20 @@ class SteamOsPeripheralObservationAdapter:
             json.dumps(semantic, sort_keys=True, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
 
-    def _controller(self, inventory: PeripheralInventory) -> ControllerPeripheralState:
+    def _controller(
+        self,
+        inventory: PeripheralInventory,
+        hints: PeripheralIdentityHints,
+        mapping_error: str,
+    ) -> ControllerPeripheralState:
         if not inventory.controller_complete:
             return ControllerPeripheralState(
                 False, False, inventory.controller_error, "", None, False, False, "", None, False
             )
-        hints = self._hints
         known = {value for value in (hints.builtin_controller_binding, hints.external_controller_binding) if value}
-        if not hints.builtin_controller_binding or set(inventory.controller_bindings) != known:
+        if mapping_error or not hints.builtin_controller_binding or set(inventory.controller_bindings) != known:
             return ControllerPeripheralState(
-                True, False, "controller.identity_unmapped", "", None, False, False, "", None, False
+                True, False, mapping_error or "controller.identity_unmapped", "", None, False, False, "", None, False
             )
         return ControllerPeripheralState(
             True,
@@ -225,12 +246,16 @@ class SteamOsPeripheralObservationAdapter:
             False,
         )
 
-    def _audio(self, inventory: PeripheralInventory) -> AudioPeripheralState:
+    def _audio(
+        self,
+        inventory: PeripheralInventory,
+        hints: PeripheralIdentityHints,
+        mapping_error: str,
+    ) -> AudioPeripheralState:
         if not inventory.audio_complete:
             return AudioPeripheralState(
                 False, False, inventory.audio_error, AudioOutput.UNKNOWN, "", False, "", None, False, "", None, False, False
             )
-        hints = self._hints
         known = {
             value
             for value in (
@@ -240,9 +265,9 @@ class SteamOsPeripheralObservationAdapter:
             )
             if value
         }
-        if not known or not set(inventory.audio_bindings).issuperset(known):
+        if mapping_error or not known or not set(inventory.audio_bindings).issuperset(known):
             return AudioPeripheralState(
-                True, False, "audio.identity_unmapped", AudioOutput.UNKNOWN, "", False, "", None, False, "", None, False, False
+                True, False, mapping_error or "audio.identity_unmapped", AudioOutput.UNKNOWN, "", False, "", None, False, "", None, False, False
             )
         return AudioPeripheralState(
             True,

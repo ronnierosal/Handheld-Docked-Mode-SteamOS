@@ -18,9 +18,11 @@ R7b adds a bounded read-only SteamOS sysfs inventory for gamepad-capable input
 nodes and sound cards. It hashes node paths into private opaque bindings and
 retains no names or paths. By default every controller identity remains
 unmapped and audio's current default output remains unobserved, so the adapter
-cannot authorize a handoff. Exact private hints may be supplied only after a
-supervised mapping test; even then the adapter never claims input verification
-or audio-output verification.
+cannot authorize a handoff. A mapping can be supplied only as explicit,
+intentional, reviewed supervised-hardware evidence bound to the complete opaque
+inventory fingerprint. Any inventory change makes that mapping stale for both
+subsystems. Even a current mapping never claims input verification or
+audio-output verification.
 
 The adapter hashes the complete private inventory into a semantic generation
 and issues a distinct sample ID on every collection. Timestamp-only collection
@@ -73,8 +75,9 @@ audio node identity.
 
 ## Required follow-on
 
-1. Extend the read-only inventory with supervised identity/default-output
-   mapping evidence and fixture parsers for SteamOS variants.
+1. Add fixture parsers for SteamOS input/audio variants and a separate,
+   controller-visible supervised mapping workflow. Persisted mapping use must
+   remain private and require fresh inventory matching.
 2. Re-plan from the same semantic generation and a new sample immediately
    before each step.
 3. Execute one typed step through the shared transition journal.

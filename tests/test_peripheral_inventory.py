@@ -15,6 +15,10 @@ from hdm.adapters.steamos.peripherals import (  # noqa: E402
     SteamOsPeripheralObservationAdapter,
     peripheral_status_to_public_payload,
 )
+from hdm.domain.peripheral_handoff import (  # noqa: E402
+    PeripheralMappingEvidence,
+    PeripheralMappingEvidenceKind,
+)
 
 
 def write(path: Path, value: str) -> None:
@@ -65,16 +69,25 @@ class PeripheralInventoryTests(unittest.TestCase):
             self.assertFalse(observed.controller.external_input_verified)
             self.assertFalse(observed.audio.external_output_verified)
 
-    def test_exact_controller_mapping_still_never_claims_input_verified(self):
+    def test_reviewed_exact_controller_mapping_still_never_claims_input_verified(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             write(root / "input" / "event1" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
             (root / "sound").mkdir()
             inventory = self._inventory(root)
             binding = inventory.scan().controller_bindings[0]
+            mapping = PeripheralMappingEvidence(
+                "peripheral-mapping-a",
+                SteamOsPeripheralObservationAdapter.inventory_generation(inventory.scan()),
+                "2026-08-31T12:00:00Z",
+                PeripheralMappingEvidenceKind.SUPERVISED_HARDWARE_TEST,
+                True,
+                True,
+                PeripheralIdentityHints(builtin_controller_binding=binding),
+            )
             observed = SteamOsPeripheralObservationAdapter(
                 inventory,
-                PeripheralIdentityHints(builtin_controller_binding=binding),
+                mapping,
                 generation_factory=lambda: "peripheral-generation-a",
                 sample_factory=lambda: "peripheral-sample-a",
             ).observe()
@@ -82,6 +95,54 @@ class PeripheralInventoryTests(unittest.TestCase):
             self.assertTrue(observed.controller.builtin_available)
             self.assertFalse(observed.controller.builtin_input_verified)
             self.assertFalse(observed.controller.builtin_restore_verified)
+
+    def test_stale_reviewed_mapping_fails_closed_for_all_subsystems(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write(root / "input" / "event1" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
+            (root / "sound" / "card0").mkdir(parents=True)
+            inventory = self._inventory(root)
+            scanned = inventory.scan()
+            mapping = PeripheralMappingEvidence(
+                "peripheral-mapping-a",
+                SteamOsPeripheralObservationAdapter.inventory_generation(scanned),
+                "2026-08-31T12:00:00Z",
+                PeripheralMappingEvidenceKind.SUPERVISED_HARDWARE_TEST,
+                True,
+                True,
+                PeripheralIdentityHints(
+                    builtin_controller_binding=scanned.controller_bindings[0],
+                    current_audio_binding=scanned.audio_bindings[0],
+                ),
+            )
+            write(root / "input" / "event9" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
+            observed = SteamOsPeripheralObservationAdapter(inventory, mapping).observe()
+
+            self.assertFalse(observed.controller.exact)
+            self.assertEqual(observed.controller.failure_code, "peripheral.mapping_stale")
+            self.assertEqual(observed.audio.failure_code, "peripheral.mapping_stale")
+
+    def test_mapping_evidence_requires_reviewed_supervised_nonempty_identity(self):
+        with self.assertRaisesRegex(ValueError, "requires intentional review"):
+            PeripheralMappingEvidence(
+                "peripheral-mapping-a",
+                "inventory-generation-a",
+                "2026-08-31T12:00:00Z",
+                PeripheralMappingEvidenceKind.SUPERVISED_HARDWARE_TEST,
+                True,
+                False,
+                PeripheralIdentityHints(builtin_controller_binding="controller-private-a"),
+            )
+        with self.assertRaisesRegex(ValueError, "requires a binding"):
+            PeripheralMappingEvidence(
+                "peripheral-mapping-a",
+                "inventory-generation-a",
+                "2026-08-31T12:00:00Z",
+                PeripheralMappingEvidenceKind.SUPERVISED_HARDWARE_TEST,
+                True,
+                True,
+                PeripheralIdentityHints(),
+            )
 
     def test_default_semantic_generation_is_stable_but_samples_are_fresh(self):
         with tempfile.TemporaryDirectory() as temporary:
