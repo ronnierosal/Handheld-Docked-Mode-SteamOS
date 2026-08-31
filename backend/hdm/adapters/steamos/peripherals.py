@@ -259,3 +259,26 @@ class SteamOsPeripheralObservationAdapter:
             False,
             False,
         )
+
+
+def peripheral_status_to_public_payload(
+    observed: PeripheralObservation,
+) -> dict[str, object]:
+    """Expose only categorical readiness; bindings and generations stay private."""
+    return {
+        "schema_version": 1,
+        "controller": {
+            "complete": observed.controller.complete,
+            "exact": observed.controller.exact,
+            "builtin_available": observed.controller.builtin_available,
+            "external_connected": observed.controller.external_connected,
+            "code": observed.controller.failure_code or "controller.observed",
+        },
+        "audio": {
+            "complete": observed.audio.complete,
+            "exact": observed.audio.exact,
+            "external_available": observed.audio.external_output_available,
+            "portable_available": observed.audio.portable_output_available,
+            "code": observed.audio.failure_code or "audio.observed",
+        },
+    }

@@ -43,6 +43,10 @@ from hdm.adapters.steamos.game_render_binding import (  # noqa: E402
 )
 from hdm.adapters.steamos.game_scopes import SystemdGameScopeDiscovery  # noqa: E402
 from hdm.adapters.steamos.version_info import SteamOsVersionDiscovery  # noqa: E402
+from hdm.adapters.steamos.peripherals import (  # noqa: E402
+    SteamOsPeripheralObservationAdapter,
+    peripheral_status_to_public_payload,
+)
 from hdm.api import DiagnosticsApi  # noqa: E402
 from hdm.adapters.transition_runtime import (  # noqa: E402
     BoundedDeadlineWaiter,
@@ -115,6 +119,7 @@ class Plugin:
             sleep_guard_status=self._sleep_guard.status
         )
         self._api = DiagnosticsApi(self._discovery)
+        self._peripherals = SteamOsPeripheralObservationAdapter()
         self._sleep_guard_task: asyncio.Task[None] | None = None
         self._docked_igpu_scheduler: DockedIgpuLifecycleScheduler | None = None
         self._docked_igpu_task: asyncio.Task[None] | None = None
@@ -140,6 +145,18 @@ class Plugin:
         payload = await asyncio.to_thread(self._api.get_snapshot)
         await asyncio.to_thread(self._record_verbose_snapshot, payload)
         return payload
+
+    async def get_peripheral_status(self) -> dict[str, object]:
+        """Read identity-free controller/audio evidence without any handoff action."""
+        try:
+            observed = await asyncio.to_thread(self._peripherals.observe)
+            return peripheral_status_to_public_payload(observed)
+        except Exception:
+            return {
+                "schema_version": 1,
+                "controller": {"complete": False, "exact": False, "builtin_available": None, "external_connected": None, "code": "controller.observation_unavailable"},
+                "audio": {"complete": False, "exact": False, "external_available": None, "portable_available": None, "code": "audio.observation_unavailable"},
+            }
 
     async def get_diagnostic_logging_status(self) -> dict[str, object]:
         """Return bounded, identity-free status for the opt-in verbose session."""

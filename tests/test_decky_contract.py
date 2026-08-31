@@ -41,6 +41,7 @@ class DeckyContractTests(unittest.TestCase):
             public_methods,
             {
                 "get_snapshot",
+                "get_peripheral_status",
                 "get_docked_igpu_status",
                 "acknowledge_docked_igpu_status",
                 "get_diagnostic_logging_status",

@@ -13,6 +13,7 @@ from hdm.adapters.steamos.peripherals import (  # noqa: E402
     PeripheralIdentityHints,
     SteamOsPeripheralInventory,
     SteamOsPeripheralObservationAdapter,
+    peripheral_status_to_public_payload,
 )
 
 
@@ -95,6 +96,19 @@ class PeripheralInventoryTests(unittest.TestCase):
             write(root / "input" / "event9" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
             changed = adapter.observe()
             self.assertNotEqual(first.generation, changed.generation)
+
+    def test_public_status_omits_private_bindings_and_observation_ids(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write(root / "input" / "event1" / "device" / "capabilities" / "key", f"{1 << 0x130:x}\n")
+            (root / "sound" / "card0").mkdir(parents=True)
+            observed = SteamOsPeripheralObservationAdapter(self._inventory(root)).observe()
+            payload = peripheral_status_to_public_payload(observed)
+            encoded = repr(payload)
+            self.assertNotIn("controller-", encoded)
+            self.assertNotIn("audio-", encoded)
+            self.assertNotIn(observed.generation, encoded)
+            self.assertNotIn(observed.sample_id, encoded)
 
 
 if __name__ == "__main__":
