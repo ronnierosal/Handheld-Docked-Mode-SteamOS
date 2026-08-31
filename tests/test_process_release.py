@@ -13,7 +13,6 @@ sys.path.insert(0, str(ROOT / "backend"))
 from hdm.application.process_release import (  # noqa: E402
     GracefulReleaseEvidence,
     ProcessReleaseApprovalStore,
-    ReleasePhase,
     revalidate_process_release,
 )
 from hdm.domain.models import (  # noqa: E402
@@ -22,6 +21,7 @@ from hdm.domain.models import (  # noqa: E402
     EgpuResourceKind,
 )
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
+from hdm.domain.process_release import ReleasePhase  # noqa: E402
 
 
 FIXTURES = ROOT / "tests" / "fixtures"

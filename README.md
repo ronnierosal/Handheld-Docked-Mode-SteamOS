@@ -44,6 +44,7 @@ Start with:
 - [Authoritative roadmap](docs/ROADMAP.md)
 - [Deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md)
 - [Remote read-only validation](docs/REMOTE_VALIDATION.md)
+- [Guarded process-release contract](docs/PROCESS_RELEASE.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 

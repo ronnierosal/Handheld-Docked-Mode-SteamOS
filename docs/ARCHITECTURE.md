@@ -46,6 +46,12 @@ exact revalidation before returning internal signal targets. Graceful and force
 approvals are distinct, and force requires prior graceful-attempt evidence. The
 service is not exposed through Decky and no process-signal adapter exists.
 
+A deterministic process-release runner now exercises a typed fake signal port.
+It re-scans after every action, revalidates the remaining approved subset before
+every next action, enforces per-signal deadlines, and exports an identity-free
+audit. Clearing software clients never sets hardware-removal authority. See
+[Guarded eGPU process-release contract](PROCESS_RELEASE.md).
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

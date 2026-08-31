@@ -12,7 +12,6 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Callable
 
 from ..domain.models import (
@@ -21,35 +20,20 @@ from ..domain.models import (
     EgpuResourceKind,
     ObservedSnapshot,
 )
+from ..domain.process_release import (
+    ProcessClientFact,
+    ProcessReleaseApproval,
+    ProcessReleasePreview,
+    ProcessReleasePreviewRow,
+    ProcessReleaseTarget,
+    ReleasePhase,
+)
 
 
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{16,96}$")
 DEFAULT_APPROVAL_TTL_SECONDS = 120.0
 MAX_APPROVAL_TOKENS = 3
 MAX_RELEASE_TARGETS = 32
-
-
-class ReleasePhase(StrEnum):
-    GRACEFUL = "graceful"
-    FORCE = "force"
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessReleaseTarget:
-    instance_id: str
-    pid: int
-    name: str
-    resources: tuple[EgpuResourceKind, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessReleaseApproval:
-    phase: ReleasePhase
-    egpu_stable_id: str
-    observed_generation: str
-    client_fingerprint: str
-    targets: tuple[ProcessReleaseTarget, ...]
-    prior_graceful_operation_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,21 +47,6 @@ class GracefulReleaseEvidence:
             raise ValueError("graceful release operation ID is invalid")
         if not self.attempted_instance_ids or not self.observed_generation:
             raise ValueError("graceful release evidence is incomplete")
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessReleasePreviewRow:
-    name: str
-    resources: tuple[EgpuResourceKind, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessReleasePreview:
-    token: str
-    phase: ReleasePhase
-    expires_in_seconds: int
-    targets: tuple[ProcessReleasePreviewRow, ...]
-    protected_client_count: int
 
 
 def _client_fingerprint(clients: tuple[EgpuClientObservation, ...]) -> str:
@@ -94,6 +63,22 @@ def _client_fingerprint(clients: tuple[EgpuClientObservation, ...]) -> str:
     )
     encoded = "\n".join("|".join(row) for row in rows).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _client_facts(
+    clients: tuple[EgpuClientObservation, ...],
+) -> tuple[ProcessClientFact, ...]:
+    return tuple(
+        ProcessClientFact(
+            instance_id=client.instance_id,
+            pid=client.pid,
+            name=client.name,
+            kind=client.kind,
+            resources=client.resources,
+            close_eligible=client.close_eligible,
+        )
+        for client in clients
+    )
 
 
 def _eligible_targets(
@@ -172,6 +157,7 @@ class ProcessReleaseApprovalStore:
             observed_generation=observed_generation,
             client_fingerprint=_client_fingerprint(readiness.clients),
             targets=targets,
+            observed_clients=_client_facts(readiness.clients),
             prior_graceful_operation_id=prior_graceful_operation_id,
         )
         with self._lock:
@@ -230,6 +216,67 @@ def revalidate_process_release(
     if _client_fingerprint(readiness.clients) != approval.client_fingerprint:
         raise ValueError("eGPU client evidence changed after approval")
     current_targets = _eligible_targets(readiness.clients)
-    if current_targets != approval.targets:
+    if frozenset(current_targets) != frozenset(approval.targets):
         raise ValueError("eligible process instances changed after approval")
     return approval.targets
+
+
+def revalidate_process_release_target(
+    approval: ProcessReleaseApproval,
+    snapshot: ObservedSnapshot,
+    *,
+    observed_generation: str,
+    previous_generation: str,
+    target: ProcessReleaseTarget,
+) -> ProcessReleaseTarget | None:
+    """Revalidate one remaining target after every preceding action.
+
+    A target that exited as a side effect of an earlier graceful action is a
+    safe no-op. Any new or changed client fact invalidates the approval.
+    """
+    readiness = snapshot.disconnect_readiness
+    if not observed_generation or observed_generation == previous_generation:
+        raise ValueError("a fresh observation is required before every signal")
+    if not readiness.applicable or not readiness.scan_complete:
+        raise ValueError("fresh eGPU client evidence is incomplete")
+    if readiness.egpu_stable_id != approval.egpu_stable_id:
+        raise ValueError("eGPU identity changed after approval")
+    if readiness.storage_in_use:
+        raise ValueError("eGPU storage use is non-overridable")
+    approved_facts = frozenset(approval.observed_clients)
+    current_facts = frozenset(_client_facts(readiness.clients))
+    if not current_facts.issubset(approved_facts):
+        raise ValueError("new or changed eGPU client evidence invalidated approval")
+    matches = tuple(
+        item
+        for item in _eligible_targets(readiness.clients)
+        if item.instance_id == target.instance_id
+    )
+    if not matches:
+        return None
+    if len(matches) != 1 or matches[0] != target:
+        raise ValueError("approved process instance changed before signal")
+    return matches[0]
+
+
+def revalidate_process_release_rescan(
+    approval: ProcessReleaseApproval,
+    snapshot: ObservedSnapshot,
+    *,
+    observed_generation: str,
+    previous_generation: str,
+) -> None:
+    """Validate the mandatory observation immediately after one signal."""
+    readiness = snapshot.disconnect_readiness
+    if not observed_generation or observed_generation == previous_generation:
+        raise ValueError("a fresh observation is required after every signal")
+    if not readiness.applicable or not readiness.scan_complete:
+        raise ValueError("post-signal eGPU client evidence is incomplete")
+    if readiness.egpu_stable_id != approval.egpu_stable_id:
+        raise ValueError("eGPU identity changed after signal")
+    if readiness.storage_in_use:
+        raise ValueError("eGPU storage use is non-overridable")
+    approved_facts = frozenset(approval.observed_clients)
+    current_facts = frozenset(_client_facts(readiness.clients))
+    if not current_facts.issubset(approved_facts):
+        raise ValueError("new or changed eGPU client evidence appeared after signal")

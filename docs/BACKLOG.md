@@ -56,6 +56,16 @@ Implemented unattended-safe approval foundation:
   observation, and a remaining target subset; it cannot add processes.
 - No Decky RPC, signal port/adapter, or live process action is present.
 
+Implemented simulator evidence:
+
+- Typed fake graceful/force signal boundary with no production implementation.
+- Mandatory fresh complete re-scan after every fake action and subset
+  revalidation before every subsequent action.
+- Deadline, missing/stale/incomplete scan, changed-client, remaining-client,
+  signal-rejection, and already-exited-target paths.
+- Identity-free bounded audit and an explicit distinction between cleared
+  software blockers and hardware removal authority.
+
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1
 validation with disposable user-process fixtures. No process signal or public

@@ -38,7 +38,8 @@ No broader label may be inferred from a narrower one.
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Durable storage adapter remains gated with live transitions. |
 | Transition snapshot replay and failure injection | Implemented and simulated | No production mechanism adapter or mutation endpoint exists. |
 | Remote read-only capture harness | Implemented and hardware tested | It cannot observe the Decky-owned sleep lease and must not be used to claim lease state. |
-| Guarded process-release approvals | Implemented and unit tested, internal only | Signal/re-scan simulator, audit integration, production adapter, RPC, and hardware proof remain. |
+| Guarded process-release approvals | Implemented and unit tested, internal only | Production adapter, RPC, and hardware proof remain. |
+| Process-release signal/re-scan simulator and audit | Implemented and simulated | Journal integration and production mechanism remain; hardware removal authority is always false. |
 
 ## Required architecture corrections
 
@@ -112,8 +113,9 @@ behavior. No new production mutation endpoint exists.
 
 ### R2 — Guarded non-game eGPU client release
 
-**Status:** IN PROGRESS — backend-owned preview/token/revalidation policy is
-implemented; no signal boundary or public RPC exists.
+**Status:** IMPLEMENTED AND SIMULATED — backend-owned preview/token/revalidation,
+fake typed signal/re-scan flow, deadlines, and privacy-safe audit are covered.
+No production signal adapter or public RPC exists.
 
 - Generate backend-owned previews for exact eligible process instances.
 - Bind short-lived single-use approval tokens to candidate set, device identity,
