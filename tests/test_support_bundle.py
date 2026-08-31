@@ -15,6 +15,15 @@ from hdm.application.support_bundle import (  # noqa: E402
     BoundedEventLog,
     SupportBundlePreviewStore,
     SupportBundleService,
+    SupportBundleContext,
+)
+from hdm.domain.control_plane import PlacementState, WorkflowState  # noqa: E402
+from hdm.domain.game_compatibility import GameCompatibilityRecord  # noqa: E402
+from hdm.domain.hardware_compatibility import HardwareCompatibilityRecord  # noqa: E402
+from hdm.domain.transition_journal import (  # noqa: E402
+    JournalEventKind,
+    TransitionJournal,
+    append_journal_entry,
 )
 from hdm.delivery.support_export import SupportBundleFileWriter  # noqa: E402
 
@@ -229,6 +238,67 @@ class SupportBundleTests(unittest.TestCase):
         store = SupportBundlePreviewStore()
         with self.assertRaisesRegex(ValueError, "invalid"):
             store.consume("../../etc/passwd")
+
+    def test_optional_transition_and_compatibility_context_is_strictly_reduced(self):
+        journal = TransitionJournal("private-operation-id", "private-request-id")
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.SLEEP_PENDING_DISCONNECT,
+            placement=PlacementState.DOCKED_EGPU,
+            code="sleep.requested",
+        )
+        game = GameCompatibilityRecord(
+            catalog_id="private-game-record",
+            title="Private Game Title",
+            steam_app_id="1234",
+            host_profile_id="asus-rog-ally-x",
+            egpu_profile_id="gpd-g1-rx7600mxt-titan-ridge",
+        )
+        hardware = HardwareCompatibilityRecord(
+            catalog_id="private-hardware-record",
+            host_profile_id="asus-rog-ally-x",
+            egpu_profile_id="gpd-g1-rx7600mxt-titan-ridge",
+        )
+        bundle = SupportBundleService().build(
+            adversarial_report(),
+            (),
+            {},
+            context=SupportBundleContext(
+                transition_journals=(journal,),
+                game_compatibility=(game,),
+                hardware_compatibility=(hardware,),
+            ),
+        )
+
+        self.assertEqual(bundle.payload["schema_version"], 2)
+        self.assertEqual(
+            bundle.payload["game_compatibility"][0]["steam_app_id"],
+            "1234",
+        )
+        self.assertEqual(
+            bundle.payload["transition_history"][0]["entries"][0]["code"],
+            "sleep.requested",
+        )
+        for forbidden in (
+            "private-operation-id",
+            "private-request-id",
+            "private-game-record",
+            "Private Game Title",
+            "private-hardware-record",
+        ):
+            self.assertNotIn(forbidden, bundle.json_text)
+
+    def test_support_context_counts_are_bounded(self):
+        record = GameCompatibilityRecord(
+            catalog_id="game-record",
+            title="Game",
+            host_profile_id="host-profile",
+            egpu_profile_id="egpu-profile",
+        )
+        with self.assertRaisesRegex(ValueError, "game compatibility"):
+            SupportBundleContext(game_compatibility=(record,) * 9)
 
 
 class SteamOsVersionDiscoveryTests(unittest.TestCase):

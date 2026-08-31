@@ -13,8 +13,12 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from ..domain.game_compatibility import GameCompatibilityRecord
+from ..domain.hardware_compatibility import HardwareCompatibilityRecord
+from ..domain.transition_journal import TransitionJournal
 
-BUNDLE_SCHEMA_VERSION = 1
+
+BUNDLE_SCHEMA_VERSION = 2
 EVENT_SCHEMA_VERSION = 1
 DEFAULT_MAX_EVENTS = 128
 DEFAULT_MAX_BYTES = 256 * 1024
@@ -174,6 +178,21 @@ class SupportBundle:
 class SupportBundlePreview:
     token: str
     bundle: SupportBundle
+
+
+@dataclass(frozen=True, slots=True)
+class SupportBundleContext:
+    transition_journals: tuple[TransitionJournal, ...] = field(default_factory=tuple)
+    game_compatibility: tuple[GameCompatibilityRecord, ...] = field(default_factory=tuple)
+    hardware_compatibility: tuple[HardwareCompatibilityRecord, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        if len(self.transition_journals) > 4:
+            raise ValueError("support context transition journal count exceeds its bound")
+        if len(self.game_compatibility) > 8:
+            raise ValueError("support context game compatibility count exceeds its bound")
+        if len(self.hardware_compatibility) > 8:
+            raise ValueError("support context hardware compatibility count exceeds its bound")
 
 
 class SupportBundlePreviewStore:
@@ -341,6 +360,61 @@ def _support_snapshot(snapshot: Mapping[str, Any], sensitive: Iterable[str]) -> 
     }
 
 
+def _support_context(context: SupportBundleContext) -> dict[str, Any]:
+    transition_rows = []
+    for journal in context.transition_journals:
+        transition_rows.append(
+            {
+                "schema_version": journal.schema_version,
+                "terminal": journal.terminal,
+                "entries": [
+                    {
+                        "sequence": entry.sequence,
+                        "kind": entry.kind.value,
+                        "occurred_at": entry.occurred_at,
+                        "workflow_state": entry.workflow_state.value,
+                        "placement": entry.placement.value,
+                        "code": entry.code,
+                        "details": {key: value for key, value in entry.details},
+                    }
+                    for entry in journal.entries[-MAX_COLLECTION_ITEMS:]
+                ],
+            }
+        )
+    game_rows = [
+        {
+            "steam_app_id": record.steam_app_id or "unknown",
+            "host_profile": record.host_profile_id,
+            "egpu_profile": record.egpu_profile_id,
+            "egpu_handoff": record.egpu_handoff.value,
+            "save_sleep": record.save_sleep.value,
+            "promotion_count": len(record.promotions),
+        }
+        for record in context.game_compatibility
+    ]
+    hardware_rows = [
+        {
+            "host_profile": record.host_profile_id,
+            "egpu_profile": record.egpu_profile_id,
+            "combination_status": record.combination_status.value,
+            "capabilities": [
+                {
+                    "capability": claim.capability.value,
+                    "status": claim.status.value,
+                }
+                for claim in record.claims
+            ],
+            "promotion_count": len(record.promotions),
+        }
+        for record in context.hardware_compatibility
+    ]
+    return {
+        "transition_history": transition_rows,
+        "game_compatibility": game_rows,
+        "hardware_compatibility": hardware_rows,
+    }
+
+
 class SupportBundleService:
     def __init__(
         self,
@@ -359,6 +433,7 @@ class SupportBundleService:
         events: Iterable[SupportEvent],
         versions: Mapping[str, str],
         sensitive_values: Iterable[str] = (),
+        context: SupportBundleContext | None = None,
     ) -> SupportBundle:
         sensitive = tuple(item for item in sensitive_values if item)
         snapshot = report.get("snapshot", {})
@@ -379,6 +454,9 @@ class SupportBundleService:
                     "diagnostics",
                     "snapshot",
                     "events",
+                    "transition_history",
+                    "game_compatibility",
+                    "hardware_compatibility",
                 ],
             },
             "versions": sanitize_value(
@@ -389,6 +467,7 @@ class SupportBundleService:
             "diagnostics": sanitize_value(report.get("diagnostics", {}), sensitive),
             "snapshot": _support_snapshot(snapshot, sensitive),
             "events": event_rows,
+            **sanitize_value(_support_context(context or SupportBundleContext()), sensitive),
         }
 
         while True:

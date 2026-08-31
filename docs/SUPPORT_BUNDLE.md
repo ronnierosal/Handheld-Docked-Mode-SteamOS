@@ -36,7 +36,7 @@ only the relative `Downloads/...` path to the UI.
 
 ## Schema and bounds
 
-- bundle schema: `1`
+- bundle schema: `2`
 - structured event schema: `1`
 - retained event count: at most `128`
 - maximum encoded JSON size: `256 KiB`
@@ -54,6 +54,14 @@ The bundle includes:
 - privacy-safe snapshot stage timings
 - a reduced current snapshot
 - recent HDM-only events
+- up to four reduced categorical transition histories with at most 32 recent
+  entries each when a dormant/future transition owner explicitly supplies them
+- up to eight reduced game and hardware compatibility records of each kind
+
+Transition operation/request IDs, game titles, catalog IDs, evidence IDs, and
+raw test artifacts are never included. Optional context defaults to empty in the
+current Decky runtime because no live transition or compatibility-test owner is
+wired.
 
 ## Privacy boundary
 
