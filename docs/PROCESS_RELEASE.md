@@ -86,6 +86,14 @@ approved force phase; process-instance identities never enter the public value.
 The force candidate remains limited to instances actually signaled during the
 graceful phase, and issuing force approval consumes the receipt.
 
+The Decky payload mapper is now implemented independently of runtime wiring. A
+preview contains only bounded process names, resource categories, counts,
+blocker codes, and an optional approval token. An execution contains only
+categorical status, counts, an acknowledgement ID, and the optional opaque
+force receipt. It excludes audit events, PIDs, process-instance IDs, exact eGPU
+identity, and target identity. Journal status similarly exposes only the exact
+opaque operation ID needed for acknowledgement.
+
 Even when every observed software blocker is cleared, the result exposes
 `software_blockers_cleared=true` and always keeps
 `hardware_removal_authorized=false`. The certified G1 profile still requires
@@ -93,8 +101,8 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- add the Decky preview/consent payload using only the opaque force receipt,
-  then add production composition
+- add controller-native Decky consent and production composition using the
+  implemented privacy-safe payload
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 

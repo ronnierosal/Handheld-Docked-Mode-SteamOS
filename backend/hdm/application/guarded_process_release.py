@@ -15,6 +15,7 @@ from ..domain.process_release import (
     ProcessReleasePreview,
     ReleasePhase,
 )
+from ..domain.transition_journal import JournalEventKind
 from ..ports.transition import TransitionObservationPort, VersionedObservation
 from ..ports.transition_journal import TransitionJournalPort
 from .process_release import (
@@ -57,6 +58,15 @@ class GuardedProcessReleaseExecution:
     result: ProcessReleaseReplayResult | None = None
     force_receipt_token: str = ""
     action_required: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class GuardedProcessReleaseStatus:
+    code: str
+    acknowledgement_required: bool = False
+    action_required: bool = False
+    operation_id: str = ""
+    durable: bool = True
 
 
 class GuardedProcessReleaseService:
@@ -175,6 +185,32 @@ class GuardedProcessReleaseService:
 
     def acknowledge(self, operation_id: str) -> bool:
         return self._recovery.acknowledge(operation_id)
+
+    def status(self) -> GuardedProcessReleaseStatus:
+        try:
+            current = self._journal_store.load_current()
+        except Exception:
+            return GuardedProcessReleaseStatus(
+                "process_release.journal_unavailable",
+                action_required=True,
+                durable=False,
+            )
+        if current is None:
+            return GuardedProcessReleaseStatus("process_release.idle")
+        if not current.terminal:
+            return GuardedProcessReleaseStatus(
+                "process_release.recovery_required",
+                action_required=True,
+                operation_id=current.operation_id,
+            )
+        terminal = current.entries[-1]
+        return GuardedProcessReleaseStatus(
+            terminal.code,
+            acknowledgement_required=True,
+            action_required=terminal.kind
+            in (JournalEventKind.BLOCKED, JournalEventKind.FAILED),
+            operation_id=current.operation_id,
+        )
 
     def _journal_blocker(self) -> str:
         try:
