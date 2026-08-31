@@ -11,18 +11,21 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  acknowledgeDockedIgpuStatus,
   getSnapshot,
   acknowledgeProcessRelease,
   approveProcessRelease,
   approvePresentationPreparation,
   executeProcessRelease,
   getProcessReleaseStatus,
+  getDockedIgpuStatus,
   preparePresentationIntegration,
   previewPresentationPreparation,
   previewProcessRelease,
   previewSupportBundle,
   saveSupportBundle,
   type SnapshotPayload,
+  type DockedIgpuStatusPayload,
   type ProcessReleasePhase,
   type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
@@ -235,6 +238,8 @@ function preflightObservation(payload: SnapshotPayload): PreflightObservation {
 
 function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
+  const [dockedIgpuStatus, setDockedIgpuStatus] = useState<DockedIgpuStatusPayload | null>(null);
+  const [dockedIgpuMessage, setDockedIgpuMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [preflightStatus, setPreflightStatus] = useState(() => preflight.status());
@@ -302,8 +307,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
     }
     try {
-      const nextPayload = await getSnapshot();
+      const [nextPayload, nextDockedIgpuStatus] = await Promise.all([
+        getSnapshot(),
+        getDockedIgpuStatus().catch(() => null),
+      ]);
       setPayload(nextPayload);
+      setDockedIgpuStatus(nextDockedIgpuStatus);
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -369,7 +378,23 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         : disconnect.ready
           ? "Ready"
           : "Blocked";
-  const overlayRows = diagnosticOverlayRows(payload);
+  const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus);
+
+  const acknowledgeDockedIgpuWatch = useCallback(async () => {
+    setDockedIgpuMessage("");
+    try {
+      const result = await acknowledgeDockedIgpuStatus();
+      if (!result.acknowledged) {
+        setDockedIgpuMessage("The watcher state could not be acknowledged.");
+        return;
+      }
+      const status = await getDockedIgpuStatus();
+      setDockedIgpuStatus(status);
+      setDockedIgpuMessage("Watcher state acknowledged. Observation will resume.");
+    } catch {
+      setDockedIgpuMessage("Watcher acknowledgement is unavailable.");
+    }
+  }, []);
 
   useEffect(() => {
     if (!sleepGuard?.required) {
@@ -843,6 +868,19 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           {overlayRows.map((row) => (
             <DiagnosticRow key={row.name} name={row.name} value={row.value} />
           ))}
+          {dockedIgpuStatus?.acknowledgement_required && (
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={() => void acknowledgeDockedIgpuWatch()}
+              >
+                Acknowledge Docked-iGPU watcher state
+              </ButtonItem>
+            </PanelSectionRow>
+          )}
+          {dockedIgpuMessage && (
+            <PanelSectionRow>{dockedIgpuMessage}</PanelSectionRow>
+          )}
           <PanelSectionRow>
             <ButtonItem
               layout="below"

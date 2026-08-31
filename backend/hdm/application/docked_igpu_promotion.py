@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from ..domain.control_plane import PlacementState
 from .docked_igpu_exit import (
@@ -14,7 +14,9 @@ from .docked_igpu_exit import (
     DockedIgpuExitWatch,
     DockedIgpuGameExitWatcher,
 )
-from .supervised_transition import SupervisedTransitionPreview
+
+if TYPE_CHECKING:
+    from .supervised_transition import SupervisedTransitionPreview
 
 
 class SupervisedPreviewPort(Protocol):
@@ -48,12 +50,16 @@ class DockedIgpuPromotionFacade:
         self,
         *,
         watcher: DockedIgpuGameExitWatcher,
-        transitions: SupervisedPreviewPort,
+        transitions: SupervisedPreviewPort | None = None,
     ) -> None:
         self._watcher = watcher
         self._transitions = transitions
         self._current: DockedIgpuExitWatch | None = None
         self._lock = threading.Lock()
+
+    @property
+    def inspection_supported(self) -> bool:
+        return self._transitions is not None
 
     def arm(self) -> DockedIgpuExitArmResult:
         with self._lock:
@@ -97,6 +103,10 @@ class DockedIgpuPromotionFacade:
             if watch.stage is not DockedIgpuExitStage.PROMOTION_READY:
                 return DockedIgpuPromotionPrepareResult(
                     False, "docked_igpu.promotion_not_ready"
+                )
+            if self._transitions is None:
+                return DockedIgpuPromotionPrepareResult(
+                    False, "docked_igpu.preview_unavailable"
                 )
             try:
                 preview = self._transitions.preview(

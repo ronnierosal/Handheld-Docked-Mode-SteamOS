@@ -41,6 +41,8 @@ class DeckyContractTests(unittest.TestCase):
             public_methods,
             {
                 "get_snapshot",
+                "get_docked_igpu_status",
+                "acknowledge_docked_igpu_status",
                 "preview_support_bundle",
                 "save_support_bundle",
                 "preview_presentation_preparation",
@@ -60,11 +62,35 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("ProcessReleaseRunner", source)
         self.assertIn("RootOwnedRuntimeState", source)
         self.assertNotIn("PresentationTransitionMechanism", source)
+        self.assertNotIn("SupervisedPresentationTransitionService", source)
         self.assertNotIn("TransitionOrchestrator", source)
+        promotion_source = (
+            ROOT / "backend" / "hdm" / "application" / "docked_igpu_promotion.py"
+        ).read_text(encoding="utf-8")
+        promotion_tree = ast.parse(promotion_source)
+        self.assertFalse(
+            any(
+                isinstance(node, ast.ImportFrom)
+                and node.level == 1
+                and node.module == "supervised_transition"
+                for node in promotion_tree.body
+            ),
+            "watch-only production import must not load supervised transition code",
+        )
+        self.assertTrue(
+            any(
+                isinstance(node, ast.If)
+                and isinstance(node.test, ast.Name)
+                and node.test.id == "TYPE_CHECKING"
+                for node in promotion_tree.body
+            )
+        )
 
     def test_frontend_has_preparation_but_no_transition_rpc(self):
         source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
+        self.assertIn('"get_docked_igpu_status"', source)
+        self.assertIn('"acknowledge_docked_igpu_status"', source)
         self.assertIn('"preview_support_bundle"', source)
         self.assertIn('"preview_presentation_preparation"', source)
         self.assertIn('"approve_presentation_preparation"', source)

@@ -10,9 +10,11 @@ from enum import StrEnum
 
 from ..domain.control_plane import PlacementState
 from ..domain.game_session import ActiveGameIdentity, GameSessionObservation
+from ..domain.gamescope_session import GamescopeSessionObservation
 from ..domain.inference import infer_placement
 from ..domain.models import GameState
 from ..ports.game_session import GameSessionObservationPort
+from ..ports.gamescope_session import GamescopeSessionObservationPort
 from ..ports.transition import MonotonicClockPort, TransitionObservationPort
 from ..profiles.registry import resolve_runtime_profiles
 
@@ -40,6 +42,7 @@ class DockedIgpuExitWatch:
     armed_snapshot_generation: str
     armed_snapshot_sample_id: str
     armed_game_generation: str
+    gamescope_session_generation: str
     armed_at_ms: int
     expires_at_ms: int
     reason_code: str
@@ -56,6 +59,7 @@ class DockedIgpuExitWatch:
                 self.armed_snapshot_generation,
                 self.armed_snapshot_sample_id,
                 self.armed_game_generation,
+                self.gamescope_session_generation,
             )
         ):
             raise ValueError("Docked-iGPU watch evidence is incomplete")
@@ -101,6 +105,7 @@ class DockedIgpuGameExitWatcher:
         *,
         snapshots: TransitionObservationPort,
         games: GameSessionObservationPort,
+        gamescope_sessions: GamescopeSessionObservationPort,
         clock: MonotonicClockPort,
         ttl_ms: int = 12 * 60 * 60 * 1000,
         watch_id_factory: Callable[[], str] | None = None,
@@ -109,6 +114,7 @@ class DockedIgpuGameExitWatcher:
             raise ValueError("Docked-iGPU watch TTL is invalid")
         self._snapshots = snapshots
         self._games = games
+        self._gamescope_sessions = gamescope_sessions
         self._clock = clock
         self._ttl_ms = ttl_ms
         self._watch_id_factory = watch_id_factory or (
@@ -117,11 +123,32 @@ class DockedIgpuGameExitWatcher:
 
     def arm(self) -> DockedIgpuExitArmResult:
         game = self._game()
+        now = self._now()
+        if game is None or now is None:
+            return DockedIgpuExitArmResult(False, "docked_igpu.observation_unavailable")
+        if not game.exact:
+            return DockedIgpuExitArmResult(False, "docked_igpu.game_identity_unverified")
+        if game.state is GameState.IDLE:
+            return DockedIgpuExitArmResult(False, "docked_igpu.game_not_running")
+        if game.state is not GameState.RUNNING or game.identity is None:
+            return DockedIgpuExitArmResult(False, "docked_igpu.game_identity_unverified")
+        gamescope_session = self._gamescope_session()
         snapshot = self._snapshot()
         game_after = self._game()
-        now = self._now()
-        if snapshot is None or game is None or game_after is None or now is None:
+        gamescope_session_after = self._gamescope_session()
+        if (
+            snapshot is None
+            or game_after is None
+            or gamescope_session is None
+            or gamescope_session_after is None
+        ):
             return DockedIgpuExitArmResult(False, "docked_igpu.observation_unavailable")
+        if not gamescope_session.exact or not gamescope_session_after.exact:
+            return DockedIgpuExitArmResult(
+                False, "docked_igpu.gamescope_identity_unverified"
+            )
+        if gamescope_session.generation != gamescope_session_after.generation:
+            return DockedIgpuExitArmResult(False, "docked_igpu.gamescope_changed")
         if not snapshot.generation or not snapshot.sample_id:
             return DockedIgpuExitArmResult(False, "docked_igpu.snapshot_unavailable")
         if (
@@ -136,8 +163,6 @@ class DockedIgpuGameExitWatcher:
             return DockedIgpuExitArmResult(False, "docked_igpu.placement_unverified")
         if snapshot.snapshot.game_state is not GameState.RUNNING:
             return DockedIgpuExitArmResult(False, "docked_igpu.game_not_running")
-        if game.state is not GameState.RUNNING or game.identity is None:
-            return DockedIgpuExitArmResult(False, "docked_igpu.game_identity_unverified")
         profiles = resolve_runtime_profiles(snapshot.snapshot)
         if not profiles.exact_host or not profiles.exact_egpu:
             return DockedIgpuExitArmResult(False, "docked_igpu.profile_unverified")
@@ -154,6 +179,7 @@ class DockedIgpuGameExitWatcher:
             armed_snapshot_generation=snapshot.generation,
             armed_snapshot_sample_id=snapshot.sample_id,
             armed_game_generation=game.generation,
+            gamescope_session_generation=gamescope_session.generation,
             armed_at_ms=now,
             expires_at_ms=now + self._ttl_ms,
             reason_code="docked_igpu.watching_game_exit",
@@ -168,6 +194,11 @@ class DockedIgpuGameExitWatcher:
             return self._action(watch, "docked_igpu.clock_unavailable")
         if now >= watch.expires_at_ms:
             return self._cancel(watch, "docked_igpu.watch_expired")
+        gamescope_session = self._gamescope_session()
+        if gamescope_session is None or not gamescope_session.exact:
+            return self._action(watch, "docked_igpu.gamescope_identity_unverified")
+        if gamescope_session.generation != watch.gamescope_session_generation:
+            return self._cancel(watch, "docked_igpu.gamescope_changed")
         game = self._game()
         if game is None or not game.exact:
             return self._action(watch, "docked_igpu.game_identity_unverified")
@@ -194,6 +225,7 @@ class DockedIgpuGameExitWatcher:
         if infer_placement(snapshot.snapshot) is not PlacementState.DOCKED_IGPU:
             return self._cancel(watch, "docked_igpu.placement_changed")
         game_after = self._game()
+        gamescope_session_after = self._gamescope_session()
         if (
             game_after is None
             or not game_after.exact
@@ -202,6 +234,10 @@ class DockedIgpuGameExitWatcher:
             or game_after.sample_id == game.sample_id
         ):
             return self._action(watch, "docked_igpu.game_identity_changed")
+        if gamescope_session_after is None or not gamescope_session_after.exact:
+            return self._action(watch, "docked_igpu.gamescope_identity_unverified")
+        if gamescope_session_after.generation != watch.gamescope_session_generation:
+            return self._cancel(watch, "docked_igpu.gamescope_changed")
         profiles = resolve_runtime_profiles(snapshot.snapshot)
         if (
             not profiles.exact_host
@@ -227,6 +263,12 @@ class DockedIgpuGameExitWatcher:
     def _game(self) -> GameSessionObservation | None:
         try:
             return self._games.observe()
+        except Exception:
+            return None
+
+    def _gamescope_session(self) -> GamescopeSessionObservation | None:
+        try:
+            return self._gamescope_sessions.observe()
         except Exception:
             return None
 

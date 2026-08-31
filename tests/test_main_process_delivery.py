@@ -17,6 +17,10 @@ from hdm.application.guarded_process_release import (  # noqa: E402
     GuardedProcessReleasePreview,
     GuardedProcessReleaseStatus,
 )
+from hdm.application.docked_igpu_lifecycle import (  # noqa: E402
+    DockedIgpuLifecycleStage,
+    DockedIgpuLifecycleStatus,
+)
 from hdm.application.game_evidence_support import (  # noqa: E402
     SupportGameEvidence,
     SupportRenderEvidence,
@@ -124,6 +128,38 @@ class SupportEvidenceService:
                 )
             ),
         )
+
+
+class DockedIgpuScheduler:
+    def __init__(self, *, acknowledgement=True):
+        self.value = DockedIgpuLifecycleStatus(
+            DockedIgpuLifecycleStage.ACTION_REQUIRED,
+            "docked_igpu.game_identity_unverified",
+            0,
+            acknowledgement_required=True,
+        )
+        self.acknowledgement = acknowledgement
+        self.acknowledge_calls = 0
+        self.wake_calls = 0
+        self.started = False
+        self.stopped = False
+
+    def status(self):
+        return self.value
+
+    def acknowledge_action(self):
+        self.acknowledge_calls += 1
+        return self.acknowledgement
+
+    def wake(self):
+        self.wake_calls += 1
+
+    async def run(self):
+        self.started = True
+        try:
+            await asyncio.Event().wait()
+        finally:
+            self.stopped = True
 
 
 async def support_snapshot():
@@ -270,6 +306,115 @@ class MainProcessDeliveryTests(unittest.TestCase):
         ]
 
         self.assertEqual(rows[0]["code"], "game_evidence.incomplete")
+
+    def test_docked_igpu_status_is_categorical_and_identity_free(self):
+        plugin, _service = self.plugin()
+        unavailable = asyncio.run(plugin.get_docked_igpu_status())
+        scheduler = DockedIgpuScheduler()
+        plugin._docked_igpu_scheduler = scheduler
+
+        observed = asyncio.run(plugin.get_docked_igpu_status())
+        encoded = json.dumps(observed, sort_keys=True)
+
+        self.assertEqual(unavailable["code"], "docked_igpu.lifecycle_unavailable")
+        self.assertEqual(observed["stage"], "action_required")
+        self.assertTrue(observed["acknowledgement_required"])
+        for private in ("watch_id", "appid", "scope", "generation", "private"):
+            self.assertNotIn(private, encoded.lower())
+
+    def test_docked_igpu_acknowledgement_wakes_only_after_acceptance(self):
+        plugin, _service = self.plugin()
+        scheduler = DockedIgpuScheduler()
+        plugin._docked_igpu_scheduler = scheduler
+
+        accepted = asyncio.run(plugin.acknowledge_docked_igpu_status())
+        scheduler.acknowledgement = False
+        rejected = asyncio.run(plugin.acknowledge_docked_igpu_status())
+
+        self.assertTrue(accepted["acknowledged"])
+        self.assertFalse(rejected["acknowledged"])
+        self.assertEqual(scheduler.acknowledge_calls, 2)
+        self.assertEqual(scheduler.wake_calls, 1)
+
+    def test_docked_igpu_task_start_and_unload_are_owned_once(self):
+        plugin, _service = self.plugin()
+        scheduler = DockedIgpuScheduler()
+        plugin._build_docked_igpu_scheduler = lambda: scheduler
+
+        async def exercise():
+            await plugin._start_docked_igpu_lifecycle()
+            for _ in range(100):
+                if scheduler.started:
+                    break
+                await asyncio.sleep(0.001)
+            first_task = plugin._docked_igpu_task
+            await plugin._start_docked_igpu_lifecycle()
+            self.assertIs(plugin._docked_igpu_task, first_task)
+            await plugin._stop_docked_igpu_lifecycle()
+
+        asyncio.run(exercise())
+
+        self.assertTrue(scheduler.started)
+        self.assertTrue(scheduler.stopped)
+        self.assertIsNone(plugin._docked_igpu_task)
+        self.assertIsNone(plugin._docked_igpu_scheduler)
+
+    def test_docked_igpu_supervisor_retries_transient_build_failure(self):
+        plugin, _service = self.plugin()
+        plugin._docked_igpu_retry_seconds = 0.001
+        scheduler = DockedIgpuScheduler()
+        attempts = 0
+
+        def build():
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise RuntimeError("transient private failure")
+            return scheduler
+
+        plugin._build_docked_igpu_scheduler = build
+
+        async def exercise():
+            await plugin._start_docked_igpu_lifecycle()
+            for _ in range(100):
+                if scheduler.started:
+                    break
+                await asyncio.sleep(0.001)
+            await plugin._stop_docked_igpu_lifecycle()
+
+        asyncio.run(exercise())
+
+        self.assertGreaterEqual(attempts, 2)
+        self.assertTrue(scheduler.started)
+        self.assertTrue(scheduler.stopped)
+
+    def test_docked_igpu_supervisor_restarts_after_runner_failure(self):
+        plugin, _service = self.plugin()
+        plugin._docked_igpu_retry_seconds = 0.001
+
+        class FailedScheduler(DockedIgpuScheduler):
+            async def run(self):
+                self.started = True
+                raise RuntimeError("private runner failure")
+
+        first = FailedScheduler()
+        second = DockedIgpuScheduler()
+        schedulers = [first, second]
+        plugin._build_docked_igpu_scheduler = lambda: schedulers.pop(0)
+
+        async def exercise():
+            await plugin._start_docked_igpu_lifecycle()
+            for _ in range(100):
+                if second.started:
+                    break
+                await asyncio.sleep(0.001)
+            await plugin._stop_docked_igpu_lifecycle()
+
+        asyncio.run(exercise())
+
+        self.assertTrue(first.started)
+        self.assertTrue(second.started)
+        self.assertTrue(second.stopped)
 
 
 if __name__ == "__main__":

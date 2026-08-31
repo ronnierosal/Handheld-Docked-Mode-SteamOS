@@ -16,7 +16,15 @@ from hdm.adapters.steamos.game_scopes import (  # noqa: E402
     SystemdGameScopeDiscovery,
     parse_game_scopes,
 )
-from hdm.adapters.steamos.gamescope import GamescopeDiscovery  # noqa: E402
+from hdm.adapters.steamos.gamescope import (  # noqa: E402
+    GamescopeDiscovery,
+    GamescopeProcessRecord,
+    GamescopeScan,
+    parse_process_start_time,
+)
+from hdm.adapters.steamos.gamescope_session import (  # noqa: E402
+    GamescopeSessionObservationAdapter,
+)
 from hdm.adapters.steamos.pci import PciUsb4Discovery  # noqa: E402
 from hdm.domain.models import GameState  # noqa: E402
 
@@ -77,6 +85,11 @@ class GamescopeDiscoveryTests(unittest.TestCase):
             (process / "environ").write_bytes(
                 b"MESA_VK_DEVICE_SELECT=1002:7480\0SECRET_TOKEN=must-not-be-retained\0"
             )
+            stat_fields = ["S", "1"] + ["0"] * 17 + ["424242"]
+            (process / "stat").write_text(
+                f"47959 (gamescope session) {' '.join(stat_fields)}",
+                encoding="utf-8",
+            )
 
             result = GamescopeDiscovery(root).scan()
 
@@ -87,7 +100,42 @@ class GamescopeDiscoveryTests(unittest.TestCase):
             self.assertEqual(result.process.mesa_vk_device_select, "1002:7480")
             self.assertTrue(result.process.environment_readable)
             self.assertIsInstance(result.process.uid, int)
+            self.assertEqual(result.process.start_time_ticks, 424242)
             self.assertNotIn("must-not-be-retained", repr(result.process))
+
+    def test_stat_parser_handles_parentheses_and_rejects_pid_mismatch(self):
+        fields = ["S", "1"] + ["0"] * 17 + ["987654"]
+        value = f"42 (gamescope (session)) {' '.join(fields)}"
+
+        self.assertEqual(parse_process_start_time(value, 42), 987654)
+        self.assertEqual(parse_process_start_time(value, 43), 0)
+
+    def test_session_generation_binds_pid_start_time_and_uid(self):
+        class Discovery:
+            def __init__(self, record):
+                self.record = record
+
+            def scan(self):
+                return GamescopeScan(self.record, 1)
+
+        first = GamescopeProcessRecord(
+            42, ("/usr/bin/gamescope", "-e"), uid=1000, start_time_ticks=100
+        )
+        restarted = GamescopeProcessRecord(
+            42, ("/usr/bin/gamescope", "-e"), uid=1000, start_time_ticks=200
+        )
+
+        observed = GamescopeSessionObservationAdapter(Discovery(first)).observe()
+        changed = GamescopeSessionObservationAdapter(Discovery(restarted)).observe()
+        unknown = GamescopeSessionObservationAdapter(
+            Discovery(GamescopeProcessRecord(42, ("gamescope", "-e"), uid=1000))
+        ).observe()
+
+        self.assertTrue(observed.exact)
+        self.assertEqual(len(observed.generation), 64)
+        self.assertNotEqual(observed.generation, changed.generation)
+        self.assertFalse(unknown.exact)
+        self.assertEqual(unknown.code, "gamescope.session_identity_unverified")
 
     def test_multiple_gamescope_processes_are_ambiguous(self):
         with tempfile.TemporaryDirectory() as temporary:

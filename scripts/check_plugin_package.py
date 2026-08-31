@@ -22,11 +22,18 @@ REQUIRED_FILES = (
     "backend/hdm/application/presentation_activation.py",
     "backend/hdm/application/supervised_transition.py",
     "backend/hdm/application/guarded_process_release.py",
+    "backend/hdm/application/docked_igpu_lifecycle.py",
+    "backend/hdm/application/docked_igpu_promotion.py",
+    "backend/hdm/adapters/steamos/gamescope_session.py",
     "backend/hdm/adapters/steamos/process_signal.py",
     "backend/hdm/delivery/process_release.py",
+    "backend/hdm/delivery/docked_igpu_lifecycle.py",
+    "backend/hdm/delivery/docked_igpu_scheduler.py",
     "backend/hdm/delivery/runtime_state.py",
     "backend/hdm/delivery/transition_journal_store.py",
     "backend/hdm/ports/presentation_activation.py",
+    "backend/hdm/ports/gamescope_session.py",
+    "backend/hdm/domain/gamescope_session.py",
     "bin/gamescope",
     "dist/index.js",
     "dist/index.js.map",
@@ -41,6 +48,8 @@ FORBIDDEN_RPC_TERMS = (
     "switch_display",
     "signal_process",
     "force_close",
+    "approve_docked_igpu",
+    "execute_docked_igpu",
 )
 
 
@@ -75,6 +84,8 @@ def main() -> int:
         }
         allowed_methods = {
             "get_snapshot",
+            "get_docked_igpu_status",
+            "acknowledge_docked_igpu_status",
             "preview_support_bundle",
             "save_support_bundle",
             "preview_presentation_preparation",
@@ -88,7 +99,7 @@ def main() -> int:
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky RPCs must remain limited to diagnostics, approved support export, supervised preparation, and guarded process release"
+                "Decky RPCs must remain limited to diagnostics, read-only watcher status, approved support export, supervised preparation, and guarded process release"
             )
 
     delivery_sources = "\n".join(
@@ -106,7 +117,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics, support export, sleep guard, supervised preparation, and guarded process release only."
+        "Plugin package check passed: diagnostics, read-only watcher status, support export, sleep guard, supervised preparation, and guarded process release only."
     )
     return 0
 

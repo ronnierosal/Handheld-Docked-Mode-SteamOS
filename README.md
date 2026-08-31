@@ -69,6 +69,7 @@ between production-safe features and dormant or simulated transition work.
 | Portable placement inference | Implemented and hardware tested | Available |
 | G1 sleep inhibitor and Steam preflight | Implemented and hardware tested | Available; persistent warning needs one final supervised visible proof |
 | Redacted support preview, one-shot game/GPU evidence, and approved save | Implemented and simulated | Available; new evidence and controller-visible save acceptance are pending hardware proof |
+| Docked-iGPU natural-exit observer | Implemented and simulated | Read-only categorical status available in troubleshooting; hardware proof pending |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
 | Portable ↔ TV Docked transition engine | Implemented and simulated | Not wired to Decky; no transition RPC exists |
 | Guarded process release | Implemented and simulated | Decky-native experimental flow; supervised disposable-process proof pending |
@@ -91,7 +92,7 @@ failed action can never overwrite hardware truth.
 |---|---|---|
 | **Portable** | Internal GPU → internal panel | Hardware tested |
 | **Boosted Handheld** | Verified eGPU → internal panel | Unproven |
-| **Docked-iGPU** | Internal GPU → external display | Research only |
+| **Docked-iGPU** | Internal GPU → external display | Read-only observer implemented; placement remains unverified |
 | **TV Docked / Docked-eGPU** | Verified eGPU → its directly attached display | Transition simulated; native hardware proof pending |
 
 Incomplete or conflicting evidence is surfaced as **Unknown** or **Degraded**.

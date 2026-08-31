@@ -14,6 +14,8 @@ class DockedIgpuLifecyclePort(Protocol):
 
     def tick(self) -> DockedIgpuLifecycleStatus: ...
 
+    def acknowledge_action(self) -> bool: ...
+
     def close(self) -> DockedIgpuLifecycleStatus: ...
 
 
@@ -35,6 +37,14 @@ class DockedIgpuLifecycleScheduler:
         """Request one fresh tick after an external lifecycle state change."""
 
         self._wake.set()
+
+    def acknowledge_action(self) -> bool:
+        """Clear only the lifecycle's current Action Required state."""
+
+        acknowledged = self._lifecycle.acknowledge_action()
+        if acknowledged:
+            self._set_latest(self._lifecycle.status())
+        return acknowledged
 
     async def run(self) -> None:
         if self._running:

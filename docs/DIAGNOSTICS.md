@@ -18,9 +18,10 @@ After package installation, the equivalent command is `hdm-diagnose`.
 
 Delivery adapters call `DiagnosticsApi.get_snapshot()` to receive the same
 versioned dictionary without parsing CLI output. The Decky plugin is a thin
-root-privileged wrapper around this API. In addition to `get_snapshot`, its only
-public calls are the bounded preview/token-approved support export documented in
-[Privacy-safe support bundle](SUPPORT_BUNDLE.md).
+root-privileged wrapper around this API. Its explicit public allowlist also
+covers support preview/export, reversible presentation preparation, guarded
+process release, and categorical Docked-iGPU watcher status/acknowledgement.
+Transition approval or execution is not public.
 
 Build the Decky package from a source checkout with:
 
@@ -43,8 +44,12 @@ redacted preview and one-time approval.
 An optional controller-friendly troubleshooting section is off by default. It
 derives categorical state, confidence, blocker codes, client categories,
 resource types, and stage timings from the existing snapshot. It does not issue
-a new RPC and does not render stable hardware IDs, connector names, vendor IDs,
-or process IDs. Closing/reopening the plugin hides it again.
+hardware mutation and does not render stable hardware IDs, connector names,
+vendor IDs, or process IDs. It also shows the categorical Docked-iGPU watcher
+stage. If that read-only watcher enters Action Required, the only offered action
+acknowledges and cancels its private watch so observation can resume; it cannot
+approve or execute promotion. Closing/reopening the plugin hides the section
+again.
 
 ## Evidence sources
 
@@ -75,6 +80,20 @@ boundary.
 Scope-derived AppID identity is currently retained only inside the read-only
 game scan. Multiple/future scope formats leave it unknown, and it is not present
 in the public schema or support bundle.
+
+The production Docked-iGPU observer resolves the exact Gamescope user and binds
+each watch to a hash of the Gamescope PID, Linux start time, and UID. A missing
+or changed process generation fails closed. It attempts to arm only from exact
+running Docked-iGPU evidence. Its serialized lifecycle uses a fifteen-second
+ineligible cadence and five-second active cadence. Watch-only promotion-ready
+is visible for one active interval and then cleared; Action Required quiesces
+until acknowledgement. A supervisor retries transient startup or runner failure
+after thirty seconds. The public
+status contains only stage, reason code, bounded next-poll timing, and boolean
+inspection/acknowledgement flags. Watch ID, AppID, scopes, profile identities,
+eGPU identity, and observation generations remain private. The production
+composition has no supervised-preview port, so `inspection_available` remains
+false and no transition authority can be created.
 
 ## Interpretation
 

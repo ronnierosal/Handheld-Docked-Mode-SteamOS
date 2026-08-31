@@ -128,6 +128,35 @@ export interface SnapshotPayload {
 
 export const getSnapshot = callable<[], SnapshotPayload>("get_snapshot");
 
+export type DockedIgpuLifecycleStage =
+  | "idle"
+  | "watching"
+  | "promotion_ready"
+  | "action_required"
+  | "closed";
+
+export interface DockedIgpuStatusPayload {
+  schema_version: number;
+  stage: DockedIgpuLifecycleStage;
+  code: string;
+  poll_after_ms: number;
+  inspection_available: boolean;
+  acknowledgement_required: boolean;
+}
+
+export interface DockedIgpuAcknowledgementPayload {
+  schema_version: number;
+  acknowledged: boolean;
+}
+
+export const getDockedIgpuStatus = callable<[], DockedIgpuStatusPayload>(
+  "get_docked_igpu_status",
+);
+export const acknowledgeDockedIgpuStatus = callable<
+  [],
+  DockedIgpuAcknowledgementPayload
+>("acknowledge_docked_igpu_status");
+
 export interface SupportBundlePreviewPayload {
   schema_version: number;
   preview_token: string;

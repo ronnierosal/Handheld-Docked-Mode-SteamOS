@@ -37,6 +37,7 @@ def watch(stage=DockedIgpuExitStage.WATCHING):
         "snapshot-running",
         "sample-running",
         "game-running",
+        "a" * 64,
         100,
         1000,
         (
@@ -135,6 +136,18 @@ class DockedIgpuPromotionFacadeTests(unittest.TestCase):
 
         self.assertTrue(prepared.accepted)
         self.assertEqual(prepared.preview.approval_token, "unexpected_token_0001")
+        self.assertTrue(facade.cancel(WATCH_ID))
+
+    def test_watch_only_composition_retains_ready_state_without_preview_port(self):
+        facade = DockedIgpuPromotionFacade(watcher=Watcher())
+        self.assertFalse(facade.inspection_supported)
+        facade.arm()
+        facade.poll(WATCH_ID)
+
+        prepared = facade.prepare(WATCH_ID, user_confirmed=False)
+
+        self.assertFalse(prepared.accepted)
+        self.assertEqual(prepared.code, "docked_igpu.preview_unavailable")
         self.assertTrue(facade.cancel(WATCH_ID))
 
     def test_blocked_preview_retains_watch_for_explicit_cancel(self):

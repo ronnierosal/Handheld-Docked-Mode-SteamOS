@@ -20,6 +20,9 @@ if str(BACKEND_ROOT) not in sys.path:
 from hdm.adapters.steamos.discovery import SteamOsDiscovery  # noqa: E402
 from hdm.adapters.steamos.commands import UserServiceCommandRunner  # noqa: E402
 from hdm.adapters.steamos.gamescope import GamescopeDiscovery  # noqa: E402
+from hdm.adapters.steamos.gamescope_session import (  # noqa: E402
+    GamescopeSessionObservationAdapter,
+)
 from hdm.adapters.steamos.gamescope_user import resolve_gamescope_user  # noqa: E402
 from hdm.adapters.steamos.sleep_inhibitor import (  # noqa: E402
     G1SleepGuardHardwareDiscovery,
@@ -53,6 +56,9 @@ from hdm.application.game_gpu_client import GameEgpuClientEvidenceService  # noq
 from hdm.application.game_render_activity import (  # noqa: E402
     GameRenderActivityComparisonService,
 )
+from hdm.application.docked_igpu_exit import DockedIgpuGameExitWatcher  # noqa: E402
+from hdm.application.docked_igpu_lifecycle import DockedIgpuWatchLifecycle  # noqa: E402
+from hdm.application.docked_igpu_promotion import DockedIgpuPromotionFacade  # noqa: E402
 from hdm.application.presentation_activation import (  # noqa: E402
     PresentationActivationApprovalStore,
     PresentationActivationService,
@@ -84,6 +90,10 @@ from hdm.delivery.process_release import (  # noqa: E402
 from hdm.delivery.game_evidence_support import (  # noqa: E402
     game_evidence_to_event_details,
 )
+from hdm.delivery.docked_igpu_lifecycle import lifecycle_status_to_payload  # noqa: E402
+from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
+    DockedIgpuLifecycleScheduler,
+)
 from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
 from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
@@ -98,6 +108,10 @@ class Plugin:
         )
         self._api = DiagnosticsApi(self._discovery)
         self._sleep_guard_task: asyncio.Task[None] | None = None
+        self._docked_igpu_scheduler: DockedIgpuLifecycleScheduler | None = None
+        self._docked_igpu_task: asyncio.Task[None] | None = None
+        self._docked_igpu_retry_seconds = 30.0
+        self._last_docked_igpu_lifecycle_code = ""
         self._last_sleep_guard_log: tuple[str, bool, str] | None = None
         self._events = BoundedEventLog()
         self._support_bundles = SupportBundleService()
@@ -112,6 +126,37 @@ class Plugin:
     async def get_snapshot(self) -> dict[str, object]:
         """Return the existing privacy-safe, read-only diagnostics payload."""
         return await asyncio.to_thread(self._api.get_snapshot)
+
+    async def get_docked_igpu_status(self) -> dict[str, object]:
+        """Return only categorical state from the read-only natural-exit watch."""
+
+        scheduler = self._docked_igpu_scheduler
+        if scheduler is None:
+            return {
+                "schema_version": 1,
+                "stage": "idle",
+                "code": "docked_igpu.lifecycle_unavailable",
+                "poll_after_ms": 15000,
+                "inspection_available": False,
+                "acknowledgement_required": False,
+            }
+        return lifecycle_status_to_payload(scheduler.status())
+
+    async def acknowledge_docked_igpu_status(self) -> dict[str, object]:
+        """Acknowledge only a terminal read-only watch; never approve a transition."""
+
+        scheduler = self._docked_igpu_scheduler
+        if scheduler is None:
+            return {"schema_version": 1, "acknowledged": False}
+        try:
+            acknowledged = await asyncio.to_thread(
+                scheduler.acknowledge_action
+            )
+        except Exception:
+            acknowledged = False
+        if acknowledged:
+            scheduler.wake()
+        return {"schema_version": 1, "acknowledged": acknowledged}
 
     async def preview_support_bundle(self) -> dict[str, object]:
         """Return a redacted preview and one-time approval token."""
@@ -462,7 +507,87 @@ class Plugin:
                 component="discovery",
                 stage="startup",
             )
+        await self._start_docked_igpu_lifecycle()
         self._sleep_guard_task = asyncio.create_task(self._sleep_guard_loop())
+
+    async def _start_docked_igpu_lifecycle(self) -> None:
+        if self._docked_igpu_task is not None:
+            return
+        self._docked_igpu_task = asyncio.create_task(
+            self._docked_igpu_supervisor_loop()
+        )
+
+    async def _docked_igpu_supervisor_loop(self) -> None:
+        while True:
+            try:
+                scheduler = await asyncio.to_thread(
+                    self._build_docked_igpu_scheduler
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._record_docked_igpu_lifecycle(
+                    "docked_igpu.lifecycle_unavailable", "warning"
+                )
+                await asyncio.sleep(self._docked_igpu_retry_seconds)
+                continue
+            self._docked_igpu_scheduler = scheduler
+            self._record_docked_igpu_lifecycle(
+                "docked_igpu.lifecycle_started", "info"
+            )
+            try:
+                await scheduler.run()
+                self._record_docked_igpu_lifecycle(
+                    "docked_igpu.lifecycle_stopped", "warning"
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._record_docked_igpu_lifecycle(
+                    "docked_igpu.lifecycle_failed", "warning"
+                )
+            finally:
+                self._docked_igpu_scheduler = None
+            await asyncio.sleep(self._docked_igpu_retry_seconds)
+
+    def _record_docked_igpu_lifecycle(self, code: str, severity: str) -> None:
+        if code == self._last_docked_igpu_lifecycle_code:
+            return
+        self._last_docked_igpu_lifecycle_code = code
+        self._events.append(
+            severity=severity,
+            code=code,
+            component="docked_igpu",
+            stage="runtime",
+        )
+
+    def _build_docked_igpu_scheduler(self) -> DockedIgpuLifecycleScheduler:
+        resolution = resolve_gamescope_user(GamescopeDiscovery().scan())
+        if not resolution.ok or resolution.context is None:
+            raise ValueError("Gamescope user is unavailable")
+        snapshots = SnapshotTransitionObservationAdapter(self._discovery)
+        games = GameScopeSessionObservationAdapter(
+            UserBoundGameScopeScanAdapter(
+                SystemdGameScopeDiscovery(),
+                resolution.context.uid,
+            )
+        )
+        watcher = DockedIgpuGameExitWatcher(
+            snapshots=snapshots,
+            games=games,
+            gamescope_sessions=GamescopeSessionObservationAdapter(
+                GamescopeDiscovery()
+            ),
+            clock=SystemMonotonicClock(),
+        )
+        promotion = DockedIgpuPromotionFacade(watcher=watcher)
+        return DockedIgpuLifecycleScheduler(
+            DockedIgpuWatchLifecycle(
+                promotion,
+                poll_interval_ms=5000,
+                idle_poll_interval_ms=15000,
+            )
+        )
 
     async def _reconcile_sleep_guard(self) -> None:
         presence = await asyncio.to_thread(self._sleep_hardware.observe_presence)
@@ -509,6 +634,7 @@ class Plugin:
             component="lifecycle",
             stage="shutdown",
         )
+        await self._stop_docked_igpu_lifecycle()
         if self._sleep_guard_task is not None:
             self._sleep_guard_task.cancel()
             try:
@@ -518,6 +644,24 @@ class Plugin:
             self._sleep_guard_task = None
         status = await asyncio.to_thread(self._sleep_guard.close)
         decky.logger.info("HDM sleep guard released: active=%s", status.active)
+
+    async def _stop_docked_igpu_lifecycle(self) -> None:
+        task = self._docked_igpu_task
+        self._docked_igpu_task = None
+        if task is not None:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                self._events.append(
+                    severity="warning",
+                    code="docked_igpu.lifecycle_close_incomplete",
+                    component="docked_igpu",
+                    stage="shutdown",
+                )
+        self._docked_igpu_scheduler = None
 
     def _support_versions(self) -> dict[str, str]:
         return {

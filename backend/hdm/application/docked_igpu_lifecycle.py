@@ -22,6 +22,7 @@ from .docked_igpu_promotion import (
 CODE_RE = re.compile(r"^[a-z0-9_.-]{1,96}$")
 MIN_POLL_INTERVAL_MS = 250
 MAX_POLL_INTERVAL_MS = 5000
+MAX_IDLE_POLL_INTERVAL_MS = 60000
 
 
 class DockedIgpuLifecycleStage(StrEnum):
@@ -43,16 +44,23 @@ class DockedIgpuLifecycleStatus:
     def __post_init__(self) -> None:
         if not CODE_RE.fullmatch(self.code):
             raise ValueError("Docked-iGPU lifecycle code is invalid")
-        if self.stage in {
-            DockedIgpuLifecycleStage.WATCHING,
-            DockedIgpuLifecycleStage.IDLE,
-        }:
+        if self.stage is DockedIgpuLifecycleStage.WATCHING:
             if not MIN_POLL_INTERVAL_MS <= self.poll_after_ms <= MAX_POLL_INTERVAL_MS:
                 raise ValueError("Docked-iGPU lifecycle poll interval is invalid")
+        elif self.stage is DockedIgpuLifecycleStage.IDLE:
+            if not MIN_POLL_INTERVAL_MS <= self.poll_after_ms <= MAX_IDLE_POLL_INTERVAL_MS:
+                raise ValueError("Docked-iGPU lifecycle idle interval is invalid")
+        elif (
+            self.stage is DockedIgpuLifecycleStage.PROMOTION_READY
+            and not self.inspection_available
+        ):
+            if not MIN_POLL_INTERVAL_MS <= self.poll_after_ms <= MAX_POLL_INTERVAL_MS:
+                raise ValueError("Docked-iGPU lifecycle ready interval is invalid")
         elif self.poll_after_ms != 0:
             raise ValueError("terminal Docked-iGPU lifecycle cannot request polling")
-        if self.inspection_available != (
-            self.stage is DockedIgpuLifecycleStage.PROMOTION_READY
+        if (
+            self.inspection_available
+            and self.stage is not DockedIgpuLifecycleStage.PROMOTION_READY
         ):
             raise ValueError("Docked-iGPU lifecycle inspection state is invalid")
         if self.acknowledgement_required != (
@@ -77,6 +85,9 @@ class DockedIgpuLifecycleInspection:
 
 
 class DockedIgpuPromotionLifecyclePort(Protocol):
+    @property
+    def inspection_supported(self) -> bool: ...
+
     def arm(self) -> DockedIgpuExitArmResult: ...
 
     def poll(self, watch_id: str) -> DockedIgpuPromotionPollResult: ...
@@ -96,11 +107,15 @@ class DockedIgpuWatchLifecycle:
         promotion: DockedIgpuPromotionLifecyclePort,
         *,
         poll_interval_ms: int = 1000,
+        idle_poll_interval_ms: int = 15000,
     ) -> None:
         if not MIN_POLL_INTERVAL_MS <= poll_interval_ms <= MAX_POLL_INTERVAL_MS:
             raise ValueError("Docked-iGPU lifecycle poll interval is invalid")
+        if not MIN_POLL_INTERVAL_MS <= idle_poll_interval_ms <= MAX_IDLE_POLL_INTERVAL_MS:
+            raise ValueError("Docked-iGPU lifecycle idle interval is invalid")
         self._promotion = promotion
         self._poll_interval_ms = poll_interval_ms
+        self._idle_poll_interval_ms = idle_poll_interval_ms
         self._watch_id = ""
         self._status = self._idle("docked_igpu.lifecycle_idle")
         self._closed = False
@@ -114,10 +129,15 @@ class DockedIgpuWatchLifecycle:
         with self._lock:
             if self._closed:
                 return self._status
-            if self._status.stage in {
-                DockedIgpuLifecycleStage.PROMOTION_READY,
-                DockedIgpuLifecycleStage.ACTION_REQUIRED,
-            }:
+            if self._status.stage is DockedIgpuLifecycleStage.ACTION_REQUIRED:
+                return self._status
+            if self._status.stage is DockedIgpuLifecycleStage.PROMOTION_READY:
+                if self._status.inspection_available:
+                    return self._status
+                if not self._cancel_locked():
+                    self._status = self._action("docked_igpu.cancel_incomplete")
+                else:
+                    self._status = self._idle("docked_igpu.promotion_observed")
                 return self._status
             if not self._watch_id:
                 return self._arm_locked()
@@ -140,6 +160,13 @@ class DockedIgpuWatchLifecycle:
         """Preview readiness without exposing identity or creating authority."""
 
         with self._lock:
+            if (
+                self._status.stage is DockedIgpuLifecycleStage.PROMOTION_READY
+                and not self._status.inspection_available
+            ):
+                return DockedIgpuLifecycleInspection(
+                    False, "docked_igpu.inspection_unavailable"
+                )
             if (
                 self._closed
                 or self._status.stage is not DockedIgpuLifecycleStage.PROMOTION_READY
@@ -289,11 +316,12 @@ class DockedIgpuWatchLifecycle:
                 self._poll_interval_ms,
             )
         if stage is DockedIgpuExitStage.PROMOTION_READY:
+            inspection_available = self._promotion.inspection_supported
             return DockedIgpuLifecycleStatus(
                 DockedIgpuLifecycleStage.PROMOTION_READY,
                 code,
-                0,
-                inspection_available=True,
+                0 if inspection_available else self._poll_interval_ms,
+                inspection_available=inspection_available,
             )
         if stage is DockedIgpuExitStage.ACTION_REQUIRED:
             return self._action(code)
@@ -303,7 +331,7 @@ class DockedIgpuWatchLifecycle:
         return DockedIgpuLifecycleStatus(
             DockedIgpuLifecycleStage.IDLE,
             code,
-            self._poll_interval_ms,
+            self._idle_poll_interval_ms,
         )
 
     @staticmethod

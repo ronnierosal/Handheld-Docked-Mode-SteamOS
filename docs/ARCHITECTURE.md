@@ -211,29 +211,38 @@ output plus the exact internal render GPU, and recovery can restore it. The path
 remains experimental, approval-gated, and unwired; the durable path itself does
 not watch for game exit or initiate promotion automatically.
 
-A separate dormant read-only watcher now binds an exact running Steam game in
-Docked-iGPU and emits only a one-shot `promotion_ready` state after two exact
-Idle samples bracket a fresh, unchanged-profile Docked-iGPU snapshot. It is
-bounded, cancels on context change, exposes no private identity in its payload,
-and has no transition/approval port. See
+A separate read-only watcher binds an exact running Steam game in Docked-iGPU
+and its PID-reuse-resistant Gamescope session generation, then emits only a
+one-shot `promotion_ready` state after two exact Idle samples bracket a fresh,
+unchanged-profile Docked-iGPU snapshot. The production backend uses a
+fifteen-second ineligible cadence with an idle fast path that skips full
+hardware discovery, then a five-second cadence while watching. It is bounded,
+cancels on game, Gamescope, placement, or profile change, exposes no private
+identity in its payload, and is constructed without a transition/approval port. See
 [Docked-iGPU workflow](DOCKED_IGPU.md).
 
-An in-memory opaque facade composes a ready watch with the existing supervised
-preview without accepting private identity or generation from delivery. It
-binds preview to the stored generation, requires Docked-iGPU again, and consumes
-the watch only after an explicit approval token is issued. No RPC constructs
-the facade and it does not execute the token.
+The opaque facade can compose a ready watch with the existing supervised preview
+without accepting private identity or generation from delivery. That
+preview-capable composition binds preview to the stored generation, requires
+Docked-iGPU again, and consumes the watch only after an explicit approval token
+is issued. It remains dormant. Production constructs the same facade in
+watch-only mode: inspection is unavailable, no approval token can be requested,
+and no transition service or mechanism is imported into `main.py`.
 
 A serialized lifecycle now owns exactly one facade watch and supplies bounded
-arm/poll timing, retained promotion readiness, Action Required acknowledgement,
-and idempotent unload cancellation. Its read-only inspection always calls the
+arm/poll timing, Action Required acknowledgement, and idempotent unload
+cancellation. Preview-capable composition retains promotion readiness;
+watch-only production clears the ready watch after one reporting interval so
+stale evidence cannot survive a new game or topology. Its read-only inspection always calls the
 facade with `user_confirmed=False`, maps only categorical placement/readiness
 and sanitized blockers, and treats any unexpected approval token as Action
-Required. The lifecycle is implemented and simulated but is not yet constructed
-by the backend or exposed through Decky. A delivery-side async driver now
-provides single-run ownership, bounded polling, explicit wake-up from terminal
-states, terminal-state quiescence, and close-on-cancellation. It is also dormant
-and creates no task by itself.
+Required. A delivery-side async driver provides single-run ownership, bounded
+polling, explicit wake-up from terminal states, terminal-state quiescence, and
+close-on-cancellation. The backend owns one such task for the watch-only
+lifecycle behind a bounded retrying supervisor and cancels it on unload. Decky
+exposes only categorical status plus
+acknowledgement of Action Required; acknowledgement cancels the private watch
+and resumes observation but cannot inspect, approve, or execute a transition.
 
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is

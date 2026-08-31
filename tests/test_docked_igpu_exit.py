@@ -19,6 +19,7 @@ from hdm.domain.game_session import (  # noqa: E402
     ActiveGameIdentity,
     GameSessionObservation,
 )
+from hdm.domain.gamescope_session import GamescopeSessionObservation  # noqa: E402
 from hdm.domain.models import GameState  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.ports.transition import VersionedObservation  # noqa: E402
@@ -26,6 +27,12 @@ from hdm.ports.transition import VersionedObservation  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures"
 GAME = ActiveGameIdentity("1234", ("app-steam-app1234-test.scope",))
+SESSION_A = GamescopeSessionObservation(
+    True, "gamescope.session_observed", "a" * 64
+)
+SESSION_B = GamescopeSessionObservation(
+    True, "gamescope.session_observed", "b" * 64
+)
 
 
 def docked_igpu(*, game_state=GameState.RUNNING):
@@ -60,6 +67,16 @@ class Scripted:
         return self.values.pop(0) if self.values else None
 
 
+class CountingScripted(Scripted):
+    def __init__(self, *values):
+        super().__init__(*values)
+        self.calls = 0
+
+    def observe(self):
+        self.calls += 1
+        return super().observe()
+
+
 class Clock:
     def __init__(self, value=100):
         self.value = value
@@ -68,10 +85,13 @@ class Clock:
         return self.value
 
 
-def watcher(*, snapshots, games, clock=None, ttl_ms=1000):
+def watcher(*, snapshots, games, sessions=None, clock=None, ttl_ms=1000):
     return DockedIgpuGameExitWatcher(
         snapshots=Scripted(*snapshots),
         games=Scripted(*games),
+        gamescope_sessions=Scripted(
+            *(sessions or (SESSION_A,) * 8)
+        ),
         clock=clock or Clock(),
         ttl_ms=ttl_ms,
         watch_id_factory=lambda: "docked-igpu-watch-test-1",
@@ -189,6 +209,65 @@ class DockedIgpuExitWatcherTests(unittest.TestCase):
         expired = value.poll(watch)
         self.assertEqual(expired.stage, DockedIgpuExitStage.CANCELLED)
         self.assertEqual(expired.reason_code, "docked_igpu.watch_expired")
+
+    def test_idle_arm_short_circuits_expensive_snapshot_and_session_scans(self):
+        snapshots = CountingScripted(
+            VersionedObservation("unused", docked_igpu(), "unused")
+        )
+        games = CountingScripted(game_idle(sample="idle-1"))
+        sessions = CountingScripted(SESSION_A)
+        value = DockedIgpuGameExitWatcher(
+            snapshots=snapshots,
+            games=games,
+            gamescope_sessions=sessions,
+            clock=Clock(),
+            watch_id_factory=lambda: "docked-igpu-watch-test-1",
+        )
+
+        result = value.arm()
+
+        self.assertFalse(result.accepted)
+        self.assertEqual(result.code, "docked_igpu.game_not_running")
+        self.assertEqual(games.calls, 1)
+        self.assertEqual(snapshots.calls, 0)
+        self.assertEqual(sessions.calls, 0)
+
+    def test_gamescope_restart_cancels_exact_watch(self):
+        value = watcher(
+            snapshots=(
+                VersionedObservation("snapshot-running", docked_igpu(), "sample-1"),
+            ),
+            games=(
+                game_running(sample="game-1"),
+                game_running(sample="game-2"),
+            ),
+            sessions=(SESSION_A, SESSION_A, SESSION_B),
+        )
+
+        changed = value.poll(value.arm().watch)
+
+        self.assertEqual(changed.stage, DockedIgpuExitStage.CANCELLED)
+        self.assertEqual(changed.reason_code, "docked_igpu.gamescope_changed")
+
+    def test_unverified_gamescope_identity_refuses_to_arm(self):
+        unknown = GamescopeSessionObservation(
+            False, "gamescope.session_identity_unverified"
+        )
+        value = watcher(
+            snapshots=(
+                VersionedObservation("snapshot-running", docked_igpu(), "sample-1"),
+            ),
+            games=(
+                game_running(sample="game-1"),
+                game_running(sample="game-2"),
+            ),
+            sessions=(unknown, unknown),
+        )
+
+        result = value.arm()
+
+        self.assertFalse(result.accepted)
+        self.assertEqual(result.code, "docked_igpu.gamescope_identity_unverified")
 
     def test_public_payload_excludes_game_profiles_and_generations(self):
         value = watcher(

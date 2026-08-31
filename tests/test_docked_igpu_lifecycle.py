@@ -48,6 +48,7 @@ def watch(stage=DockedIgpuExitStage.WATCHING, reason="docked_igpu.watching_game_
         armed_snapshot_generation="snapshot-generation-private",
         armed_snapshot_sample_id="snapshot-sample-private",
         armed_game_generation="game-generation-private",
+        gamescope_session_generation="a" * 64,
         armed_at_ms=100,
         expires_at_ms=1000,
         reason_code=reason,
@@ -60,7 +61,15 @@ def watch(stage=DockedIgpuExitStage.WATCHING, reason="docked_igpu.watching_game_
 
 
 class PromotionFacade:
-    def __init__(self, *, arms=(), polls=(), prepares=(), cancel=True):
+    def __init__(
+        self,
+        *,
+        arms=(),
+        polls=(),
+        prepares=(),
+        cancel=True,
+        inspection_supported=True,
+    ):
         self.arms = list(arms)
         self.polls = list(polls)
         self.prepares = list(prepares)
@@ -69,6 +78,7 @@ class PromotionFacade:
         self.poll_calls = []
         self.prepare_calls = []
         self.cancel_calls = []
+        self.inspection_supported = inspection_supported
 
     def arm(self):
         self.arm_calls += 1
@@ -149,7 +159,7 @@ class DockedIgpuWatchLifecycleTests(unittest.TestCase):
         self.assertEqual(first.stage, DockedIgpuLifecycleStage.IDLE)
         self.assertEqual(second.stage, DockedIgpuLifecycleStage.IDLE)
         self.assertEqual(second.code, "docked_igpu.game_not_running")
-        self.assertEqual(second.poll_after_ms, 500)
+        self.assertEqual(second.poll_after_ms, 15000)
         self.assertEqual(facade.arm_calls, 2)
 
     def test_cancelled_watch_is_released_before_later_rearm(self):
@@ -390,6 +400,47 @@ class DockedIgpuWatchLifecycleTests(unittest.TestCase):
         self.assertEqual(
             lifecycle.status().stage, DockedIgpuLifecycleStage.PROMOTION_READY
         )
+
+    def test_ready_watch_without_preview_authority_reports_no_inspection(self):
+        armed = watch()
+        ready = replace(
+            armed,
+            stage=DockedIgpuExitStage.PROMOTION_READY,
+            reason_code="docked_igpu.promotion_ready",
+            ready_snapshot_generation="ready-generation-private",
+        )
+        facade = PromotionFacade(
+            arms=(
+                DockedIgpuExitArmResult(
+                    True, "docked_igpu.watch_armed", armed
+                ),
+            ),
+            polls=(
+                DockedIgpuPromotionPollResult(
+                    True, "docked_igpu.promotion_ready", ready
+                ),
+            ),
+            inspection_supported=False,
+        )
+        lifecycle = DockedIgpuWatchLifecycle(
+            facade, poll_interval_ms=5000, idle_poll_interval_ms=15000
+        )
+        lifecycle.tick()
+
+        ready_status = lifecycle.tick()
+        inspection = lifecycle.inspect_ready()
+        cleared = lifecycle.tick()
+
+        self.assertFalse(ready_status.inspection_available)
+        self.assertEqual(ready_status.poll_after_ms, 5000)
+        self.assertFalse(inspection.accepted)
+        self.assertEqual(inspection.code, "docked_igpu.inspection_unavailable")
+        self.assertEqual(facade.prepare_calls, [])
+        self.assertEqual(cleared.stage, DockedIgpuLifecycleStage.IDLE)
+        self.assertEqual(cleared.code, "docked_igpu.promotion_observed")
+        self.assertEqual(cleared.poll_after_ms, 15000)
+        self.assertEqual(facade.cancel_calls, [armed.watch_id])
+        self.assertIs(lifecycle.acknowledge_action(), False)
 
     def test_unexpected_authority_fails_closed_and_requires_acknowledgement(self):
         armed = watch()

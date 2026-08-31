@@ -98,8 +98,23 @@ test("overlay is empty until a snapshot exists", () => {
   assert.deepEqual(diagnosticOverlayRows(null), []);
 });
 
-test("overlay exposes useful categorical state without raw identities", () => {
+test("missing watcher delivery is visible rather than silently omitted", () => {
   const rows = diagnosticOverlayRows(payload());
+  assert.deepEqual(
+    rows.find((row) => row.name === "Docked-iGPU watch"),
+    { name: "Docked-iGPU watch", value: "unavailable" },
+  );
+});
+
+test("overlay exposes useful categorical state without raw identities", () => {
+  const rows = diagnosticOverlayRows(payload(), {
+    schema_version: 1,
+    stage: "promotion_ready",
+    code: "docked_igpu.promotion_ready",
+    poll_after_ms: 0,
+    inspection_available: false,
+    acknowledgement_required: false,
+  });
   const text = JSON.stringify(rows);
   assert.match(text, /asus-rog-ally-x/);
   assert.match(text, /test\.blocker/);
@@ -109,6 +124,10 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /host exact/);
   assert.match(text, /usb4/);
   assert.match(text, /shutdown before disconnect/);
+  assert.match(text, /Docked-iGPU watch/);
+  assert.match(text, /promotion ready/);
+  assert.match(text, /Promotion inspection/);
+  assert.match(text, /unavailable/);
   for (const forbidden of [
     "private-gpu-id",
     "private-display-id",

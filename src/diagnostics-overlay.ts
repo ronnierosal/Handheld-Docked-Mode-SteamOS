@@ -1,4 +1,8 @@
-import type { HardwareCapabilityAxis, SnapshotPayload } from "./backend";
+import type {
+  DockedIgpuStatusPayload,
+  HardwareCapabilityAxis,
+  SnapshotPayload,
+} from "./backend";
 
 
 export interface DiagnosticOverlayRow {
@@ -16,6 +20,7 @@ function yesNoUnknown(value: boolean | null): string {
 
 export function diagnosticOverlayRows(
   payload: SnapshotPayload | null,
+  dockedIgpuStatus: DockedIgpuStatusPayload | null = null,
 ): DiagnosticOverlayRow[] {
   if (!payload) {
     return [];
@@ -108,6 +113,27 @@ export function diagnosticOverlayRows(
       value: "off · control not enabled in this build",
     },
   ];
+  rows.push(
+    ...(dockedIgpuStatus
+      ? [
+      {
+        name: "Docked-iGPU watch",
+        value: `${humanize(dockedIgpuStatus.stage)} · ${humanize(dockedIgpuStatus.code)}`,
+      },
+      {
+        name: "Promotion inspection",
+        value: dockedIgpuStatus.inspection_available
+          ? "available · read-only"
+          : "unavailable",
+      },
+        ]
+      : [
+          {
+            name: "Docked-iGPU watch",
+            value: "unavailable",
+          },
+        ]),
+  );
   disconnect.clients.forEach((client, index) => {
     rows.push({
       name: `Client ${index + 1}`,

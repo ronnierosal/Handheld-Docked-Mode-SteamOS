@@ -97,7 +97,10 @@ Only after the player naturally connects the G1 and confirms visible control:
 2. Verify exact profile identity, TV/EDID state, Gamescope, render GPU, game
    state, disconnect blockers, and both sleep-protection layers.
 3. Verify adaptive polling and support preview without saving or changing state.
-4. Keep the G1 attached; do not test removal.
+4. In troubleshooting details, verify the Docked-iGPU watcher status remains
+   categorical and contains no AppID, scope, device identity, or generation.
+   Do not treat `promotion_ready` as approval or proof of G1 rendering.
+5. Keep the G1 attached; do not test removal.
 
 Automated SSH work remains read-only. Any unknown identity or game state stops
 the stage.

@@ -15,6 +15,7 @@ class GamescopeProcessRecord:
     mesa_vk_device_select: str = ""
     environment_readable: bool = False
     uid: int | None = None
+    start_time_ticks: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +52,7 @@ def parse_gamescope_process(
     environment: dict[str, str] | None = None,
     environment_readable: bool = False,
     uid: int | None = None,
+    start_time_ticks: int = 0,
 ) -> GamescopeProcessRecord:
     output = _option(argv, "-O", "--prefer-output")
     output_order = tuple(part.strip() for part in output.split(",") if part.strip())
@@ -62,7 +64,28 @@ def parse_gamescope_process(
         mesa_vk_device_select=str((environment or {}).get("MESA_VK_DEVICE_SELECT", "")).lower(),
         environment_readable=environment_readable,
         uid=uid,
+        start_time_ticks=start_time_ticks,
     )
+
+
+def parse_process_start_time(value: str, expected_pid: int) -> int:
+    """Return Linux /proc stat field 22 without trusting the process name."""
+
+    closing = value.rfind(")")
+    if closing <= 1:
+        return 0
+    opening = value[:closing].find("(")
+    if opening <= 0:
+        return 0
+    try:
+        pid = int(value[:opening].strip())
+        fields = value[closing + 1 :].strip().split()
+        start_time_ticks = int(fields[19])
+    except (IndexError, ValueError):
+        return 0
+    if pid != expected_pid or start_time_ticks <= 0:
+        return 0
+    return start_time_ticks
 
 
 class GamescopeDiscovery:
@@ -103,6 +126,13 @@ class GamescopeDiscovery:
                 uid = process_path.stat().st_uid
             except (AttributeError, OSError):
                 uid = None
+            try:
+                start_time_ticks = parse_process_start_time(
+                    (process_path / "stat").read_text(encoding="utf-8"),
+                    int(process_path.name),
+                )
+            except (OSError, UnicodeError):
+                start_time_ticks = 0
             environment: dict[str, str] = {}
             for part in environment_raw.split(b"\0"):
                 if not part.startswith(b"MESA_VK_DEVICE_SELECT="):
@@ -118,6 +148,7 @@ class GamescopeDiscovery:
                     environment,
                     environment_readable,
                     uid,
+                    start_time_ticks,
                 )
             )
         if len(candidates) == 1:

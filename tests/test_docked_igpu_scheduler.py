@@ -42,6 +42,7 @@ class Lifecycle:
         )
         self.tick_calls = 0
         self.close_calls = 0
+        self.acknowledge_calls = 0
 
     def status(self):
         return self.current
@@ -59,6 +60,17 @@ class Lifecycle:
             "docked_igpu.lifecycle_closed",
         )
         return self.current
+
+    def acknowledge_action(self):
+        self.acknowledge_calls += 1
+        if self.current.stage is not DockedIgpuLifecycleStage.ACTION_REQUIRED:
+            return False
+        self.current = status(
+            DockedIgpuLifecycleStage.IDLE,
+            "docked_igpu.action_acknowledged",
+            5000,
+        )
+        return True
 
 
 async def wait_until(predicate, attempts=200):
@@ -155,6 +167,24 @@ class DockedIgpuLifecycleSchedulerTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(asyncio.CancelledError):
             await task
         self.assertEqual(lifecycle.close_calls, 1)
+
+    async def test_acknowledgement_is_forwarded_but_wake_remains_explicit(self):
+        lifecycle = Lifecycle(())
+        lifecycle.current = status(
+            DockedIgpuLifecycleStage.ACTION_REQUIRED,
+            "docked_igpu.game_identity_unverified",
+        )
+        scheduler = DockedIgpuLifecycleScheduler(lifecycle)
+
+        accepted = scheduler.acknowledge_action()
+
+        self.assertTrue(accepted)
+        self.assertEqual(lifecycle.acknowledge_calls, 1)
+        self.assertEqual(lifecycle.tick_calls, 0)
+        self.assertEqual(
+            scheduler.status().stage,
+            DockedIgpuLifecycleStage.IDLE,
+        )
 
 
 if __name__ == "__main__":
