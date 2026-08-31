@@ -33,7 +33,7 @@ No broader label may be inferred from a narrower one.
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
 | Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, and unwired supervised transition facade implemented and simulated | Decky transition controls, startup recovery wiring, and hardware proof remain; preparation cannot restart Gamescope. |
-| Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
+| Process release/termination | Approval/classification, POSIX adapter, mandatory re-scan runner, durable pre-signal journal, and no-repeat restart recovery implemented and simulated | Decky composition plus supervised disposable-process proof remain. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
 | Atomic fixed-path transition journal store | Implemented and unit tested, dormant | Startup recovery policy is implemented; Decky construction and supervised persistence proof remain. |
@@ -125,8 +125,9 @@ behavior. No new production mutation endpoint exists.
 ### R2 — Guarded non-game eGPU client release
 
 **Status:** IMPLEMENTED AND SIMULATED — backend-owned preview/token/revalidation,
-fake typed signal/re-scan flow, deadlines, and privacy-safe audit are covered.
-No production signal adapter or public RPC exists.
+typed signal/re-scan flow, deadlines, privacy-safe audit, durable pre-signal
+journaling, and no-repeat restart terminalization are covered. A narrow POSIX
+adapter exists, but Decky constructs neither it nor a public process RPC.
 
 - Generate backend-owned previews for exact eligible process instances.
 - Bind short-lived single-use approval tokens to candidate set, device identity,

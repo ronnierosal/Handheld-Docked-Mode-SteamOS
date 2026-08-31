@@ -15,6 +15,7 @@ from hdm.application.process_release import (  # noqa: E402
     ProcessReleaseApprovalStore,
 )
 from hdm.application.process_release_replay import (  # noqa: E402
+    ProcessReleaseJournalRecovery,
     ProcessReleaseReplaySimulator,
     ProcessReleaseStatus,
     process_audit_to_dict,
@@ -24,6 +25,7 @@ from hdm.domain.models import (  # noqa: E402
     EgpuClientObservation,
     EgpuResourceKind,
 )
+from hdm.domain.control_plane import PlacementState, WorkflowState  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
 from hdm.ports.process_signal import (  # noqa: E402
@@ -31,7 +33,11 @@ from hdm.ports.process_signal import (  # noqa: E402
     ProcessSignalResult,
 )
 from hdm.ports.transition import VersionedObservation  # noqa: E402
-from hdm.domain.transition_journal import JournalEventKind  # noqa: E402
+from hdm.domain.transition_journal import (  # noqa: E402
+    JournalEventKind,
+    TransitionJournal,
+    append_journal_entry,
+)
 
 
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -106,6 +112,26 @@ class Signals:
         return result
 
 
+class MemoryJournalStore:
+    def __init__(self, current=None, fail_kind=None):
+        self.current = current
+        self.fail_kind = fail_kind
+        self.saved = []
+
+    def load_current(self):
+        return self.current
+
+    def save(self, journal):
+        if journal.entries[-1].kind is self.fail_kind:
+            raise OSError("injected journal persistence failure")
+        self.current = journal
+        self.saved.append(journal)
+
+    def clear_terminal(self, operation_id):
+        if self.current and self.current.operation_id == operation_id:
+            self.current = None
+
+
 def approval(snapshot, phase=ReleasePhase.GRACEFUL):
     tokens = iter(["approval_token_123456"])
     store = ProcessReleaseApprovalStore(
@@ -131,6 +157,80 @@ def approval(snapshot, phase=ReleasePhase.GRACEFUL):
 
 
 class ProcessReleaseReplayTests(unittest.TestCase):
+    def test_durable_runner_persists_step_started_before_signal(self):
+        target = client("instance-1", 100)
+        initial = with_clients(base_snapshot(), target)
+        after = with_clients(initial)
+        store = MemoryJournalStore()
+        clock = FakeClock()
+
+        class InspectingSignals(Signals):
+            def signal(self, target, action):
+                self_test.assertEqual(
+                    store.current.entries[-1].kind, JournalEventKind.STEP_STARTED
+                )
+                return super().signal(target, action)
+
+        self_test = self
+        signals = InspectingSignals(
+            clock, (10, ProcessSignalResult(True, "signal.accepted"))
+        )
+        result = ProcessReleaseReplaySimulator(
+            Observations(VersionedObservation("generation-3", after)),
+            signals,
+            clock,
+            journal_store=store,
+            occurred_at=lambda: "2026-08-31T12:00:00Z",
+        ).run(approval(initial), VersionedObservation("generation-2", initial))
+        self.assertEqual(result.status, ProcessReleaseStatus.COMPLETED)
+        self.assertTrue(store.current.terminal)
+        self.assertEqual(store.current.entries[-1].kind, JournalEventKind.COMMITTED)
+
+    def test_journal_failure_before_signal_prevents_signal(self):
+        target = client("instance-1", 100)
+        initial = with_clients(base_snapshot(), target)
+        store = MemoryJournalStore(fail_kind=JournalEventKind.STEP_STARTED)
+        clock = FakeClock()
+        signals = Signals(clock, (10, ProcessSignalResult(True, "signal.accepted")))
+        with self.assertRaisesRegex(OSError, "persistence"):
+            ProcessReleaseReplaySimulator(
+                Observations(), signals, clock, journal_store=store
+            ).run(
+                approval(initial), VersionedObservation("generation-2", initial)
+            )
+        self.assertEqual(signals.calls, [])
+        self.assertEqual(store.current.entries[-1].kind, JournalEventKind.PLANNED)
+
+    def test_restart_terminalizes_without_repeating_signal(self):
+        journal = TransitionJournal("process-release-operation-1", "request-1")
+        for kind, code in (
+            (JournalEventKind.REQUESTED, "process_release.requested"),
+            (JournalEventKind.OBSERVED, "process_release.observed"),
+            (JournalEventKind.VALIDATED, "process_release.validated"),
+            (JournalEventKind.PLANNED, "process_release.planned"),
+            (JournalEventKind.STEP_STARTED, "process_release.step_started"),
+        ):
+            journal = append_journal_entry(
+                journal,
+                kind=kind,
+                occurred_at="2026-08-31T12:00:00Z",
+                workflow_state=WorkflowState.PREPARING_TO_DISCONNECT,
+                placement=PlacementState.PORTABLE,
+                code=code,
+            )
+        store = MemoryJournalStore(journal)
+        recovery = ProcessReleaseJournalRecovery(
+            store, occurred_at=lambda: "2026-08-31T12:01:00Z"
+        )
+        result = recovery.recover(
+            VersionedObservation("generation-current", base_snapshot())
+        )
+        self.assertTrue(result.action_required)
+        self.assertTrue(result.durable)
+        self.assertEqual(result.journal.entries[-1].kind, JournalEventKind.FAILED)
+        self.assertTrue(recovery.acknowledge("process-release-operation-1"))
+        self.assertIsNone(store.current)
+
     def test_rescans_after_every_fake_signal_and_clears_software_blockers(self):
         first = client("instance-1", 100)
         second = client("instance-2", 200)

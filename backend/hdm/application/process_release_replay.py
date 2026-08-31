@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 import re
@@ -32,6 +33,7 @@ from ..ports.transition import (
     TransitionObservationPort,
     VersionedObservation,
 )
+from ..ports.transition_journal import TransitionJournalPort
 
 
 MAX_PROCESS_AUDIT_EVENTS = 96
@@ -107,6 +109,8 @@ class ProcessReleaseReplaySimulator:
         clock: MonotonicClockPort,
         *,
         per_signal_deadline_ms: int = 2_000,
+        journal_store: TransitionJournalPort | None = None,
+        occurred_at: Callable[[], str] = lambda: "replay",
     ) -> None:
         if per_signal_deadline_ms <= 0 or per_signal_deadline_ms > 10_000:
             raise ValueError("process signal deadline must be between 1 and 10000 ms")
@@ -114,25 +118,30 @@ class ProcessReleaseReplaySimulator:
         self._signals = signals
         self._clock = clock
         self._deadline_ms = per_signal_deadline_ms
+        self._journal_store = journal_store
+        self._occurred_at = occurred_at
 
     def run(
         self,
         approval: ProcessReleaseApproval,
         current: VersionedObservation,
     ) -> ProcessReleaseReplayResult:
+        if (
+            self._journal_store is not None
+            and self._journal_store.load_current() is not None
+        ):
+            raise ValueError("another process release journal requires attention")
         audit: list[ProcessReleaseAuditEvent] = []
         results: list[ProcessTargetResult] = []
         placement = infer_placement(current.snapshot)
-        journal = TransitionJournal(
-            approval.operation_id, f"{approval.operation_id}.request"
-        )
+        journal = TransitionJournal(approval.operation_id, approval.operation_id)
 
         def journal_event(kind: JournalEventKind, code: str) -> None:
             nonlocal journal, placement
             journal = append_journal_entry(
                 journal,
                 kind=kind,
-                occurred_at="replay",
+                occurred_at=self._occurred_at(),
                 workflow_state=(
                     WorkflowState.ACTION_REQUIRED
                     if kind in (JournalEventKind.BLOCKED, JournalEventKind.FAILED)
@@ -141,6 +150,8 @@ class ProcessReleaseReplaySimulator:
                 placement=placement,
                 code=code,
             )
+            if self._journal_store is not None:
+                self._journal_store.save(journal)
 
         def record(
             code: str,
@@ -379,3 +390,82 @@ class ProcessReleaseReplaySimulator:
             journal=journal,
             reason_code=reason_code,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class ProcessReleaseRecoveryResult:
+    journal: TransitionJournal | None
+    action_required: bool
+    code: str
+    durable: bool
+
+
+class ProcessReleaseJournalRecovery:
+    """Terminalize an interrupted release without ever repeating a signal."""
+
+    def __init__(
+        self,
+        journal_store: TransitionJournalPort,
+        *,
+        occurred_at: Callable[[], str],
+    ) -> None:
+        self._journal_store = journal_store
+        self._occurred_at = occurred_at
+
+    def recover(
+        self, observation: VersionedObservation | None
+    ) -> ProcessReleaseRecoveryResult:
+        try:
+            journal = self._journal_store.load_current()
+        except Exception:
+            return ProcessReleaseRecoveryResult(
+                None, True, "process_release.journal_unavailable", False
+            )
+        if journal is None:
+            return ProcessReleaseRecoveryResult(
+                None, False, "process_release.no_recovery", True
+            )
+        if journal.terminal:
+            return ProcessReleaseRecoveryResult(
+                journal, True, "process_release.acknowledgement_required", True
+            )
+        if not journal.entries and observation is None:
+            return ProcessReleaseRecoveryResult(
+                journal, True, "process_release.journal_invalid", False
+            )
+        placement = (
+            infer_placement(observation.snapshot)
+            if observation is not None
+            else journal.entries[-1].placement
+        )
+        try:
+            terminal = append_journal_entry(
+                journal,
+                kind=JournalEventKind.FAILED,
+                occurred_at=self._occurred_at(),
+                workflow_state=WorkflowState.ACTION_REQUIRED,
+                placement=placement,
+                code="process_release.interrupted",
+            )
+            self._journal_store.save(terminal)
+        except Exception:
+            return ProcessReleaseRecoveryResult(
+                journal, True, "process_release.recovery_persist_failed", False
+            )
+        return ProcessReleaseRecoveryResult(
+            terminal, True, "process_release.interrupted", True
+        )
+
+    def acknowledge(self, operation_id: str) -> bool:
+        try:
+            journal = self._journal_store.load_current()
+            if (
+                journal is None
+                or not journal.terminal
+                or journal.operation_id != operation_id
+            ):
+                return False
+            self._journal_store.clear_terminal(operation_id)
+            return True
+        except (OSError, ValueError):
+            return False

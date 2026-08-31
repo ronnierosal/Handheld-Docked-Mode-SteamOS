@@ -61,11 +61,19 @@ deadlines, stale or missing scans, changed clients, incomplete evidence, and
 remaining blockers. Its privacy-safe audit contains sequence, phase, categorical
 event/outcome, target ordinal, and resource kinds only.
 
-The runner also writes the shared bounded transition journal from request,
-observation, validation, and plan through every fake step and terminal commit,
-block, or failure. The journal contains only categorical codes and observed
-placement; it does not contain approval tokens, PIDs, instance IDs, process
-names, eGPU identity, or commands.
+The runner can now persist the shared bounded transition journal through the
+real journal port from request, observation, validation, and plan through every
+step and terminal commit, block, or failure. `step_started` is durably saved
+before the signal port is called. A persistence failure before that event sends
+no signal; a later failure leaves enough durable state to require recovery. The
+journal contains only categorical codes and observed placement; it does not
+contain approval tokens, PIDs, instance IDs, process names, eGPU identity, or
+commands.
+
+Restart recovery never repeats or escalates a signal. It terminalizes any
+incomplete process-release journal as Action Required using a fresh placement
+observation when available, then requires exact operation acknowledgement
+before another release can begin.
 
 Even when every observed software blocker is cleared, the result exposes
 `software_blockers_cleared=true` and always keeps
@@ -74,7 +82,7 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- add a Decky preview/consent flow only after the adapter review
+- add a Decky preview/consent flow and production composition
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 
@@ -86,4 +94,5 @@ construct it, and package contract tests forbid process-release imports or RPCs
 in both backend and frontend delivery layers.
 
 There is currently no enabled process-release mechanism and no process-release
-RPC.
+RPC. Durable execution and restart-terminalization are implemented and tested
+but remain unconstructed by Decky.
