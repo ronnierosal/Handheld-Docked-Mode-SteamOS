@@ -12,6 +12,9 @@ license = { text = "MIT" }
 authors = [{ name = "Ronnie Rosal" }]
 dependencies = []
 
+[project.scripts]
+hdm-diagnose = "hdm.cli:main"
+
 [tool.setuptools]
 package-dir = { "" = "backend" }
 

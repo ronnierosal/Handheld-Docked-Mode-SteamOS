@@ -7,9 +7,11 @@ GPU identity, display routing, Gamescope state, and safety policy.
 
 ## Status
 
-HDM is in its foundation phase. The current code defines read-only state
-contracts and mode inference. It does not switch displays, restart Gamescope,
-select GPUs, or support live eGPU removal.
+HDM 0.1 read-only discovery is in progress. The current code inventories DRM,
+Gamescope, Steam game scopes, PCI/USB4 topology, and the certified Ally X/GPD G1
+profile; aggregates a typed snapshot; and derives a confidence-aware mode. It
+does not switch displays, restart Gamescope, select GPUs, or support live eGPU
+removal.
 
 Planned milestones:
 
@@ -28,6 +30,7 @@ Start with:
 - [Safety invariants](docs/SAFETY_INVARIANTS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Hardware support](docs/HARDWARE_SUPPORT.md)
+- [Read-only diagnostics](docs/DIAGNOSTICS.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
 ## Development
@@ -38,6 +41,12 @@ The foundation uses the Python standard library only.
 python scripts/check_architecture.py
 python -m unittest discover -s tests -v
 python -m compileall -q backend tests scripts
+```
+
+On SteamOS, emit a read-only diagnostic snapshot with:
+
+```text
+PYTHONPATH=backend python -m hdm.cli
 ```
 
 ## License

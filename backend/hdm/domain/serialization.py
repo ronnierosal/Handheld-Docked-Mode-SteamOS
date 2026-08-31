@@ -19,6 +19,65 @@ from .models import (
 )
 
 
+def _evidence_to_dict(values: tuple[Evidence, ...]) -> list[dict[str, Any]]:
+    return [
+        {
+            "source": value.source,
+            "confidence": value.confidence.value,
+            "detail": value.detail,
+        }
+        for value in values
+    ]
+
+
+def snapshot_to_dict(snapshot: ObservedSnapshot) -> dict[str, Any]:
+    return {
+        "schema_version": snapshot.schema_version,
+        "observed_at": snapshot.observed_at,
+        "host_profile": snapshot.host_profile,
+        "support_tier": snapshot.support_tier.value,
+        "game_state": snapshot.game_state.value,
+        "gpus": [
+            {
+                "stable_id": gpu.stable_id,
+                "role": gpu.role.value,
+                "vendor_device": gpu.vendor_device,
+                "present": gpu.present,
+                "selected_for_render": gpu.selected_for_render,
+                "confidence": gpu.confidence.value,
+                "evidence": _evidence_to_dict(gpu.evidence),
+            }
+            for gpu in snapshot.gpus
+        ],
+        "displays": [
+            {
+                "stable_id": display.stable_id,
+                "kind": display.kind.value,
+                "connector": display.connector,
+                "connected": display.connected,
+                "active": display.active,
+                "edid_ready": display.edid_ready,
+                "confidence": display.confidence.value,
+                "evidence": _evidence_to_dict(display.evidence),
+            }
+            for display in snapshot.displays
+        ],
+        "gamescope": {
+            "running": snapshot.gamescope.running,
+            "pid": snapshot.gamescope.pid,
+            "output_order": list(snapshot.gamescope.output_order),
+            "render_gpu_stable_id": snapshot.gamescope.render_gpu_stable_id,
+            "render_vendor_device": snapshot.gamescope.render_vendor_device,
+            "confidence": snapshot.gamescope.confidence.value,
+            "evidence": _evidence_to_dict(snapshot.gamescope.evidence),
+        },
+        "blockers": [
+            {"code": blocker.code, "message": blocker.message}
+            for blocker in snapshot.blockers
+        ],
+    }
+
+
 def _optional_bool(value: Any, field_name: str) -> bool | None:
     if value is None or isinstance(value, bool):
         return value

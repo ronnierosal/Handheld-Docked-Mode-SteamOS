@@ -1,0 +1,65 @@
+# Read-only diagnostics
+
+## Purpose
+
+Milestone 0.1 exposes one privacy-safe JSON snapshot. It observes current state
+and derives a mode; it does not write configuration, restart services, control a
+display, or select a GPU.
+
+From a source checkout on SteamOS:
+
+```text
+PYTHONPATH=backend python -m hdm.cli
+PYTHONPATH=backend python -m hdm.cli --compact
+```
+
+After package installation, the equivalent command is `hdm-diagnose`.
+
+Delivery adapters can call `DiagnosticsApi.get_snapshot()` to receive the same
+versioned dictionary without parsing CLI output. Decky integration should remain
+a thin wrapper around this API.
+
+## Evidence sources
+
+- `/sys/class/dmi/id`: host profile
+- `/sys/class/drm`: GPU, connector, mode, and hashed EDID observations
+- `/sys/bus/pci/devices`: PCI identity and topology
+- `/sys/bus/thunderbolt/devices`: authorization and hashed USB4 identity
+- `/proc/<pid>/cmdline`: unique Steam Gamescope session and output arguments
+- `/proc/<pid>/environ`: Mesa Vulkan selector cross-check
+- `systemctl --user list-units`: running Steam game scopes
+
+The only subprocess command currently allowed is the read-only systemd scope
+inventory. It runs without a shell. Mutation-shaped systemctl arguments are
+rejected by the command boundary.
+
+## Interpretation
+
+`confidence` is explicit:
+
+- `verified`: required sources agree
+- `observed`: data exists but does not meet a certification rule
+- `unknown`: a required source is missing, unreadable, conflicting, or ambiguous
+
+`blockers` explain why a later transition would be unsafe. A successful
+diagnostic command can still report an Unknown or Degraded mode; command success
+means the report was produced, not that the machine is safe to mutate.
+
+HDM verifies Portable only when the unique Steam Gamescope process, its
+environment, one boot VGA GPU, and one active internal connector agree. It
+verifies TV Docked only when the exact certified G1 topology, Gamescope GPU
+selectors, and one connected external connector agree.
+
+On the validated Ally X SteamOS build, the normal `deck` user cannot read the
+Gamescope process environment even though it owns the process. An unprivileged
+source-checkout run will therefore report `gamescope_environment_unreadable` and
+leave render GPU and mode unknown. This is expected; do not weaken the rule.
+
+## Privacy boundary
+
+Normal JSON output excludes command lines, DMI strings, PCI bus addresses, raw
+EDID, raw USB4 unique IDs, usernames, hostnames, home paths, IP addresses, and
+systemd stderr. EDID and USB4 identities are represented by bounded hashes only.
+
+Raw hardware evidence belongs in supervised, redacted test captures and is not
+part of this default payload.

@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "backend"))
+
+from hdm.adapters.steamos.drm import DrmCardRecord  # noqa: E402
+from hdm.adapters.steamos.host import HostRecord  # noqa: E402
+from hdm.adapters.steamos.pci import PciDeviceRecord, Usb4DeviceRecord  # noqa: E402
+from hdm.profiles.ally_x import matches_ally_x  # noqa: E402
+from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
+
+
+GPU_BDF = "0000:08:00.0"
+ROOT_BDF = "0000:04:00.0"
+
+
+def g1_records():
+    ancestry = ("0000:00:03.1", ROOT_BDF)
+    return (
+        PciDeviceRecord(
+            ROOT_BDF,
+            "0x8086",
+            "0x15ef",
+            "0x060400",
+            "pcieport",
+            ("0000:00:03.1", ROOT_BDF),
+            True,
+        ),
+        PciDeviceRecord(
+            GPU_BDF,
+            "0x1002",
+            "0x7480",
+            "0x030000",
+            "amdgpu",
+            (*ancestry, GPU_BDF),
+        ),
+        PciDeviceRecord(
+            "0000:08:00.1",
+            "0x1002",
+            "0xab30",
+            "0x040300",
+            "snd_hda_intel",
+            (*ancestry, "0000:08:00.1"),
+        ),
+        PciDeviceRecord(
+            "0000:09:00.0",
+            "0x8086",
+            "0x15f0",
+            "0x0c0330",
+            "xhci_hcd",
+            (*ancestry, "0000:09:00.0"),
+        ),
+    )
+
+
+class HardwareProfileTests(unittest.TestCase):
+    def test_matches_known_ally_x_dmi_forms(self):
+        host = HostRecord(
+            "ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "RC72LA"
+        )
+        self.assertTrue(matches_ally_x(host))
+        self.assertFalse(matches_ally_x(HostRecord("Valve", "Jupiter", "Steam Deck")))
+
+    def test_verifies_exact_g1_topology(self):
+        card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")
+        usb4 = Usb4DeviceRecord("0-1", "Intel", "Tapex Creek", True, "a" * 64)
+
+        result = match_gpd_g1((card,), g1_records(), (usb4,))
+
+        self.assertTrue(result.verified)
+        self.assertEqual(result.stable_id, "gpd-g1:" + "a" * 16)
+        self.assertEqual(result.gpu_bdf, GPU_BDF)
+
+    def test_rejects_same_gpu_id_without_complete_topology(self):
+        card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")
+        result = match_gpd_g1((card,), g1_records()[:-1], ())
+        self.assertTrue(result.detected)
+        self.assertFalse(result.verified)
+        self.assertIn("subtree", result.reason)
+
+    def test_rejects_an_extra_authorized_usb4_device(self):
+        card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")
+        usb4 = (
+            Usb4DeviceRecord("0-1", "Intel", "Tapex Creek", True, "a" * 64),
+            Usb4DeviceRecord("0-2", "Other", "Device", True, "b" * 64),
+        )
+        result = match_gpd_g1((card,), g1_records(), usb4)
+        self.assertFalse(result.verified)
+        self.assertIn("USB4", result.reason)
+
+
+if __name__ == "__main__":
+    unittest.main()

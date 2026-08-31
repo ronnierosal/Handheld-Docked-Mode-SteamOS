@@ -34,14 +34,18 @@ automatic requests.
 
 ## Ports and adapters
 
-Ports are narrow protocols defined by the application. Planned SteamOS adapters
-will observe:
+Ports are narrow protocols defined by the application. The first SteamOS
+adapters observe:
 
 - DRM cards, connectors, modes, and EDID through sysfs and `modetest`
 - PCI and USB4 topology
 - Gamescope PID, arguments, active output, and render device
 - Steam user-systemd game scopes
 - bounded kernel link-health evidence
+
+Kernel link-health collection remains pending. The implemented snapshot adapter
+cross-correlates the other sources and emits blockers when any required source is
+missing, conflicting, or ambiguous.
 
 Hardware profiles classify observations and quirks. They do not select devices
 by enumeration order.

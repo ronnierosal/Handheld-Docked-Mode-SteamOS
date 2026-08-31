@@ -40,3 +40,6 @@ GPU PCI ID alone does not prove that the device is the certified G1.
 
 All addresses and connector names observed during validation are ephemeral and
 must be rediscovered after boot, reconnect, and resume.
+
+See [HDM 0.1 read-only hardware validation](HARDWARE_VALIDATION_2026-08-31.md)
+for the first native snapshot result and its privilege-boundary finding.

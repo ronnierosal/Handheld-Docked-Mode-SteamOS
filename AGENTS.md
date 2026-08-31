@@ -11,6 +11,7 @@ project; eGPUBridge is reference evidence, not the architecture to reproduce.
 - Non-negotiable safety rules: `docs/SAFETY_INVARIANTS.md`
 - Component and state design: `docs/ARCHITECTURE.md`
 - Certified hardware claims: `docs/HARDWARE_SUPPORT.md`
+- Diagnostics contract: `docs/DIAGNOSTICS.md`
 - Current executable behavior: code plus tests; docs and memory never override it
 
 ## Required rules
