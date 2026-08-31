@@ -244,7 +244,8 @@ exposes only categorical status plus
 acknowledgement of Action Required; acknowledgement cancels the private watch
 and resumes observation but cannot inspect, approve, or execute a transition.
 
-Controller and audio handoff also have pure decision policies only. External
+Controller and audio handoff have pure decision policies plus a versioned,
+delivery-independent composite planning foundation. External
 controller promotion is independent from built-in suppression; suppression is
 never planned without verified external input and a verified built-in recovery
 path. Controller loss/undock restores and promotes built-in input first.
@@ -253,7 +254,14 @@ controller active instead of failing the entire dock handoff.
 External power-off may fall back to an independently verified disconnect
 capability but is never assumed. Audio selection requires a verified usable
 rollback output; otherwise the current usable output is preserved or Action
-Required is reported. No input/audio observation or mechanism adapter is wired.
+Required is reported. The composite plan binds exact private controller/output
+targets, one semantic generation, and one independent sample ID. Controller and
+audio completeness/identity gates are independent, but stale shared evidence or
+a repeated sample blocks all work. Every typed child step requires a fresh
+verification sample. Categorical public traces omit all bindings and observation
+identities. Partial safe work remains distinguishable from a fully ready plan.
+No production observer, mechanism, or RPC is wired.
+See [Controller and audio handoff foundation](PERIPHERAL_HANDOFF.md).
 
 Exact Steam scope identity can now be enriched by a dormant read-only cgroup
 and procfs adapter. It binds PID plus start time, captures private parent and

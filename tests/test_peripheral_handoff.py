@@ -157,6 +157,14 @@ class ControllerHandoffTests(unittest.TestCase):
         )
         self.assertNotIn(ControllerDirective.POWER_OFF_EXTERNAL, unsupported.directives)
         self.assertNotIn(ControllerDirective.DISCONNECT_EXTERNAL, unsupported.directives)
+        self.assertIn(
+            "capability.external_controller_power_off_unverified",
+            unsupported.blockers,
+        )
+        self.assertIn(
+            "capability.external_controller_disconnect_unverified",
+            unsupported.blockers,
+        )
 
     def test_real_profile_never_promotes_or_suppresses_controller(self):
         decision = plan_controller_handoff(

@@ -21,6 +21,10 @@ capability claims. Capabilities include exact identity, eGPU detection, external
 display output, display/audio handoff, Docked-iGPU, sleep behavior, live
 removal, controller handoff/suppression, and optional controller power-off.
 
+The R7a composite controller/audio plan is implemented and simulated only. Its
+private bindings and recovery ordering do not promote any physical capability;
+live observers, mechanisms, and supervised rollback proof remain required.
+
 Simulation and passive observation cannot promote either a combination or a
 capability. Promotion requires an intentional reviewed test with exact
 host/eGPU profiles, HDM and SteamOS versions, and a timestamp. Read-only hardware
