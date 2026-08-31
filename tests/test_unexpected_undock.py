@@ -71,12 +71,12 @@ def loss_snapshot(event: TopologyEvent):
 
 def portable_with_egpu():
     portable = snapshot("portable.json")
-    external = next(
-        gpu for gpu in snapshot("tv-docked.json").gpus if gpu.role is GpuRole.EXTERNAL
-    )
+    docked = snapshot("tv-docked.json")
+    external = next(gpu for gpu in docked.gpus if gpu.role is GpuRole.EXTERNAL)
     return replace(
         portable,
         gpus=(*portable.gpus, replace(external, selected_for_render=False)),
+        disconnect_readiness=docked.disconnect_readiness,
     )
 
 
