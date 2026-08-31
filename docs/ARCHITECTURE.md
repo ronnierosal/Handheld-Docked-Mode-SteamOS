@@ -78,6 +78,13 @@ continue sleep. Even when the observed workflow is SleepPendingDisconnect, only
 the canonical reducer may continue the exact unexpired request after separate
 removal and Portable verification. Unknown placement fails closed.
 
+The dormant manual planner supports only the bounded Portable↔Docked-eGPU path
+and verified no-ops. A mutating plan requires exact host/eGPU identity,
+Verified display-handoff capability, idle game state, target display/render
+readiness, and a verified source-placement rollback path. Docked-iGPU, Boosted Handheld,
+unknown, and degraded sources are not silently coerced into that path. The real
+Ally X/G1 profile remains blocked because display handoff is Experimental.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

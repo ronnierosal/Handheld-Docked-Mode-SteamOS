@@ -138,6 +138,12 @@ disposable-process validation. This does not enable physical removal.
 
 ### R3 — Manual verified transition engine and recovery
 
+**Status:** PURE PLANNER + GENERIC REPLAY IMPLEMENTED — a one-step manual
+Portable↔Docked-eGPU plan is produced only from verified identity, capability,
+game, display/render, and source-rollback evidence. The current Ally/G1
+profile remains blocked as Experimental. No presentation mechanism, live
+orchestrator, store wiring, or RPC exists.
+
 - Implement one idempotent Portable/Docked transition path with journal,
   precondition re-observation, verification, rollback, and crash recovery.
 - Restore a known-good internal display path before any shutdown/removal advice.
