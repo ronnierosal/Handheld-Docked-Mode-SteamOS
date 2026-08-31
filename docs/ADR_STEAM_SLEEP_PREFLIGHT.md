@@ -2,8 +2,9 @@
 
 ## Status
 
-Proposed from read-only inspection on the certified Ally X/SteamOS build. This
-ADR does not authorize another sleep attempt or implement runtime interception.
+Implemented with deterministic tests. The non-sleep lifecycle proof passed on
+the certified Ally X/SteamOS build on 2026-08-31. The supervised request proof
+remains pending; this ADR does not authorize an unsupervised sleep attempt.
 
 ## Problem
 

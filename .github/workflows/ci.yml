@@ -36,6 +36,10 @@ jobs:
         run: python -m hdm.cli --compact
       - name: Type-check Decky UI
         run: pnpm typecheck
+      - name: Test Steam sleep preflight
+        run: pnpm test:frontend
+      - name: Check live preflight probe
+        run: node --check scripts/probe_steam_suspend_store.mjs
       - name: Build Decky UI
         run: pnpm build
       - name: Check Decky package contract

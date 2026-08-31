@@ -162,3 +162,35 @@ owns the visible physical-button behavior on this build. Do not repeat the Steam
 Sleep action or proceed to physical-button/idle acceptance until HDM can stop the
 player-facing sequence before it can leave presentation black. No
 inhibitor-bypass option was used.
+
+## Steam preflight non-sleep lifecycle proof
+
+The capability-resolved Steam preflight package was installed through Decky
+Loader 3.2.6 while the same exact G1 remained attached. The validation used the
+shared Steam suspend store's native blocker count only; it did not call
+`RequestSleep`, `OnSuspendRequest`, `SuspendPC`, or any physical power control.
+
+Observed lifecycle:
+
+- before the new frontend loaded, the Steam native suspend-blocker count was `0`
+- plugin load acquired exactly one HDM lease, producing count `1`
+- repeated probes across multiple three-second snapshot polls remained at `1`
+- Decky's frontend unload lifecycle invoked `onDismount` and returned the count
+  to `0`
+- backend disable also released the root login1 inhibitor and stopped the HDM
+  backend process
+- backend enable and frontend re-import reacquired both layers; repeated probes
+  again remained at exactly `1`
+- an existing unrelated-blocker preservation case is covered separately by the
+  deterministic frontend test harness
+
+The development deployment WebSocket temporarily became Decky's active event
+recipient, so the first backend-only disable did not deliver the frontend event
+to Steam and was not counted as an unload proof. The accepted measurement used
+Decky's actual `DeckyPluginLoader.unloadPlugin` frontend lifecycle and observed
+the expected `1 → 0` release directly.
+
+Phase A therefore passes. Phase B remains blocked until it is deliberately
+supervised: one visible Steam **Power → Sleep** request must show HDM's warning,
+leave the internal display usable, preserve boot ID and continuous uptime, and
+never begin Steam's preparation sequence.

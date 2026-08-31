@@ -8,6 +8,13 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getSnapshot, type SnapshotPayload } from "./backend";
+import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
+import {
+  SleepPreflightCoordinator,
+  observationFromSnapshotEvidence,
+  type BlockedAttemptWarning,
+  type PreflightObservation,
+} from "./sleep-preflight";
 
 
 const LABELS: Record<string, string> = {
@@ -28,6 +35,7 @@ const LABELS: Record<string, string> = {
 };
 
 const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
+const SNAPSHOT_STALE_AFTER_MS = 10_000;
 
 function label(value: string): string {
   return LABELS[value] ?? value.replaceAll("_", " ");
@@ -60,37 +68,72 @@ function MonitorIcon() {
   );
 }
 
-function Content() {
+function preflightObservation(payload: SnapshotPayload): PreflightObservation {
+  const { snapshot } = payload;
+  return observationFromSnapshotEvidence({
+    schemaVersion: snapshot.schema_version,
+    observedAt: snapshot.observed_at,
+    guardRequired: snapshot.sleep_guard.required,
+    guardConfidence: snapshot.sleep_guard.confidence,
+    gameState: snapshot.game_state,
+    gameUsesEgpu: snapshot.disconnect_readiness.clients.some(
+      (client) => client.kind === "game",
+    ),
+  }, Date.now(), SNAPSHOT_STALE_AFTER_MS);
+}
+
+function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [preflightStatus, setPreflightStatus] = useState(() => preflight.status());
   const [sleepWarningHidden, setSleepWarningHidden] = useState(
     () => localStorage.getItem(SLEEP_WARNING_KEY) === "1",
   );
+  const lastSnapshotAt = useRef<number | null>(null);
+  const refreshInFlight = useRef(false);
   const warningToastShown = useRef(false);
   const inactiveToastShown = useRef(false);
 
   const refresh = useCallback(async (quiet = false) => {
+    if (refreshInFlight.current) {
+      return;
+    }
+    refreshInFlight.current = true;
     if (!quiet) {
       setLoading(true);
       setError("");
     }
     try {
-      setPayload(await getSnapshot());
+      const nextPayload = await getSnapshot();
+      setPayload(nextPayload);
+      setError("");
+      lastSnapshotAt.current = Date.now();
+      setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
     } catch {
       setError("Read-only snapshot unavailable. Check the Decky log for details.");
+      setPreflightStatus(preflight.reconcile({ kind: "unavailable" }));
     } finally {
+      refreshInFlight.current = false;
       if (!quiet) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [preflight]);
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => void refresh(true), 3000);
+    const timer = window.setInterval(() => {
+      if (
+        lastSnapshotAt.current !== null
+        && Date.now() - lastSnapshotAt.current > SNAPSHOT_STALE_AFTER_MS
+      ) {
+        setPreflightStatus(preflight.reconcile({ kind: "stale" }));
+      }
+      void refresh(true);
+    }, 3000);
     return () => window.clearInterval(timer);
-  }, [refresh]);
+  }, [preflight, refresh]);
 
   const snapshot = payload?.snapshot;
   const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
@@ -156,33 +199,54 @@ function Content() {
         <DiagnosticRow name="Hardware" value={label(snapshot?.support_tier ?? "unknown")} />
       </PanelSection>
 
-      {sleepGuard?.required && (
-        <PanelSection title="Sleep protection">
-          <DiagnosticRow
-            name="Sleep"
-            value={sleepGuard.active ? "Blocked while G1 attached" : "Protection inactive"}
-          />
-          {!sleepWarningHidden && (
-            <>
+      <PanelSection title="Sleep protection">
+        <DiagnosticRow
+          name="System inhibitor"
+          value={loading
+            ? "Checking…"
+            : sleepGuard?.required
+              ? sleepGuard.active
+                ? "Active"
+                : "Inactive"
+              : "Not required"}
+        />
+        <DiagnosticRow
+          name="Steam preflight"
+          value={preflightStatus.state === "active"
+            ? preflightStatus.attemptWarningAvailable
+              ? "Active"
+              : "Blocked; warning unavailable"
+            : preflightStatus.state === "inactive"
+              ? "Standby — G1 verified absent"
+              : "Unavailable"}
+        />
+        {preflightStatus.error && (
+          <PanelSectionRow>{preflightStatus.error}</PanelSectionRow>
+        )}
+        {sleepGuard?.required && (
+          <>
+            {!sleepWarningHidden && (
+              <>
+                <PanelSectionRow>
+                  {gameUsesEgpu
+                    ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
+                    : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent."}
+                </PanelSectionRow>
+                <PanelSectionRow>
+                  <ButtonItem layout="below" onClick={hideSleepWarning}>
+                    Never show this explanation again
+                  </ButtonItem>
+                </PanelSectionRow>
+              </>
+            )}
+            {sleepWarningHidden && (
               <PanelSectionRow>
-                {gameUsesEgpu
-                  ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
-                  : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent."}
+                The explanation is hidden. Sleep protection remains active.
               </PanelSectionRow>
-              <PanelSectionRow>
-                <ButtonItem layout="below" onClick={hideSleepWarning}>
-                  Never show this explanation again
-                </ButtonItem>
-              </PanelSectionRow>
-            </>
-          )}
-          {sleepWarningHidden && (
-            <PanelSectionRow>
-              The explanation is hidden. Sleep protection remains active.
-            </PanelSectionRow>
-          )}
-        </PanelSection>
-      )}
+            )}
+          </>
+        )}
+      </PanelSection>
 
       <PanelSection title="Disconnect readiness">
         <DiagnosticRow name="Status" value={disconnectStatus} />
@@ -244,11 +308,30 @@ function Content() {
   );
 }
 
-export default definePlugin(() => ({
-  name: "Handheld Dock Mode",
-  titleView: <div className={staticClasses.Title}>Handheld Dock Mode</div>,
-  content: <Content />,
-  icon: <MonitorIcon />,
-  alwaysRender: true,
-  onDismount() {},
-}));
+function showBlockedAttempt(warning: BlockedAttemptWarning): void {
+  toaster.toast({
+    title: warning.title,
+    body: warning.body,
+    critical: warning.critical,
+    duration: 10_000,
+  });
+}
+
+export default definePlugin(() => {
+  const preflight = new SleepPreflightCoordinator(
+    createDeckySteamSuspendAdapter(),
+    showBlockedAttempt,
+  );
+  preflight.start();
+
+  return {
+    name: "Handheld Dock Mode",
+    titleView: <div className={staticClasses.Title}>Handheld Dock Mode</div>,
+    content: <Content preflight={preflight} />,
+    icon: <MonitorIcon />,
+    alwaysRender: true,
+    onDismount() {
+      preflight.stop();
+    },
+  };
+});

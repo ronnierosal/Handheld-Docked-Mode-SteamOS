@@ -54,9 +54,9 @@ guarded process closure, is documented in
 [eGPUBridge feature review for HDM](EGPUBRIDGE_FEATURE_REVIEW.md). These are 0.2
 candidates. The sleep guard is now explicitly in 0.2 scope; the other mutation
 boundaries remain closed until their own design and validation gates pass.
-The failed Steam power-menu acceptance test also requires the complementary
-[Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md) before sleep protection
-can be considered complete.
+The complementary [Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md) is now
+implemented and has passed its non-sleep lease-lifecycle proof. Sleep protection
+is not considered complete until its supervised request proof also passes.
 
 ## Non-goals for the initial release
 
