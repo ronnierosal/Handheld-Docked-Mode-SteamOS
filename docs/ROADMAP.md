@@ -210,7 +210,7 @@ persistence, publication, or verbose RPC is enabled.
 
 - Add an opt-in overlay and bounded verbose logging with a maximum TTL that
   cannot survive reboot.
-- Add game and hardware compatibility schemas plus developer guidance.
+- Maintain the game schema/developer guidance and add the hardware catalog schema.
 - Expand previewable support bundles and compatibility test mode.
 - Design Cloudflare Worker/private R2 submission separately with explicit
   upload consent, validation, rate limits, and retention.
@@ -225,7 +225,13 @@ Exit: privacy/security tests pass; no client credentials or silent upload.
 
 ## Smallest safe next milestone
 
-After R0's supervised UI checks, implement **R1 only**. It creates the typed
-control-plane, transaction contract, replay simulator, and read-only remote
-capture needed by every later mutation without yet signaling a process,
-switching a display/GPU, requesting sleep, or removing hardware.
+Unattended-safe R1 policy/replay, guarded process-release simulation, canonical
+sleep policy/journaling, compatibility policy, temporary logging policy, and
+the optional overlay are complete. The next release-facing milestone is still
+R0's supervised controller-visible warning and support-preview acceptance.
+
+Without physical supervision, continue only bounded simulator/schema work. Do
+not wire process signals, display/GPU/audio/controller mutation, original-sleep
+continuation, reboot, suspend, or physical-removal actions. The first future
+live transition remains R3 and requires an explicit milestone decision plus its
+documented supervised rollback tests.

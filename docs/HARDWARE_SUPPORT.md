@@ -8,6 +8,12 @@
 - **Experimental:** detected and intentionally available for controlled testing.
 - **Unsupported:** blocked because required identity, safety, or mechanism is absent.
 
+A combination-level tier does not verify every feature. Capabilities such as
+display handoff, audio handoff, controller ordering, sleep behavior, and live
+removal retain independent evidence/status. In particular, the certified
+Ally X/G1 identity does not override its shutdown-before-disconnect rule or
+turn untested live removal into a supported capability.
+
 ## First certified profile
 
 | Component | Identity |

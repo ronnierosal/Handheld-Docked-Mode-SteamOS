@@ -48,6 +48,7 @@ Start with:
 - [Durable transition journal](docs/TRANSITION_JOURNAL.md)
 - [Canonical sleep workflow policy](docs/SLEEP_WORKFLOW.md)
 - [Game compatibility catalog](docs/GAME_COMPATIBILITY.md)
+- [Game developer compatibility notes](docs/GAME_DEVELOPER_COMPATIBILITY.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
