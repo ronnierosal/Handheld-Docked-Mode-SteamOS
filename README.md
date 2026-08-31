@@ -248,6 +248,7 @@ evidence, but its architecture and behavior are not inherited as proof.
 | Remote read-only capture | [Remote validation](docs/REMOTE_VALIDATION.md) |
 | Transition safety and recovery | [Experimental transitions](docs/EXPERIMENTAL_TRANSITIONS.md) |
 | Sleep request policy | [Sleep workflow](docs/SLEEP_WORKFLOW.md) |
+| Verified game-save boundary | [Game save](docs/GAME_SAVE.md) |
 | Process-release boundary | [Process release](docs/PROCESS_RELEASE.md) |
 
 Additional design records and compatibility documents are available in

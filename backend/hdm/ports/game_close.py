@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
-from ..domain.game_session import ActiveGameIdentity, GameSessionObservation
+from ..domain.game_session import ActiveGameIdentity
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,10 +17,6 @@ class GameCloseMechanismResult:
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[a-z0-9_.-]{1,64}", self.code):
             raise ValueError("game-close result code must be categorical")
-
-
-class GameSessionObservationPort(Protocol):
-    def observe(self) -> GameSessionObservation: ...
 
 
 class GameCloseMechanismPort(Protocol):

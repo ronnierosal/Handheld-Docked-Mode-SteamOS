@@ -43,7 +43,8 @@ No broader label may be inferred from a narrower one.
 | Process-release signal/re-scan runner, audit, and journal | Implemented and simulated | Supervised mechanism proof remains; hardware removal authority is always false. |
 | Exact-instance Linux pidfd signal adapter | Implemented, unit tested, and guarded by Decky orchestration | Supervised disposable-process proof remains. |
 | Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
-| Exact-identity guarded game-close child | Implemented and simulated, mechanism-injected | Production SteamOS close mechanism, Decky delivery, verified save child, and supervised proof remain. |
+| Exact-identity guarded game-close child | Implemented and simulated, mechanism-injected | Production SteamOS close mechanism, Decky delivery, and supervised proof remain. |
+| Exact-recipe verified game-save child | Implemented and simulated, proof/mechanism-injected | Reviewed production recipes, proof/mechanism adapters, Decky delivery, and per-game hardware proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
@@ -185,7 +186,9 @@ recovery are covered. An exact AppID/scope game-close child now binds explicit
 single-use consent to the same parent operation, persists before its injected
 mechanism, and advances only after a fresh verified Idle observation. No
 production game-close or live sleep mechanism and no sleep-continuation RPC is
-enabled.
+enabled. A verified-save child now binds the already-granted close consent to
+one exact reviewed recipe and requires an independent new Verified proof before
+unlocking close; no production recipe or adapter is present.
 
 - Normalize Steam menu and physical-button attempts into one request intent
   where the platform exposes a verified interception mechanism.
@@ -204,8 +207,10 @@ sleep transaction journal in the application/simulation layer. It does not run
 two authoritative journals or drop pre-signal persistence. Decky sleep delivery
 and live mechanisms remain gated. Guarded game close uses the same composition
 rule and records no AppID or scope identity in the journal. A
-verified-triggerable-autosave game remains blocked until the save child is
-implemented.
+verified-triggerable-autosave game remains blocked unless the save child proves
+completion for that exact parent request. The 26-target sleep-child release
+bound leaves room for save, close, graceful plus force release, every remaining
+sleep stage, and recovery within the 128-entry journal.
 
 ### R5 — Unexpected-undock recovery
 

@@ -69,9 +69,11 @@ class Sleep:
         self,
         parent="sleep-operation-0001",
         save_capability=GameSaveCapability.UNTESTED,
+        save_completed=False,
     ):
         self.parent = parent
         self.save_capability = save_capability
+        self.save_completed = save_completed
         self.advances = []
 
     def game_close_parent_operation_id(self, request_id):
@@ -80,6 +82,11 @@ class Sleep:
     def game_close_requirements(self, request_id):
         parent = self.game_close_parent_operation_id(request_id)
         return (parent, self.save_capability if parent else None)
+
+    def verified_game_save_completed(self, request_id):
+        return bool(
+            request_id == "sleep-request-0001" and self.save_completed
+        )
 
     def advance(self, request_id, event):
         self.advances.append((request_id, event))
@@ -342,6 +349,19 @@ class GuardedGameCloseTests(unittest.TestCase):
         self.assertEqual(
             preview.blockers, ("game.verified_save_step_required",)
         )
+        self.assertEqual(mechanism.calls, [])
+
+    def test_verified_save_completion_unlocks_exact_game_close(self):
+        value, _, mechanism, _ = service(
+            Observations(observed("sample-1")),
+            sleep=Sleep(
+                save_capability=GameSaveCapability.VERIFIED_TRIGGERABLE_AUTOSAVE,
+                save_completed=True,
+            ),
+        )
+        preview = value.preview("sleep-request-0001", user_confirmed=False)
+        self.assertTrue(preview.ready)
+        self.assertEqual(preview.steam_app_id, "1234")
         self.assertEqual(mechanism.calls, [])
 
 

@@ -34,7 +34,9 @@ TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{16,96}$")
 DEFAULT_APPROVAL_TTL_SECONDS = 120.0
 MAX_APPROVAL_TOKENS = 3
 MAX_RELEASE_TARGETS = 32
-MAX_SLEEP_CHILD_RELEASE_TARGETS = 27
+# Reserve full journal capacity for the verified-save child, both release
+# phases, every remaining sleep boundary, and restart recovery.
+MAX_SLEEP_CHILD_RELEASE_TARGETS = 26
 
 
 @dataclass(frozen=True, slots=True)

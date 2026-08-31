@@ -129,5 +129,6 @@ cannot provide that ID. Each target is recorded as a bounded, identity-free
 substep in the active sleep journal before the pidfd signal and verified after
 the mandatory rescan. Graceful evidence and force receipts cannot cross sleep
 transactions. Child mode never creates or commits a second journal and is
-bounded to 27 targets to reserve full journal capacity for force and recovery.
+bounded to 26 targets to reserve full journal capacity for verified save,
+graceful plus force release, sleep completion, and recovery.
 This composition is simulated and remains unwired from Decky sleep requests.

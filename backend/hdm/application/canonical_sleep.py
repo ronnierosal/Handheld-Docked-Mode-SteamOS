@@ -20,6 +20,7 @@ from ..domain.control_plane import (
     TransitionRequest,
     WorkflowState,
 )
+from ..domain.game_compatibility import GameSaveCapability
 from ..domain.models import EgpuPresence
 from ..domain.sleep_workflow import (
     SleepFlow,
@@ -68,6 +69,7 @@ class CanonicalSleepSession:
     last_sample_id: str
     bound_egpu_stable_id: str
     bound_capabilities: EffectiveCapabilities
+    verified_save_completed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -286,6 +288,7 @@ class CanonicalSleepWorkflowService:
             observed.sample_id,
             session.bound_egpu_stable_id,
             session.bound_capabilities,
+            session.verified_save_completed,
         )
         return self._result(session.operation_id, after)
 
@@ -488,6 +491,76 @@ class CanonicalSleepWorkflowService:
             if session is None or session.operation_id != parent:
                 return "", None
             return parent, session.flow.save_capability
+
+    def verified_game_save_completed(self, request_id: str) -> bool:
+        with self._lock:
+            session = self._session
+            return bool(
+                session is not None
+                and session.request.request_id == request_id
+                and session.flow.stage is SleepFlowStage.CLOSING_GAME
+                and session.verified_save_completed
+            )
+
+    def game_save_requirements(self, request_id: str) -> tuple[str, str, str]:
+        """Return the exact profile tuple only for a required save child."""
+        parent = self.game_close_parent_operation_id(request_id)
+        if not parent:
+            return "", "", ""
+        with self._lock:
+            session = self._session
+            if (
+                session is None
+                or session.operation_id != parent
+                or session.flow.save_capability
+                is not GameSaveCapability.VERIFIED_TRIGGERABLE_AUTOSAVE
+                or session.verified_save_completed
+            ):
+                return "", "", ""
+            capabilities = session.bound_capabilities
+            return (
+                parent,
+                capabilities.host_profile_id,
+                capabilities.egpu_profile_id,
+            )
+
+    def mark_verified_game_save_completed(
+        self, request_id: str, parent_operation_id: str
+    ) -> bool:
+        """Accept only the durable verified child belonging to this session."""
+        with self._lock:
+            session = self._session
+            if (
+                session is None
+                or session.request.request_id != request_id
+                or session.operation_id != parent_operation_id
+                or session.flow.stage is not SleepFlowStage.CLOSING_GAME
+                or session.flow.save_capability
+                is not GameSaveCapability.VERIFIED_TRIGGERABLE_AUTOSAVE
+                or session.verified_save_completed
+            ):
+                return False
+            try:
+                journal = self._journal_store.load_current()
+            except Exception:
+                return False
+            if (
+                journal is None
+                or journal.terminal
+                or journal.operation_id != session.operation_id
+                or not self._is_sleep_journal(journal)
+                or not journal.entries
+            ):
+                return False
+            last = journal.entries[-1]
+            if (
+                last.kind is not JournalEventKind.SUBSTEP_VERIFIED
+                or last.code != "game.save_substep_verified"
+                or dict(last.details).get("step_code") != "game_save.verified"
+            ):
+                return False
+            self._session = replace(session, verified_save_completed=True)
+            return True
 
     def _journal_blocker(self) -> str:
         try:

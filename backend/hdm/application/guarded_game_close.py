@@ -19,10 +19,8 @@ from ..domain.transition_journal import (
     TransitionJournal,
     append_journal_entry,
 )
-from ..ports.game_close import (
-    GameCloseMechanismPort,
-    GameSessionObservationPort,
-)
+from ..ports.game_close import GameCloseMechanismPort
+from ..ports.game_session import GameSessionObservationPort
 from ..ports.runtime_transition import DeadlineWaitPort
 from ..ports.transition import MonotonicClockPort
 from ..ports.transition_journal import TransitionJournalPort
@@ -165,9 +163,14 @@ class GuardedGameCloseService:
                 False, blockers=("sleep.game_close_step_inactive",)
             )
         if save_capability is GameSaveCapability.VERIFIED_TRIGGERABLE_AUTOSAVE:
-            return GuardedGameClosePreview(
-                False, blockers=("game.verified_save_step_required",)
-            )
+            try:
+                save_completed = self._sleep.verified_game_save_completed(request_id)
+            except Exception:
+                save_completed = False
+            if not save_completed:
+                return GuardedGameClosePreview(
+                    False, blockers=("game.verified_save_step_required",)
+                )
         observed = self._observe()
         if observed is None or not observed.exact or observed.identity is None:
             return GuardedGameClosePreview(

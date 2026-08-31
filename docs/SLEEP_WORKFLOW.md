@@ -96,11 +96,18 @@ Execution requires a newer matching sample, persists an identity-free
 `substep_started` before the injected mechanism, polls to a verified Idle state,
 persists `substep_verified`, and advances only the same sleep request. Identity
 change, timeout, mechanism refusal, observation failure, or wait failure enters
-Action Required. A verified-triggerable-autosave catalog value blocks close
-until a separate verified save child exists. AppID and scope identity never
-enter the transition journal.
+Action Required. AppID and scope identity never enter the transition journal.
 
-There is still no production game-close mechanism adapter, save adapter,
-removal mechanism, sleep-continuation adapter, physical-button interception
-adapter, or Decky sleep workflow RPC. Current login1 and Steam preflight
-behavior remains governed by the existing sleep ADRs.
+For `verified_triggerable_autosave`, a separate guarded save child must complete
+first. It binds an internal single-use token to the same sleep parent, exact
+game/profile-specific reviewed recipe, and fresh independent proof baseline. It
+persists before the injected mechanism and unlocks close only after a new proof
+generation reports Verified. A mechanism success is never treated as save
+proof. No production recipes, proof adapters, mechanisms, or Decky delivery are
+wired. See [Verified game-save child](GAME_SAVE.md).
+
+There is still no production game-close mechanism adapter, game-specific save
+recipe/proof/mechanism adapter, removal mechanism, sleep-continuation adapter,
+physical-button interception adapter, or Decky sleep workflow RPC. Current
+login1 and Steam preflight behavior remains governed by the existing sleep
+ADRs.

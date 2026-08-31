@@ -55,3 +55,10 @@ its exact scope set, then request close only through an injected narrow
 mechanism after a newer matching observation. It grants no relaunch, save, or
 GPU-selection authority, and no production close mechanism is wired. The
 AppID/scope identity is intentionally excluded from the transition journal.
+
+`Verified triggerable autosave` is still only a catalog capability. Runtime
+save authority additionally requires a backend-owned recipe for the exact
+AppID/host/eGPU tuple and a separate proof adapter capable of observing a new
+verified save result. The guarded child is implemented and simulated, but the
+production registry is empty and no proof or mechanism adapter is wired. See
+[Verified game-save child](GAME_SAVE.md).

@@ -83,13 +83,14 @@ def context(
     placement=PlacementState.DOCKED_EGPU,
     capabilities=None,
     removal_ready=False,
+    save_capability=GameSaveCapability.UNTESTED,
 ):
     return SleepWorkflowContext(
         egpu_presence=presence,
         exact_egpu_identity_verified=presence is not EgpuPresence.UNKNOWN,
         capabilities=capabilities or compose_capabilities(ALLY_X, GPD_G1),
         game_state=game_state,
-        save_capability=GameSaveCapability.UNTESTED,
+        save_capability=save_capability,
         disconnect_readiness=readiness(),
         placement=placement,
         removal_readiness_verified=removal_ready,
@@ -261,6 +262,66 @@ class CanonicalSleepWorkflowServiceTests(unittest.TestCase):
         )
         self.assertTrue(finished.accepted)
         self.assertEqual(finished.flow.stage, SleepFlowStage.SHUTDOWN_REQUIRED)
+
+    def test_verified_save_child_requires_durable_exact_substep(self):
+        running = context(
+            game_state=GameState.RUNNING,
+            save_capability=GameSaveCapability.VERIFIED_TRIGGERABLE_AUTOSAVE,
+        )
+        store = JournalStore()
+        value = service(
+            Observations(
+                observed("sample-1", running),
+                observed("sample-2", running),
+            ),
+            store,
+        )
+        started = value.start(request())
+        closing = value.advance(
+            started.flow.request_id, SleepFlowEvent.GAME_CONSENT_GRANTED
+        )
+        self.assertEqual(closing.flow.stage, SleepFlowStage.CLOSING_GAME)
+        parent, host_profile, egpu_profile = value.game_save_requirements(
+            started.flow.request_id
+        )
+        self.assertEqual(parent, started.operation_id)
+        self.assertEqual(host_profile, running.capabilities.host_profile_id)
+        self.assertEqual(egpu_profile, running.capabilities.egpu_profile_id)
+        self.assertFalse(
+            value.mark_verified_game_save_completed(
+                started.flow.request_id, parent
+            )
+        )
+
+        journal = append_journal_entry(
+            store.current,
+            kind=JournalEventKind.SUBSTEP_STARTED,
+            occurred_at="test",
+            workflow_state=WorkflowState.SLEEP_PENDING_DISCONNECT,
+            placement=PlacementState.DOCKED_EGPU,
+            code="game.save_substep_started",
+            details=(("step_code", "game_save.verified"),),
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.SUBSTEP_VERIFIED,
+            occurred_at="test",
+            workflow_state=WorkflowState.SLEEP_PENDING_DISCONNECT,
+            placement=PlacementState.DOCKED_EGPU,
+            code="game.save_substep_verified",
+            details=(("step_code", "game_save.verified"),),
+        )
+        store.save(journal)
+        self.assertTrue(
+            value.mark_verified_game_save_completed(
+                started.flow.request_id, parent
+            )
+        )
+        self.assertTrue(value.verified_game_save_completed(started.flow.request_id))
+        self.assertEqual(
+            value.game_save_requirements(started.flow.request_id),
+            ("", "", ""),
+        )
 
     def test_exact_egpu_identity_change_terminalizes_before_game_close(self):
         running = context(game_state=GameState.RUNNING)

@@ -152,6 +152,14 @@ service are implemented and simulated, but no production close mechanism or
 Decky sleep delivery is wired. See
 [Canonical sleep workflow](SLEEP_WORKFLOW.md).
 
+Verified save is another strict child of that same parent. A backend-owned
+recipe must match the exact game plus bound host/eGPU profiles, and a separate
+proof observation must change to Verified after the attempt. The single-use
+authority, durable pre-mechanism substep, bounded proof loop, close gate, and
+privacy/capacity tests are implemented and simulated. No production recipe,
+proof adapter, save mechanism, or Decky route exists. See
+[Verified game-save child](GAME_SAVE.md).
+
 Asynchronous cable-loss policy can request Portable recovery but can never
 continue sleep. Even when the observed workflow is SleepPendingDisconnect, only
 the canonical reducer may continue the exact unexpired request after separate

@@ -92,15 +92,24 @@ an active parent step. Canonical sleep uses them for guarded process release:
 every signal is preceded by a durable identity-free substep, every rescan closes
 that substep, and graceful plus force phases remain inside the original sleep
 operation. A second authoritative process journal is never opened. The sleep
-child target bound is 27 so the worst-case two-phase release plus all remaining
-sleep/recovery events still fit the 128-entry journal.
+child target bound is 26 so the worst-case verified-save, game-close,
+two-phase-release, completion, and recovery path fits the 128-entry journal.
 
-The guarded game-close child uses the same substep ordering. It persists an
+The verified-save and guarded game-close children use the same substep ordering.
+Save persists `game.save_substep_started` before its injected mechanism and
+`game.save_substep_verified` only after a new independent proof generation is
+Verified. Close then persists an
 identity-free `game.close_substep_started` event before invoking its injected
 mechanism and closes the substep only after a fresh exact observation proves
 the game Idle. Steam AppID, scope names, approval tokens, and mechanism details
-are never journal fields. Any close failure terminalizes the parent sleep
-transaction as Action Required; no production game-close adapter is wired.
+are never journal fields; recipe, evidence, profile, and proof identities are
+also excluded. Any save/close failure terminalizes the parent sleep transaction
+as Action Required; no production save or game-close adapter is wired.
+
+Adding the two save entries reduces the canonical sleep child process limit to
+26. A deterministic maximum-path test proves that save, close, 26 graceful and
+26 force substeps, all later sleep stages, and commit fit in 125 of 128 entries,
+leaving bounded recovery capacity.
 
 Every recovery/acknowledgement service first verifies the journal's categorical
 owner marker. Process-release startup recovery cannot terminalize, clear, or

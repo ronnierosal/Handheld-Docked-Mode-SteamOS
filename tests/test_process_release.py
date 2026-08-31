@@ -208,7 +208,7 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
     def test_sleep_child_target_bound_reserves_full_journal_recovery_capacity(self):
         clients = tuple(
             client(instance_id=f"instance-{index}", pid=100 + index)
-            for index in range(28)
+            for index in range(27)
         )
         snapshot = with_clients(base_snapshot(), *clients)
         with self.assertRaisesRegex(ValueError, "journal capacity"):
@@ -223,7 +223,7 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
             observed_generation="sample-1",
             phase=ReleasePhase.GRACEFUL,
         )
-        self.assertEqual(len(standalone.targets), 28)
+        self.assertEqual(len(standalone.targets), 27)
 
     def test_revalidation_requires_fresh_identical_evidence(self):
         snapshot = with_clients(base_snapshot(), client())
