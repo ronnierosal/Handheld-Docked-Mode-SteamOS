@@ -12,6 +12,8 @@ REQUIRED_FILES = (
     "LICENSE",
     "backend/hdm/api.py",
     "backend/hdm/adapters/steamos/sleep_inhibitor.py",
+    "backend/hdm/application/support_bundle.py",
+    "backend/hdm/delivery/support_export.py",
     "dist/index.js",
     "dist/index.js.map",
     "main.py",
@@ -55,9 +57,14 @@ def main() -> int:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             and not node.name.startswith("_")
         }
-        if public_methods != {"get_snapshot"}:
+        allowed_methods = {
+            "get_snapshot",
+            "preview_support_bundle",
+            "save_support_bundle",
+        }
+        if public_methods != allowed_methods:
             failures.append(
-                "Decky backend must expose exactly one public RPC: get_snapshot"
+                "Decky backend RPCs must be limited to snapshot and approved support-bundle export"
             )
 
     delivery_sources = "\n".join(
@@ -75,7 +82,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics RPC and sleep-guard lease only."
+        "Plugin package check passed: diagnostics, approved support export, and sleep-guard lease only."
     )
     return 0
 

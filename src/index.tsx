@@ -4,13 +4,21 @@ import {
   ConfirmModal,
   PanelSection,
   PanelSectionRow,
+  ScrollPanel,
   showModal,
   staticClasses,
 } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getSnapshot, type SnapshotPayload } from "./backend";
+import {
+  getSnapshot,
+  previewSupportBundle,
+  saveSupportBundle,
+  type SnapshotPayload,
+  type SupportBundlePreviewPayload,
+} from "./backend";
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
+import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
 import {
   SleepPreflightCoordinator,
   observationFromSnapshotEvidence,
@@ -55,6 +63,42 @@ function DiagnosticRow({ name, value }: { name: string; value: string }) {
   );
 }
 
+function showSupportBundlePreview(
+  preview: SupportBundlePreviewPayload,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle="Redacted support bundle preview"
+      strOKButtonText="Close preview"
+      bAlertDialog={true}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={close}
+    >
+      <div style={{ fontSize: "12px", lineHeight: "17px" }}>
+        <p>
+          Review this exact redacted JSON before copying or saving it. The save approval expires
+          after five minutes and can be used once.
+        </p>
+        <div style={{ maxHeight: "55vh", overflow: "hidden" }}>
+          <ScrollPanel>
+            <pre style={{ whiteSpace: "pre-wrap" }}>{preview.preview_json}</pre>
+          </ScrollPanel>
+        </div>
+      </div>
+    </ConfirmModal>,
+    window,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
 function MonitorIcon() {
   return (
     <svg
@@ -93,14 +137,23 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [sleepWarningHidden, setSleepWarningHidden] = useState(
     () => localStorage.getItem(SLEEP_WARNING_KEY) === "1",
   );
+  const [supportPreview, setSupportPreview] = useState<SupportBundlePreviewPayload | null>(null);
+  const [supportBusy, setSupportBusy] = useState(false);
+  const [supportMessage, setSupportMessage] = useState("");
   const lastSnapshotAt = useRef<number | null>(null);
   const refreshInFlight = useRef(false);
   const warningToastShown = useRef(false);
   const inactiveToastShown = useRef(false);
+  const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
 
-  const refresh = useCallback(async (quiet = false) => {
+  useEffect(() => () => {
+    supportModal.current?.Close();
+    supportModal.current = null;
+  }, []);
+
+  const refresh = useCallback(async (quiet = false): Promise<SnapshotPayload | null> => {
     if (refreshInFlight.current) {
-      return;
+      return null;
     }
     refreshInFlight.current = true;
     if (!quiet) {
@@ -113,9 +166,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
+      return nextPayload;
     } catch {
       setError("Read-only snapshot unavailable. Check the Decky log for details.");
       setPreflightStatus(preflight.reconcile({ kind: "unavailable" }));
+      return null;
     } finally {
       refreshInFlight.current = false;
       if (!quiet) {
@@ -125,17 +180,30 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   }, [preflight]);
 
   useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => {
+    let disposed = false;
+    let timer: number | null = null;
+    const poll = async (quiet: boolean) => {
       if (
         lastSnapshotAt.current !== null
         && Date.now() - lastSnapshotAt.current > SNAPSHOT_STALE_AFTER_MS
       ) {
         setPreflightStatus(preflight.reconcile({ kind: "stale" }));
       }
-      void refresh(true);
-    }, 3000);
-    return () => window.clearInterval(timer);
+      const nextPayload = await refresh(quiet);
+      if (!disposed) {
+        timer = window.setTimeout(
+          () => void poll(true),
+          refreshDelayForSnapshot(nextPayload),
+        );
+      }
+    };
+    void poll(false);
+    return () => {
+      disposed = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+      }
+    };
   }, [preflight, refresh]);
 
   const snapshot = payload?.snapshot;
@@ -143,6 +211,10 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const display = snapshot?.displays.find((item) => item.active === true);
   const disconnect = snapshot?.disconnect_readiness;
   const sleepGuard = snapshot?.sleep_guard;
+  const progress = connectionProgress(payload);
+  const totalTiming = payload?.diagnostics.timings_ms.find(
+    (timing) => timing.stage === "snapshot_total",
+  );
   const gameUsesEgpu = disconnect?.clients.some((client) => client.kind === "game") ?? false;
   const disconnectStatus = loading
     ? "Reading…"
@@ -192,14 +264,89 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     setSleepWarningHidden(false);
   }, []);
 
+  const createSupportPreview = useCallback(async () => {
+    setSupportBusy(true);
+    setSupportMessage("");
+    try {
+      const preview = await previewSupportBundle();
+      setSupportPreview(preview);
+      setSupportMessage("Redacted preview ready. Review it before copying or saving.");
+      supportModal.current?.Close();
+      supportModal.current = showSupportBundlePreview(preview, () => {
+        supportModal.current = null;
+      });
+    } catch {
+      setSupportMessage("Support bundle preview failed. No file was written.");
+    } finally {
+      setSupportBusy(false);
+    }
+  }, []);
+
+  const reviewSupportPreview = useCallback(() => {
+    if (!supportPreview) {
+      return;
+    }
+    supportModal.current?.Close();
+    supportModal.current = showSupportBundlePreview(supportPreview, () => {
+      supportModal.current = null;
+    });
+  }, [supportPreview]);
+
+  const copySupportPreview = useCallback(async () => {
+    if (!supportPreview) {
+      return;
+    }
+    setSupportBusy(true);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(supportPreview.preview_json);
+      setSupportMessage("Redacted support bundle copied to the clipboard.");
+    } catch {
+      setSupportMessage("Clipboard copy is unavailable. The preview was not changed.");
+    } finally {
+      setSupportBusy(false);
+    }
+  }, [supportPreview]);
+
+  const saveApprovedSupportPreview = useCallback(async () => {
+    if (!supportPreview) {
+      return;
+    }
+    setSupportBusy(true);
+    try {
+      const result = await saveSupportBundle(supportPreview.preview_token);
+      setSupportMessage(
+        result.ok
+          ? `Saved the reviewed bundle to ${result.relative_path}.`
+          : "Support bundle save did not complete.",
+      );
+      if (result.ok) {
+        setSupportPreview(null);
+      }
+    } catch {
+      setSupportMessage("Save approval expired or failed. Create and review a new preview.");
+      setSupportPreview(null);
+    } finally {
+      setSupportBusy(false);
+    }
+  }, [supportPreview]);
+
   return (
     <>
       <PanelSection title="Observed state">
+        <DiagnosticRow name="Connection" value={progress.label} />
         <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
         <DiagnosticRow name="Game" value={label(snapshot?.game_state ?? "unknown")} />
         <DiagnosticRow name="Render GPU" value={renderer ? label(renderer.role) : "Unknown"} />
         <DiagnosticRow name="Active display" value={display ? label(display.kind) : "Unknown"} />
         <DiagnosticRow name="Hardware" value={label(snapshot?.support_tier ?? "unknown")} />
+        <DiagnosticRow
+          name="Snapshot time"
+          value={totalTiming ? `${Math.round(totalTiming.duration_ms)} ms` : "Unknown"}
+        />
+        <PanelSectionRow>{progress.detail}</PanelSectionRow>
       </PanelSection>
 
       <PanelSection title="Sleep protection">
@@ -289,6 +436,44 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           ))}
         </PanelSection>
       )}
+
+      <PanelSection title="Support bundle">
+        <PanelSectionRow>
+          Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs,
+          addresses, usernames, home paths, and command lines are excluded or redacted.
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => void createSupportPreview()} disabled={supportBusy}>
+            {supportBusy ? "Working…" : "Preview redacted support bundle"}
+          </ButtonItem>
+        </PanelSectionRow>
+        {supportPreview && (
+          <>
+            <DiagnosticRow name="Preview size" value={`${supportPreview.size_bytes} bytes`} />
+            <DiagnosticRow name="Recent events" value={String(supportPreview.event_count)} />
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={reviewSupportPreview} disabled={supportBusy}>
+                Review exact redacted JSON
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={() => void copySupportPreview()} disabled={supportBusy}>
+                Copy reviewed JSON
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={() => void saveApprovedSupportPreview()}
+                disabled={supportBusy}
+              >
+                Save reviewed bundle to Downloads
+              </ButtonItem>
+            </PanelSectionRow>
+          </>
+        )}
+        {supportMessage && <PanelSectionRow>{supportMessage}</PanelSectionRow>}
+      </PanelSection>
 
       <PanelSection title="Diagnostics only">
         <PanelSectionRow>

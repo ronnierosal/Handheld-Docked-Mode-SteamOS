@@ -16,6 +16,11 @@ proof; the supervised request proof remains pending. HDM does not switch
 displays, restart Gamescope, select GPUs, close processes, or support live eGPU
 removal.
 
+The Decky panel now uses adaptive discovery polling with privacy-safe stage
+timings and can preview, copy, or save a bounded redacted HDM support bundle.
+Saving requires a five-minute, single-use token for the exact JSON the player
+reviewed; no frontend-supplied path is accepted.
+
 Planned milestones:
 
 - **0.1:** reliable read-only discovery and diagnostics
@@ -34,6 +39,7 @@ Start with:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Hardware support](docs/HARDWARE_SUPPORT.md)
 - [Read-only diagnostics](docs/DIAGNOSTICS.md)
+- [Privacy-safe support bundle](docs/SUPPORT_BUNDLE.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
@@ -55,10 +61,11 @@ PYTHONPATH=backend python -m hdm.cli
 ```
 
 The Decky package uses a root delivery adapter because SteamOS protects the
-Gamescope process environment. The only public plugin RPC remains
-`get_snapshot`. Root access is limited to observation plus the exact login1
-sleep-inhibitor lease; the command runner still accepts only the Steam game-scope
-inventory query.
+Gamescope process environment. Public plugin RPCs are limited to `get_snapshot`
+and the preview/token-approved support-bundle flow. Root access is limited to
+observation, fixed-boundary support export, and the exact login1 sleep-inhibitor
+lease; the command runner still accepts only the Steam game-scope inventory
+query.
 
 ## License
 

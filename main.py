@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import socket
 import sys
 from pathlib import Path
 
@@ -14,12 +16,20 @@ BACKEND_ROOT = PLUGIN_ROOT / "backend"
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from hdm.api import DiagnosticsApi  # noqa: E402
 from hdm.adapters.steamos.discovery import SteamOsDiscovery  # noqa: E402
 from hdm.adapters.steamos.sleep_inhibitor import (  # noqa: E402
     G1SleepGuardHardwareDiscovery,
     SleepGuardController,
 )
+from hdm.adapters.steamos.version_info import SteamOsVersionDiscovery  # noqa: E402
+from hdm.api import DiagnosticsApi  # noqa: E402
+from hdm.application.support_bundle import (  # noqa: E402
+    BoundedEventLog,
+    SupportBundle,
+    SupportBundlePreviewStore,
+    SupportBundleService,
+)
+from hdm.delivery.support_export import SupportBundleFileWriter  # noqa: E402
 
 
 class Plugin:
@@ -32,12 +42,62 @@ class Plugin:
         self._api = DiagnosticsApi(self._discovery)
         self._sleep_guard_task: asyncio.Task[None] | None = None
         self._last_sleep_guard_log: tuple[str, bool, str] | None = None
+        self._events = BoundedEventLog()
+        self._support_bundles = SupportBundleService()
+        self._support_previews = SupportBundlePreviewStore()
+        self._support_writer = SupportBundleFileWriter()
+        self._version_info = SteamOsVersionDiscovery().scan()
 
     async def get_snapshot(self) -> dict[str, object]:
         """Return the existing privacy-safe, read-only diagnostics payload."""
         return await asyncio.to_thread(self._api.get_snapshot)
 
+    async def preview_support_bundle(self) -> dict[str, object]:
+        """Return a redacted preview and one-time approval token."""
+        report = await self.get_snapshot()
+        self._events.append(
+            severity="info",
+            code="support.preview_created",
+            component="support",
+            stage="preview",
+        )
+        bundle = await asyncio.to_thread(
+            self._support_bundles.build,
+            report,
+            self._events.snapshot(),
+            self._support_versions(),
+            self._sensitive_values(),
+        )
+        preview = self._support_previews.issue(bundle)
+        return {
+            "schema_version": 1,
+            "preview_token": preview.token,
+            "preview_json": bundle.json_text,
+            "size_bytes": bundle.size_bytes,
+            "event_count": bundle.event_count,
+            "manifest": dict(bundle.payload["manifest"]),
+        }
+
+    async def save_support_bundle(self, preview_token: str) -> dict[str, object]:
+        """Save only the exact bundle represented by a one-time preview token."""
+        bundle = self._support_previews.consume(preview_token)
+        result = await asyncio.to_thread(self._write_support_bundle, bundle)
+        self._events.append(
+            severity="info",
+            code="support.bundle_saved",
+            component="support",
+            stage="save",
+            details={"size_bytes": bundle.size_bytes},
+        )
+        return result
+
     async def _main(self) -> None:
+        self._events.append(
+            severity="info",
+            code="plugin.started",
+            component="lifecycle",
+            stage="startup",
+        )
         try:
             await self._reconcile_sleep_guard()
             payload = await self.get_snapshot()
@@ -51,8 +111,26 @@ class Plugin:
                 snapshot["support_tier"],
                 blocker_codes,
             )
+            self._events.append(
+                severity="info",
+                code="diagnostics.ready",
+                component="discovery",
+                stage="startup",
+                details={
+                    "mode": inference["mode"],
+                    "game_state": snapshot["game_state"],
+                    "support_tier": snapshot["support_tier"],
+                    "blocker_codes": blocker_codes,
+                },
+            )
         except Exception:
             decky.logger.exception("HDM initial read-only snapshot failed")
+            self._events.append(
+                severity="error",
+                code="diagnostics.initial_failed",
+                component="discovery",
+                stage="startup",
+            )
         self._sleep_guard_task = asyncio.create_task(self._sleep_guard_loop())
 
     async def _reconcile_sleep_guard(self) -> None:
@@ -66,6 +144,17 @@ class Plugin:
                 status.active,
                 bool(status.error),
             )
+            self._events.append(
+                severity="warning" if status.error else "info",
+                code="sleep_guard.state_changed",
+                component="sleep_guard",
+                stage="reconcile",
+                details={
+                    "presence": presence.value,
+                    "active": status.active,
+                    "error": bool(status.error),
+                },
+            )
             self._last_sleep_guard_log = current
 
     async def _sleep_guard_loop(self) -> None:
@@ -74,9 +163,21 @@ class Plugin:
                 await self._reconcile_sleep_guard()
             except Exception:
                 decky.logger.exception("HDM sleep guard reconciliation failed")
+                self._events.append(
+                    severity="error",
+                    code="sleep_guard.reconcile_failed",
+                    component="sleep_guard",
+                    stage="reconcile",
+                )
             await asyncio.sleep(1)
 
     async def _unload(self) -> None:
+        self._events.append(
+            severity="info",
+            code="plugin.unloading",
+            component="lifecycle",
+            stage="shutdown",
+        )
         if self._sleep_guard_task is not None:
             self._sleep_guard_task.cancel()
             try:
@@ -86,3 +187,30 @@ class Plugin:
             self._sleep_guard_task = None
         status = await asyncio.to_thread(self._sleep_guard.close)
         decky.logger.info("HDM sleep guard released: active=%s", status.active)
+
+    def _support_versions(self) -> dict[str, str]:
+        return {
+            "hdm": "0.2.0",
+            "decky": str(getattr(decky, "DECKY_VERSION", "unknown")),
+            "steamos": self._version_info.steamos,
+            "kernel": self._version_info.kernel,
+        }
+
+    @staticmethod
+    def _sensitive_values() -> tuple[str, ...]:
+        home = str(getattr(decky, "DECKY_USER_HOME", ""))
+        username = os.environ.get("DECKY_USER", "")
+        return tuple(
+            value
+            for value in (home, Path(home).name if home else "", username, socket.gethostname())
+            if value
+        )
+
+    def _write_support_bundle(self, bundle: SupportBundle) -> dict[str, object]:
+        raw_home = Path(str(getattr(decky, "DECKY_USER_HOME", "")))
+        result = self._support_writer.save(raw_home, bundle)
+        return {
+            "ok": True,
+            "relative_path": result.relative_path,
+            "size_bytes": result.size_bytes,
+        }

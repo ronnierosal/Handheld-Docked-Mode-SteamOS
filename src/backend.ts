@@ -85,6 +85,39 @@ export interface SnapshotPayload {
     mode: string;
     reasons: string[];
   };
+  diagnostics: {
+    schema_version: number;
+    timings_ms: Array<{
+      stage: string;
+      duration_ms: number;
+    }>;
+  };
 }
 
 export const getSnapshot = callable<[], SnapshotPayload>("get_snapshot");
+
+export interface SupportBundlePreviewPayload {
+  schema_version: number;
+  preview_token: string;
+  preview_json: string;
+  size_bytes: number;
+  event_count: number;
+  manifest: {
+    redacted: boolean;
+    bounded: boolean;
+    contents: string[];
+  };
+}
+
+export interface SupportBundleSavePayload {
+  ok: boolean;
+  relative_path: string;
+  size_bytes: number;
+}
+
+export const previewSupportBundle = callable<[], SupportBundlePreviewPayload>(
+  "preview_support_bundle",
+);
+export const saveSupportBundle = callable<[string], SupportBundleSavePayload>(
+  "save_support_bundle",
+);

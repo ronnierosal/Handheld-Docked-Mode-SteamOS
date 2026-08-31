@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime, timezone
+from time import perf_counter_ns
+from typing import TypeVar
 
 from ...domain.models import (
     Blocker,
@@ -23,6 +25,7 @@ from ...domain.models import (
 from ...profiles.ally_x import PROFILE_ID as ALLY_X_PROFILE_ID
 from ...profiles.ally_x import matches_ally_x
 from ...profiles.gpd_g1 import GpdG1Match, match_gpd_g1
+from ...ports.discovery import DiscoveryResult, DiscoveryTiming
 from .drm import DrmCardRecord, DrmConnectorRecord, DrmDiscovery
 from .egpu_clients import EgpuClientDiscovery, EgpuClientScan
 from .game_scopes import GameScopeScan, SystemdGameScopeDiscovery
@@ -34,6 +37,9 @@ from .sleep_inhibitor import InhibitorLeaseStatus
 
 def _default_clock() -> datetime:
     return datetime.now(timezone.utc)
+
+
+T = TypeVar("T")
 
 
 def _card_stable_id(card: DrmCardRecord, g1: GpdG1Match, index: int) -> str:
@@ -74,6 +80,7 @@ class SteamOsDiscovery:
         egpu_clients: EgpuClientDiscovery | None = None,
         sleep_guard_status: Callable[[], InhibitorLeaseStatus] | None = None,
         clock: Callable[[], datetime] = _default_clock,
+        monotonic_ns: Callable[[], int] = perf_counter_ns,
     ) -> None:
         self._drm = drm or DrmDiscovery()
         self._gamescope = gamescope or GamescopeDiscovery()
@@ -87,38 +94,63 @@ class SteamOsDiscovery:
             )
         )
         self._clock = clock
+        self._monotonic_ns = monotonic_ns
 
     def collect_snapshot(self) -> ObservedSnapshot:
-        cards = self._drm.scan()
-        gamescope_scan = self._gamescope.scan()
+        return self.collect_snapshot_with_timings().snapshot
+
+    def collect_snapshot_with_timings(self) -> DiscoveryResult:
+        timings: list[DiscoveryTiming] = []
+        total_started = self._monotonic_ns()
+
+        def timed(stage: str, operation: Callable[[], T]) -> T:
+            started = self._monotonic_ns()
+            value = operation()
+            duration_ms = (self._monotonic_ns() - started) / 1_000_000
+            timings.append(DiscoveryTiming(stage, max(0.0, duration_ms)))
+            return value
+
+        cards = timed("drm", self._drm.scan)
+        gamescope_scan = timed("gamescope", self._gamescope.scan)
         gamescope_uid = (
             gamescope_scan.process.uid if gamescope_scan.process is not None else None
         )
-        game_scan = self._game_scopes.scan(user_uid=gamescope_uid)
-        pci_devices = self._pci_usb4.scan_pci()
-        usb4_devices = self._pci_usb4.scan_usb4()
-        host = self._host.scan()
-        g1 = match_gpd_g1(cards, pci_devices, usb4_devices)
+        game_scan = timed(
+            "game_state", lambda: self._game_scopes.scan(user_uid=gamescope_uid)
+        )
+        pci_devices = timed("pci", self._pci_usb4.scan_pci)
+        usb4_devices = timed("usb4", self._pci_usb4.scan_usb4)
+        host = timed("host", self._host.scan)
+        g1 = timed(
+            "egpu_identity",
+            lambda: match_gpd_g1(cards, pci_devices, usb4_devices),
+        )
 
         if g1.verified:
-            client_scan = self._egpu_clients.scan(
-                gpu_bdf=g1.gpu_bdf,
-                audio_bdf=g1.audio_bdf,
-                root_bdf=g1.root_bdf,
-                xhci_bdf=g1.xhci_bdf,
-                egpu_stable_id=g1.stable_id,
-                gamescope_pid=(
-                    gamescope_scan.process.pid
-                    if gamescope_scan.process is not None
-                    else None
+            client_scan = timed(
+                "disconnect_clients",
+                lambda: self._egpu_clients.scan(
+                    gpu_bdf=g1.gpu_bdf,
+                    audio_bdf=g1.audio_bdf,
+                    root_bdf=g1.root_bdf,
+                    xhci_bdf=g1.xhci_bdf,
+                    egpu_stable_id=g1.stable_id,
+                    gamescope_pid=(
+                        gamescope_scan.process.pid
+                        if gamescope_scan.process is not None
+                        else None
+                    ),
+                    session_uid=gamescope_uid,
                 ),
-                session_uid=gamescope_uid,
             )
         else:
-            client_scan = EgpuClientScan(
-                applicable=g1.detected,
-                complete=not g1.detected,
-                error=g1.reason if g1.detected else "",
+            client_scan = timed(
+                "disconnect_clients",
+                lambda: EgpuClientScan(
+                    applicable=g1.detected,
+                    complete=not g1.detected,
+                    error=g1.reason if g1.detected else "",
+                ),
             )
         disconnect_readiness = self._disconnect_readiness(g1, client_scan)
         sleep_guard = self._build_sleep_guard(g1, self._sleep_guard_status())
@@ -140,7 +172,7 @@ class SteamOsDiscovery:
         host_profile = ALLY_X_PROFILE_ID if matches_ally_x(host) else "unknown"
         support_tier = self._support_tier(host_profile, cards, g1)
         observed_at = self._clock().astimezone(timezone.utc).isoformat()
-        return ObservedSnapshot(
+        snapshot = ObservedSnapshot(
             schema_version=3,
             observed_at=observed_at,
             host_profile=host_profile,
@@ -153,6 +185,13 @@ class SteamOsDiscovery:
             sleep_guard=sleep_guard,
             blockers=blockers,
         )
+        timings.append(
+            DiscoveryTiming(
+                "snapshot_total",
+                max(0.0, (self._monotonic_ns() - total_started) / 1_000_000),
+            )
+        )
+        return DiscoveryResult(snapshot, tuple(timings))
 
     @staticmethod
     def _build_sleep_guard(

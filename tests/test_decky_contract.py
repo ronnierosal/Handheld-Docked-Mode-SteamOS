@@ -19,7 +19,7 @@ class DeckyContractTests(unittest.TestCase):
         self.assertEqual(manifest["api_version"], 1)
         self.assertIn("sleep safety", manifest["publish"]["description"].lower())
 
-    def test_backend_exposes_only_snapshot_rpc(self):
+    def test_backend_exposes_only_snapshot_and_support_bundle_rpcs(self):
         path = ROOT / "main.py"
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         plugin = next(
@@ -31,13 +31,23 @@ class DeckyContractTests(unittest.TestCase):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
             and not node.name.startswith("_")
         }
-        self.assertEqual(public_methods, {"get_snapshot"})
+        self.assertEqual(
+            public_methods,
+            {"get_snapshot", "preview_support_bundle", "save_support_bundle"},
+        )
 
-    def test_frontend_calls_only_snapshot_rpc(self):
+    def test_frontend_calls_only_snapshot_and_support_bundle_rpcs(self):
         source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
+        self.assertIn('"preview_support_bundle"', source)
+        self.assertIn('"save_support_bundle"', source)
         for forbidden in ("apply_transition", "restart_gamescope", "switch_display"):
             self.assertNotIn(forbidden, source.lower())
+
+    def test_support_bundle_save_requires_a_preview_token_and_no_path(self):
+        source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
+        self.assertIn("callable<[string], SupportBundleSavePayload>", source)
+        self.assertNotIn("saveSupportBundle = callable<[string, string]", source)
 
     def test_attempted_sleep_warning_requires_acknowledgement(self):
         source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")

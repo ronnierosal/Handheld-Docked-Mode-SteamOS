@@ -18,7 +18,9 @@ After package installation, the equivalent command is `hdm-diagnose`.
 
 Delivery adapters call `DiagnosticsApi.get_snapshot()` to receive the same
 versioned dictionary without parsing CLI output. The Decky plugin is a thin
-root-privileged wrapper around this API and exposes only `get_snapshot`.
+root-privileged wrapper around this API. In addition to `get_snapshot`, its only
+public calls are the bounded preview/token-approved support export documented in
+[Privacy-safe support bundle](SUPPORT_BUNDLE.md).
 
 Build the Decky package from a source checkout with:
 
@@ -33,8 +35,10 @@ python scripts/build_plugin.py
 The distributable archive is written under `out/`. Its Quick Access view shows
 the inferred mode, running-game state, render GPU role, active display kind,
 hardware support tier, blockers, sleep-protection state, and read-only eGPU
-disconnect readiness. Its only controls refresh the snapshot or hide/show the
-explanation; neither control changes system state or releases the inhibitor.
+disconnect readiness. It also shows progressive connection readiness and the
+total snapshot duration. Refresh and warning-preference controls do not change
+system state or release the inhibitor. Support export writes only after an exact
+redacted preview and one-time approval.
 
 ## Evidence sources
 
@@ -81,6 +85,12 @@ scan fails closed unless both card and render nodes, every visible process FD,
 and attached-storage usage can be inspected. Any exact resource holder or
 mounted/swap storage makes `ready` false. This is evidence only: HDM does not
 signal a process or remove hardware.
+
+The report also has a top-level diagnostics schema `1` with allowlisted stage
+names and millisecond durations for DRM, Gamescope, game state, PCI, USB4, host,
+eGPU identity, disconnect clients, and total snapshot collection. Timings carry
+no paths, device addresses, connector names, process identifiers, or command
+output.
 
 The CLI never acquires an inhibitor. The root Decky backend polls only the host,
 DRM, PCI, and USB4 identity needed for the sleep lease. Candidate G1 presence

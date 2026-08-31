@@ -57,6 +57,10 @@ boundaries remain closed until their own design and validation gates pass.
 The complementary [Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md) is now
 implemented and has passed its non-sleep lease-lifecycle proof. Sleep protection
 is not considered complete until its supervised request proof also passes.
+Read-only responsiveness instrumentation, adaptive Decky refresh, progressive
+connection states, and the [privacy-safe support bundle](SUPPORT_BUNDLE.md) are
+also implemented in 0.2. They do not authorize display/GPU mutation, process
+signals, or live hardware removal.
 
 ## Non-goals for the initial release
 

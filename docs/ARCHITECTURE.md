@@ -29,8 +29,8 @@ combination of verified axes.
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a
-snapshot service only. Later, one transition service will accept both manual and
-automatic requests.
+snapshot service plus a bounded privacy-safe support-report service. Later, one
+transition service will accept both manual and automatic requests.
 
 ## Ports and adapters
 
@@ -58,7 +58,9 @@ Read-only discovery uses the least privilege that can verify each source. The
 CLI runs unprivileged and reports protected Gamescope environment state as
 unknown. The Decky adapter runs as root so it can read that environment, then
 reads the Gamescope owner's user cgroups directly. A strict user-systemd command
-allowlist remains only as a fallback. Its only public RPC is `get_snapshot`.
+allowlist remains only as a fallback. Public RPCs are limited to `get_snapshot`
+and the preview/token-approved support-bundle flow. No RPC accepts a command,
+system path, device identity, or process target.
 
 The first 0.2 safety mechanism is a backend-owned, parent-death-guarded
 `systemd-inhibit` process. Exact G1 presence acquires its login1 lease, verified
@@ -68,6 +70,19 @@ holder chain. Warning suppression is frontend-only and cannot affect the lease.
 Future transition mutation is exposed through a small, typed API with no arbitrary command
 or path inputs. The Decky entrypoint remains an adapter; it is not the domain or
 transition engine.
+
+Snapshot discovery records privacy-safe stage durations and the Decky frontend
+uses an adaptive non-overlapping refresh loop: one second while discovering or
+ready, 750 ms while identity/display evidence is settling, and three seconds in
+a verified TV Docked state. The current certified live snapshot path measured 25–31 ms over
+five end-to-end Decky RPC calls, so parallelizing sysfs/procfs sources is not
+currently justified; snapshot consistency remains more important than shaving
+that bounded observation time.
+
+Support bundle construction, redaction, event rotation, size enforcement, and
+one-time preview approval are application policy. The only file mechanism is a
+fixed-boundary Decky delivery helper that creates the exact reviewed bytes in
+the Decky user's Downloads directory. See [Privacy-safe support bundle](SUPPORT_BUNDLE.md).
 
 ## Transition design gate
 

@@ -33,22 +33,24 @@ overrides before starting SteamOS's `/usr/bin/python` and
 ## User experience
 
 Quick Access always shows the current protection state while the G1 is attached.
-It also emits a game-aware Decky toast and explanatory panel. **Never show this
+It also emits a game-aware acknowledgement dialog and explanatory panel. **Never show this
 explanation again** stores a frontend-only preference. It cannot release the
 lease, hide inactive-protection failures, or alter blockers.
 
 ## Boundaries
 
-- The only public RPC remains `get_snapshot`.
+- Public RPCs remain limited to `get_snapshot` and the separately documented
+  preview/token-approved support-bundle flow.
 - No sleep request is initiated by HDM.
 - No power-menu interception is treated as the safety boundary.
 - No display/GPU transition, process signal, or physical removal is added.
-- The Steam active-session power-menu Sleep path currently fails acceptance on
+- The original Steam active-session power-menu Sleep path failed acceptance on
   the certified Ally X/G1 profile: login1 refused full suspend, but Steam left
-  the handheld backlight lit with a black screen.
-- Do not repeat that path until a Decky-native preflight/warning prevents Steam
-  from beginning its player-facing sleep sequence while the guard is required.
-  The proposed lifecycle and validation gates are defined in
+  the handheld backlight lit with a black screen. The Steam-native preflight now
+  blocks before preparation and preserved presentation in supervised tests;
+  delayed acknowledgement-dialog visibility remains pending.
+- Do not repeat that path without the player present. The implemented lifecycle
+  and remaining validation gates are defined in
   [ADR: Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md).
 - Synthetic Steam input and a short physical power-button press did not recover
   presentation. A graceful Steam reboot restored the internal display.

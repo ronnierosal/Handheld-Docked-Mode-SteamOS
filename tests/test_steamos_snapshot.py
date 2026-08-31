@@ -43,6 +43,15 @@ class FixedTopology:
         return self.usb4
 
 
+class TickingMonotonic:
+    def __init__(self):
+        self.value = 0
+
+    def __call__(self):
+        self.value += 1_000_000
+        return self.value
+
+
 def certified_topology():
     root = "0000:04:00.0"
     ancestry = ("0000:00:03.1", root)
@@ -139,6 +148,7 @@ class SteamOsSnapshotTests(unittest.TestCase):
             True,
         )
         pci, usb4 = certified_topology()
+        monotonic = TickingMonotonic()
         discovery = SteamOsDiscovery(
             drm=Fixed((internal, external)),
             gamescope=Fixed(GamescopeScan(process, 1)),
@@ -148,6 +158,7 @@ class SteamOsSnapshotTests(unittest.TestCase):
             egpu_clients=Fixed(EgpuClientScan(True, True)),
             sleep_guard_status=lambda: InhibitorLeaseStatus(True),
             clock=lambda: datetime(2026, 8, 31, tzinfo=timezone.utc),
+            monotonic_ns=monotonic,
         )
 
         report = SnapshotService(discovery).observe()
@@ -160,8 +171,31 @@ class SteamOsSnapshotTests(unittest.TestCase):
         self.assertTrue(report.snapshot.sleep_guard.active)
         payload = report_to_dict(report)
         self.assertEqual(payload["inference"]["mode"], "tv_docked")
+        self.assertEqual(payload["diagnostics"]["schema_version"], 1)
+        self.assertEqual(
+            [row["stage"] for row in payload["diagnostics"]["timings_ms"]],
+            [
+                "drm",
+                "gamescope",
+                "game_state",
+                "pci",
+                "usb4",
+                "host",
+                "egpu_identity",
+                "disconnect_clients",
+                "snapshot_total",
+            ],
+        )
+        self.assertTrue(
+            all(
+                row["duration_ms"] >= 0
+                for row in payload["diagnostics"]["timings_ms"]
+            )
+        )
         self.assertEqual(snapshot_from_dict(payload["snapshot"]), report.snapshot)
-        self.assertEqual(DiagnosticsApi(discovery).get_snapshot(), payload)
+        self.assertEqual(
+            DiagnosticsApi(discovery).get_snapshot()["snapshot"], payload["snapshot"]
+        )
 
     def test_unknown_game_state_and_incomplete_g1_are_blocked(self):
         card = DrmCardRecord("card9", "0000:08:00.0", "0x1002", "0x7480", False, "amdgpu")
