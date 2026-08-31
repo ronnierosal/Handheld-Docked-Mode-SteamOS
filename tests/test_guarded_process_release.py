@@ -14,6 +14,7 @@ from hdm.application.guarded_process_release import (  # noqa: E402
     GuardedProcessReleaseService,
 )
 from hdm.application.process_release import (  # noqa: E402
+    GracefulReleaseReceiptStore,
     ProcessReleaseApprovalStore,
 )
 from hdm.application.process_release_replay import (  # noqa: E402
@@ -146,6 +147,13 @@ def service(observations):
         GuardedProcessReleaseService(
             observations=observations,
             approvals=approvals(),
+            receipts=GracefulReleaseReceiptStore(
+                ttl_seconds=30,
+                monotonic=lambda: 10,
+                token_factory=iter(
+                    ("force_receipt_000001", "force_receipt_000002")
+                ).__next__,
+            ),
             runner=runner,
             journal_store=store,
             recovery=recovery,
@@ -182,7 +190,7 @@ class GuardedProcessReleaseTests(unittest.TestCase):
         self.assertTrue(result.accepted)
         self.assertTrue(result.result.software_blockers_cleared)
         self.assertFalse(result.result.hardware_removal_authorized)
-        self.assertIsNotNone(result.graceful_evidence)
+        self.assertEqual(result.force_receipt_token, "")
         self.assertEqual(
             signals.actions,
             [("instance-1", ProcessSignalAction.GRACEFUL_TERMINATE)],
@@ -209,17 +217,20 @@ class GuardedProcessReleaseTests(unittest.TestCase):
         graceful = value.preview(ReleasePhase.GRACEFUL, user_confirmed=True)
         graceful_result = value.execute(graceful.details.token)
         self.assertFalse(graceful_result.result.software_blockers_cleared)
+        self.assertEqual(
+            graceful_result.force_receipt_token, "force_receipt_000001"
+        )
         self.assertTrue(value.acknowledge(graceful_result.operation_id))
 
         force = value.preview(
             ReleasePhase.FORCE,
             user_confirmed=True,
-            graceful_evidence=graceful_result.graceful_evidence,
+            graceful_receipt_token=graceful_result.force_receipt_token,
         )
         self.assertTrue(force.ready)
         force_result = value.execute(force.details.token)
         self.assertTrue(force_result.result.software_blockers_cleared)
-        self.assertIsNone(force_result.graceful_evidence)
+        self.assertEqual(force_result.force_receipt_token, "")
         self.assertEqual(
             signals.actions,
             [

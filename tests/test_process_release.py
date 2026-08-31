@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.application.process_release import (  # noqa: E402
     GracefulReleaseEvidence,
+    GracefulReleaseReceiptStore,
     ProcessReleaseApprovalStore,
     revalidate_process_release,
 )
@@ -241,6 +242,29 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
                 observed_generation="generation-1",
                 phase=ReleasePhase.GRACEFUL,
             )
+
+    def test_graceful_receipt_is_opaque_bounded_expiring_and_single_use(self):
+        clock = FakeTime()
+        values = iter(("graceful_receipt_0001", "graceful_receipt_0002"))
+        receipts = GracefulReleaseReceiptStore(
+            ttl_seconds=10,
+            max_tokens=1,
+            monotonic=clock,
+            token_factory=values.__next__,
+        )
+        first = GracefulReleaseEvidence(
+            "graceful_operation_1", ("instance-1",), "sample-1"
+        )
+        token = receipts.issue(first)
+        self.assertEqual(receipts.inspect(token), first)
+        self.assertEqual(receipts.consume(token), first)
+        with self.assertRaisesRegex(ValueError, "already used"):
+            receipts.consume(token)
+
+        token = receipts.issue(first)
+        clock.value = 11
+        with self.assertRaisesRegex(ValueError, "expired"):
+            receipts.inspect(token)
 
 
 if __name__ == "__main__":

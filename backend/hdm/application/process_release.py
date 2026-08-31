@@ -49,6 +49,66 @@ class GracefulReleaseEvidence:
             raise ValueError("graceful release evidence is incomplete")
 
 
+class GracefulReleaseReceiptStore:
+    """Keep graceful-attempt identities behind short-lived opaque receipts."""
+
+    def __init__(
+        self,
+        *,
+        ttl_seconds: float = DEFAULT_APPROVAL_TTL_SECONDS,
+        max_tokens: int = MAX_APPROVAL_TOKENS,
+        monotonic: Callable[[], float] = time.monotonic,
+        token_factory: Callable[[], str] | None = None,
+    ) -> None:
+        if ttl_seconds <= 0 or ttl_seconds > 300:
+            raise ValueError("process receipt TTL must be between 0 and 300 seconds")
+        if max_tokens <= 0 or max_tokens > 10:
+            raise ValueError("process receipt bound must be between 1 and 10")
+        self._ttl_seconds = ttl_seconds
+        self._max_tokens = max_tokens
+        self._monotonic = monotonic
+        self._token_factory = token_factory or (lambda: secrets.token_urlsafe(18))
+        self._values: dict[str, tuple[float, GracefulReleaseEvidence]] = {}
+        self._lock = threading.Lock()
+
+    def issue(self, evidence: GracefulReleaseEvidence) -> str:
+        with self._lock:
+            self._expire_locked()
+            while len(self._values) >= self._max_tokens:
+                oldest = min(self._values, key=lambda token: self._values[token][0])
+                self._values.pop(oldest)
+            token = self._token_factory()
+            if not TOKEN_RE.fullmatch(token) or token in self._values:
+                raise ValueError("process receipt generator returned an invalid token")
+            self._values[token] = (self._monotonic(), evidence)
+            return token
+
+    def inspect(self, token: str) -> GracefulReleaseEvidence:
+        return self._get(token, consume=False)
+
+    def consume(self, token: str) -> GracefulReleaseEvidence:
+        return self._get(token, consume=True)
+
+    def _get(self, token: str, *, consume: bool) -> GracefulReleaseEvidence:
+        if not TOKEN_RE.fullmatch(token):
+            raise ValueError("process receipt token is invalid")
+        with self._lock:
+            self._expire_locked()
+            value = self._values.get(token)
+            if value is None:
+                raise ValueError("process receipt expired or was already used")
+            if consume:
+                self._values.pop(token)
+            return value[1]
+
+    def _expire_locked(self) -> None:
+        cutoff = self._monotonic() - self._ttl_seconds
+        for token in [
+            token for token, (created, _) in self._values.items() if created < cutoff
+        ]:
+            self._values.pop(token, None)
+
+
 def _client_fingerprint(clients: tuple[EgpuClientObservation, ...]) -> str:
     rows = sorted(
         (

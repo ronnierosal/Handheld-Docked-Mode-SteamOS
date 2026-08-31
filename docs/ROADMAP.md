@@ -128,8 +128,8 @@ behavior. No new production mutation endpoint exists.
 typed signal/re-scan flow, deadlines, privacy-safe audit, durable pre-signal
 journaling, no-repeat restart terminalization, and a guarded application facade
 are covered. A narrow POSIX adapter exists, but Decky constructs neither it nor
-a public process RPC. Private graceful evidence must not be serialized when the
-controller-first delivery flow is added.
+a public process RPC. Private graceful evidence is held behind an opaque,
+expiring, single-use force receipt for the future controller-first flow.
 
 - Generate backend-owned previews for exact eligible process instances.
 - Bind short-lived single-use approval tokens to candidate set, device identity,

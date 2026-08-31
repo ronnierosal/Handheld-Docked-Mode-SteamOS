@@ -19,6 +19,7 @@ from ..ports.transition import TransitionObservationPort, VersionedObservation
 from ..ports.transition_journal import TransitionJournalPort
 from .process_release import (
     GracefulReleaseEvidence,
+    GracefulReleaseReceiptStore,
     ProcessReleaseApprovalStore,
 )
 from .process_release_replay import (
@@ -54,7 +55,7 @@ class GuardedProcessReleaseExecution:
     code: str
     operation_id: str = ""
     result: ProcessReleaseReplayResult | None = None
-    graceful_evidence: GracefulReleaseEvidence | None = None
+    force_receipt_token: str = ""
     action_required: bool = False
 
 
@@ -66,12 +67,14 @@ class GuardedProcessReleaseService:
         *,
         observations: TransitionObservationPort,
         approvals: ProcessReleaseApprovalStore,
+        receipts: GracefulReleaseReceiptStore,
         runner: ProcessReleaseRunnerPort,
         journal_store: TransitionJournalPort,
         recovery: ProcessReleaseJournalRecovery,
     ) -> None:
         self._observations = observations
         self._approvals = approvals
+        self._receipts = receipts
         self._runner = runner
         self._journal_store = journal_store
         self._recovery = recovery
@@ -82,7 +85,7 @@ class GuardedProcessReleaseService:
         phase: ReleasePhase,
         *,
         user_confirmed: bool,
-        graceful_evidence: GracefulReleaseEvidence | None = None,
+        graceful_receipt_token: str = "",
     ) -> GuardedProcessReleasePreview:
         journal_blocker = self._journal_blocker()
         if journal_blocker:
@@ -93,6 +96,11 @@ class GuardedProcessReleaseService:
                 phase, blockers=("observation.unavailable",)
             )
         try:
+            graceful_evidence = self._resolve_graceful_evidence(
+                phase,
+                graceful_receipt_token,
+                consume=user_confirmed,
+            )
             method = self._approvals.issue if user_confirmed else self._approvals.inspect
             details = method(
                 observed.snapshot,
@@ -142,13 +150,23 @@ class GuardedProcessReleaseService:
                 action_required=True,
             )
         evidence = self._graceful_evidence(approval, result)
+        try:
+            receipt = self._receipts.issue(evidence) if evidence is not None else ""
+        except ValueError:
+            return GuardedProcessReleaseExecution(
+                True,
+                "process_release.receipt_unavailable",
+                approval.operation_id,
+                result,
+                action_required=True,
+            )
         code = result.reason_code or f"process_release.{result.status.value}"
         return GuardedProcessReleaseExecution(
             True,
             code,
             approval.operation_id,
             result,
-            evidence,
+            receipt,
             result.status is ProcessReleaseStatus.ACTION_REQUIRED,
         )
 
@@ -177,6 +195,22 @@ class GuardedProcessReleaseService:
         except Exception:
             return None
 
+    def _resolve_graceful_evidence(
+        self,
+        phase: ReleasePhase,
+        receipt_token: str,
+        *,
+        consume: bool,
+    ) -> GracefulReleaseEvidence | None:
+        if phase is ReleasePhase.GRACEFUL:
+            if receipt_token:
+                raise ValueError("graceful release cannot use a force receipt")
+            return None
+        if not receipt_token:
+            raise ValueError("force approval requires a prior graceful receipt")
+        method = self._receipts.consume if consume else self._receipts.inspect
+        return method(receipt_token)
+
     @staticmethod
     def _graceful_evidence(
         approval: ProcessReleaseApproval,
@@ -187,7 +221,7 @@ class GuardedProcessReleaseService:
         attempted = tuple(
             approval.targets[item.target_index - 1].instance_id
             for item in result.target_results
-            if item.signal_requested
+            if item.signal_requested and not item.released
         )
         if not attempted:
             return None
@@ -206,6 +240,10 @@ class GuardedProcessReleaseService:
             ("identity", "process_release.identity_unknown"),
             ("no close-eligible", "process_release.no_eligible_targets"),
             ("prior graceful", "process_release.graceful_evidence_required"),
+            ("prior graceful receipt", "process_release.graceful_evidence_required"),
+            ("force receipt", "process_release.phase_evidence_invalid"),
+            ("receipt expired", "process_release.graceful_evidence_invalid"),
+            ("receipt token", "process_release.graceful_evidence_invalid"),
             ("post-graceful", "process_release.fresh_evidence_required"),
             ("new process target", "process_release.target_set_changed"),
             ("valid only for force", "process_release.phase_evidence_invalid"),

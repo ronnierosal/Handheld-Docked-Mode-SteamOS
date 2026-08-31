@@ -72,7 +72,8 @@ Implemented guarded-runner evidence:
   behavior. Delivery/package tests prove it is not wired to Decky.
 - Delivery-independent facade with authority-free inspection, explicit
   single-use approval, fresh-sample execution, one-operation locking, durable
-  recovery, and private graceful evidence for a separate force approval.
+  recovery, and an opaque expiring receipt over private graceful evidence for a
+  separate force approval.
 
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1

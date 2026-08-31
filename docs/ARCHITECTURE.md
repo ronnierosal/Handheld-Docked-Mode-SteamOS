@@ -124,8 +124,9 @@ contract tests forbid process-release wiring and RPC terms.
 The unwired `GuardedProcessReleaseService` composes redacted inspection,
 explicit token issuance, fresh-sample execution, single-operation locking,
 durable journaling, and no-repeat recovery. Graceful-attempt evidence remains a
-private application value so a future Decky facade cannot accidentally expose
-PID-plus-start-time-derived identities. Force is always a second approval.
+private application value behind a bounded, expiring opaque receipt, so a future
+Decky facade cannot expose PID-plus-start-time-derived identities. Issuing a
+force approval consumes that receipt; force is always a second approval.
 
 The canonical sleep reducer is pure policy over exact eGPU presence/identity,
 profile capabilities, game/save state, disconnect evidence, placement, and a

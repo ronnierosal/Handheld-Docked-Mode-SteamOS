@@ -79,11 +79,12 @@ A delivery-independent guarded facade now joins observation, inspection,
 approval, execution, persistence, and recovery. Read-only inspection returns
 the same redacted target rows but never creates a token. Explicit confirmation
 creates a short-lived single-use approval, execution collects a fresh sample,
-and one in-process lock prevents overlapping requests. A graceful result may
-return private backend evidence for a separately inspected and approved force
-phase; that evidence never belongs in a public payload because it contains
-process-instance identities. The force candidate remains limited to instances
-actually signaled during the graceful phase.
+and one in-process lock prevents overlapping requests. When an attempted target
+remains, a graceful result returns only a bounded, expiring opaque receipt. The
+receipt store retains private backend evidence for a separately inspected and
+approved force phase; process-instance identities never enter the public value.
+The force candidate remains limited to instances actually signaled during the
+graceful phase, and issuing force approval consumes the receipt.
 
 Even when every observed software blocker is cleared, the result exposes
 `software_blockers_cleared=true` and always keeps
@@ -92,8 +93,8 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- design a Decky preview/consent payload that never serializes private graceful
-  evidence, then add production composition
+- add the Decky preview/consent payload using only the opaque force receipt,
+  then add production composition
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 
