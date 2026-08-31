@@ -66,6 +66,8 @@ sufficient for the player-facing path. HDM needs a Decky-native
 preflight/warning before Steam starts that sequence. Physical power-button,
 idle-sleep, and authorized direct login1/system requests remain separate
 supervised tests and must not proceed until that path is fixed.
+The proposed preflight lifecycle and test gates are specified in
+[ADR: Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md).
 
 ## Close eGPU processes workflow
 

@@ -48,6 +48,8 @@ lease, hide inactive-protection failures, or alter blockers.
   the handheld backlight lit with a black screen.
 - Do not repeat that path until a Decky-native preflight/warning prevents Steam
   from beginning its player-facing sleep sequence while the guard is required.
+  The proposed lifecycle and validation gates are defined in
+  [ADR: Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md).
 - Synthetic Steam input and a short physical power-button press did not recover
   presentation. A graceful Steam reboot restored the internal display.
 - Physical power-button, idle-sleep, and authorized direct login1 paths still

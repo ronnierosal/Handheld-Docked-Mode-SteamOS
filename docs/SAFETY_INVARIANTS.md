@@ -38,6 +38,10 @@ These invariants are release gates, not preferences.
 18. A sleep inhibitor is released when its verified hardware condition ends or
     the plugin unloads. The plugin must not leave a permanent inhibitor after a
     crash.
+19. Steam sleep requests are blocked before Steam prepares the session for
+    suspend whenever G1 presence is required, loading, stale, unavailable, or
+    unknown. A missing frontend preflight is a critical degraded state, never
+    evidence that Sleep is safe.
 
 The first milestone is read-only. The approved 0.2 sleep guard is an ephemeral,
 crash-released lease governed by its documented lifecycle state machine. Durable

@@ -86,7 +86,10 @@ to limit time-of-check/time-of-use races.
 
 The sleep guard is not a display transition and does not use the transaction
 journal. Its complete acquire/hold/release lifecycle and failure behavior are
-defined in [ADR: G1 sleep guard](ADR_SLEEP_GUARD.md).
+defined in [ADR: G1 sleep guard](ADR_SLEEP_GUARD.md). The proposed frontend
+layer that stops Steam before its preparation sequence is defined separately in
+[ADR: Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md); it complements and
+never replaces the backend login1 lease.
 
 ## Verification strategy
 
