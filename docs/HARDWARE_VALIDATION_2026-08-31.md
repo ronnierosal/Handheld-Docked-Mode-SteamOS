@@ -125,7 +125,7 @@ request, process signal, GPU/display change, disconnect, or physical removal was
 attempted. Quick Access, physical-button, idle, and direct login1 sleep-request
 tests remain separate supervised acceptance work.
 
-## Steam active-session Sleep acceptance
+## Steam active-session Sleep acceptance failure
 
 With the same exact G1 still attached, Steam's visible **Power → Sleep** menu
 item was activated through the live active-session UI. A bounded before/after
@@ -139,14 +139,26 @@ capture showed:
 - the same root HDM inhibitor process remained active
 - the internal and G1 DRM card/render device identities remained unchanged
 - continuous network reachability showed no suspend/resume interruption
+- the user observed a lit backlight with a black screen
+- both legacy framebuffer blank controls reported `4` after the request
 
-This validates that Steam's active-session Sleep request did not enter suspend
-while HDM held the G1 sleep inhibitor. An SSH-issued `systemctl suspend` request
-also returned `Access denied` without changing state, but that result is not
-counted as direct-login1 acceptance because the remote session may have failed
-active-seat PolicyKit authorization before inhibitor evaluation.
+This validates only that Steam's active-session Sleep request did not enter full
+suspend while HDM held the G1 sleep inhibitor. It fails the player-facing
+acceptance criterion because Steam's player-facing sleep sequence did not
+restore presentation after login1 rejected suspend. Synthetic Steam input and a
+short physical power-button press did not restore the display. A graceful
+reboot requested through Steam completed normally and restored the visible
+internal screen; Gamescope, the exact G1, and the HDM inhibitor returned
+successfully.
+The legacy framebuffer blank controls still reported `4` with the screen visibly
+working after reboot, so that value is not treated as a causal indicator. An
+SSH-issued `systemctl suspend` request also returned `Access denied` without
+changing state, but that result is not counted as direct-login1 acceptance
+because the remote session may have failed active-seat PolicyKit authorization
+before inhibitor evaluation.
 
 The installed logind configuration reports `HandlePowerKey=ignore`, so Steam
-owns the visible physical-button behavior on this build. A user-initiated
-physical power-button press, idle-sleep path, and an authorized direct login1
-request remain pending. No inhibitor-bypass option was used.
+owns the visible physical-button behavior on this build. Do not repeat the Steam
+Sleep action or proceed to physical-button/idle acceptance until HDM can stop the
+player-facing sequence before it can leave presentation black. No
+inhibitor-bypass option was used.

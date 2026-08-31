@@ -43,7 +43,12 @@ lease, hide inactive-protection failures, or alter blockers.
 - No sleep request is initiated by HDM.
 - No power-menu interception is treated as the safety boundary.
 - No display/GPU transition, process signal, or physical removal is added.
-- The Steam active-session power-menu Sleep path is validated on the certified
-  Ally X/G1 profile: the request was refused without entering sleep.
+- The Steam active-session power-menu Sleep path currently fails acceptance on
+  the certified Ally X/G1 profile: login1 refused full suspend, but Steam left
+  the handheld backlight lit with a black screen.
+- Do not repeat that path until a Decky-native preflight/warning prevents Steam
+  from beginning its player-facing sleep sequence while the guard is required.
+- Synthetic Steam input and a short physical power-button press did not recover
+  presentation. A graceful Steam reboot restored the internal display.
 - Physical power-button, idle-sleep, and authorized direct login1 paths still
   require separate supervised hardware validation.

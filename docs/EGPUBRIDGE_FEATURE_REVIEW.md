@@ -17,7 +17,7 @@ native Decky UI; its monolithic backend and legacy UI are not ported.
 | Restore Internal recovery | Reimplement | 0.2 | Required rollback and black-screen recovery path. |
 | Running-game transition block | Reimplement | 0.2 | Required safety invariant; unknown game state also blocks. |
 | eGPU sleep warning and resume observation | Reimplement | 0.2 | The certified Ally X/GPD G1 immediately wakes from attached sleep. |
-| Sleep blocking while the G1 is attached | Implemented; Steam Sleep path validated | 0.2 | A crash-safe login1 lease and Decky warnings are active on the certified Ally X/G1; the active-session Steam Sleep request was blocked without entering sleep. |
+| Sleep blocking while the G1 is attached | Lease implemented; Steam UI acceptance failed | 0.2 | The login1 lease prevents full suspend, but Steam's Sleep action can still leave the active presentation black. A native preflight/warning is required. |
 | Exact disconnect readiness report | Read-only core implemented | 0.1/0.2 | Schema 2 now explains exact GPU/audio process clients and mounted/swap storage; transition actions remain 0.2. |
 | Close processes using the exact eGPU | New guarded workflow | 0.2 | Addresses stale non-game clients without presenting live unplug as safe. |
 | Hot-plug observation and internal failback | Reimplement | 0.2 | Protects the next Gamescope session when the configured eGPU is absent. |
@@ -57,11 +57,15 @@ covered by the root login1 inhibitor. HDM must test the Decky/Steam UI hook and
 the inhibitor independently.
 
 On the validated Ally build, logind reports `HandlePowerKey=ignore`; Steam owns
-the visible power-button path. The Steam active-session power-menu Sleep action
-has now been tested with the G1 attached and was refused without a suspend
-transition. Physical power-button, idle-sleep, and authorized direct
-login1/system requests remain separate supervised tests, including whether any
-privileged caller bypasses inhibitors.
+the visible power-button path. Testing Steam's active-session power-menu Sleep
+action with the G1 attached showed that login1 refused the suspend transition,
+but Steam left the backlight lit with a black screen. Synthetic Steam input and
+a short physical power-button press did not recover presentation; a graceful
+Steam reboot restored the display. The lease is therefore necessary but not
+sufficient for the player-facing path. HDM needs a Decky-native
+preflight/warning before Steam starts that sequence. Physical power-button,
+idle-sleep, and authorized direct login1/system requests remain separate
+supervised tests and must not proceed until that path is fixed.
 
 ## Close eGPU processes workflow
 
@@ -103,9 +107,9 @@ only a short-lived approval token issued for the backend-computed candidate set.
 2. Add pure policy for sleep eligibility, process classification, and disconnect
    readiness.
 3. Add the durable transition journal and manual Portable / TV Docked engine.
-4. Add the sleep inhibitor and native warning preferences. Implemented; Steam
-   power-menu validation passed, while physical, idle, and authorized direct
-   request paths remain.
+4. Add the sleep inhibitor and native warning preferences. The lease is
+   implemented, but Steam power-menu acceptance exposed a black-screen failure;
+   add a native preflight/warning before further sleep-path tests.
 5. Add graceful close and separately confirmed force-close for eligible clients.
 6. Add supervised Ally X/G1 tests for transitions, sleep attempts, process
    closure, failure injection, and internal recovery.
