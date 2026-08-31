@@ -40,6 +40,12 @@ composition, and a strict bounded transaction-journal schema. The journal is an
 immutable value with a persistence port only: no storage adapter or production
 transition endpoint is enabled yet.
 
+The guarded-process backlog has an internal approval service that issues
+single-use tokens for backend-discovered eligible instances and requires a fresh
+exact revalidation before returning internal signal targets. Graceful and force
+approvals are distinct, and force requires prior graceful-attempt evidence. The
+service is not exposed through Decky and no process-signal adapter exists.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

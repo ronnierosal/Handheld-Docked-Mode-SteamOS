@@ -7,7 +7,7 @@ cross-feature status and dependency plan is maintained in the
 
 ## Add guarded eGPU process closure
 
-**Status:** DESIGN SPECIFIED — process signals remain gated
+**Status:** APPROVAL FOUNDATION IMPLEMENTED — process signals remain gated
 **Target:** Milestone 0.2 after transition-journal and approval-token gates
 
 Let a player resolve an otherwise idle disconnect blocker by closing only
@@ -42,6 +42,19 @@ Required mutation gates:
   claims live removal is safe on the certified G1 profile.
 - Structured audit events without command lines, private paths, raw PIDs, or
   stable hardware identifiers in exported diagnostics.
+
+Implemented unattended-safe approval foundation:
+
+- Backend-owned graceful/force preview policy for close-eligible same-session
+  user processes only; preview rows expose no PID or process-instance token.
+- Bounded, short-lived, single-use approvals bound to release phase, exact eGPU
+  identity, complete client/resource fingerprint, eligible process instances,
+  and observation generation.
+- Mandatory fresh full revalidation rejects PID reuse, changed resources,
+  changed client set, storage use, or changed eGPU identity.
+- Force approval requires evidence of a prior graceful attempt, a new
+  observation, and a remaining target subset; it cannot add processes.
+- No Decky RPC, signal port/adapter, or live process action is present.
 
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1
