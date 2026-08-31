@@ -21,12 +21,26 @@ class GpdG1Match:
     verified: bool
     stable_id: str = ""
     gpu_bdf: str = ""
+    root_bdf: str = ""
+    audio_bdf: str = ""
+    xhci_bdf: str = ""
     reason: str = ""
     pci_functions: tuple[str, ...] = field(default_factory=tuple)
 
 
 def _identity(record: PciDeviceRecord) -> tuple[str, str]:
     return record.vendor, record.device
+
+
+def _is_identityless_host_router(device: Usb4DeviceRecord) -> bool:
+    domain, separator, route = device.sysfs_id.partition("-")
+    return bool(
+        separator
+        and domain.isdigit()
+        and route == "0"
+        and not device.vendor_name
+        and not device.device_name
+    )
 
 
 def match_gpd_g1(
@@ -51,14 +65,23 @@ def match_gpd_g1(
         for bdf in gpu.ancestry
         if bdf in by_bdf and _identity(by_bdf[bdf]) == ROOT_ID
     ]
-    if len(root_candidates) != 1 or not root_candidates[0].removable:
+    root_bdfs = {record.bdf for record in root_candidates}
+    top_level_roots = [
+        record
+        for record in root_candidates
+        if not any(
+            ancestor != record.bdf and ancestor in root_bdfs
+            for ancestor in record.ancestry
+        )
+    ]
+    if len(top_level_roots) != 1 or not top_level_roots[0].removable:
         return GpdG1Match(
             True,
             False,
             gpu_bdf=card.pci_bdf,
-            reason="Validated removable Intel 15ef bridge was not proven",
+            reason="Unique top-level removable Intel 15ef bridge was not proven",
         )
-    root = root_candidates[0]
+    root = top_level_roots[0]
     subtree = tuple(
         record
         for record in pci_devices
@@ -82,14 +105,19 @@ def match_gpd_g1(
         )
 
     authorized = [device for device in usb4_devices if device.authorized is True]
-    matching_usb4 = [
+    external_authorized = [
         device
         for device in authorized
+        if not _is_identityless_host_router(device)
+    ]
+    matching_usb4 = [
+        device
+        for device in external_authorized
         if device.vendor_name.casefold() == "intel"
         and device.device_name.casefold() == "tapex creek"
         and device.unique_id_sha256
     ]
-    if len(authorized) != 1 or len(matching_usb4) != 1:
+    if len(external_authorized) != 1 or len(matching_usb4) != 1:
         return GpdG1Match(
             True,
             False,
@@ -104,5 +132,8 @@ def match_gpd_g1(
         True,
         stable_id=stable_id,
         gpu_bdf=card.pci_bdf,
+        root_bdf=root.bdf,
+        audio_bdf=audio[0].bdf,
+        xhci_bdf=xhci[0].bdf,
         pci_functions=tuple(sorted(record.bdf for record in subtree)),
     )

@@ -17,6 +17,7 @@ from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
 
 GPU_BDF = "0000:08:00.0"
 ROOT_BDF = "0000:04:00.0"
+DOWNSTREAM_BDF = "0000:05:01.0"
 
 
 def g1_records():
@@ -32,12 +33,21 @@ def g1_records():
             True,
         ),
         PciDeviceRecord(
+            DOWNSTREAM_BDF,
+            "0x8086",
+            "0x15ef",
+            "0x060400",
+            "pcieport",
+            ("0000:00:03.1", ROOT_BDF, DOWNSTREAM_BDF),
+            True,
+        ),
+        PciDeviceRecord(
             GPU_BDF,
             "0x1002",
             "0x7480",
             "0x030000",
             "amdgpu",
-            (*ancestry, GPU_BDF),
+            (*ancestry, DOWNSTREAM_BDF, "0000:06:00.0", "0000:07:00.0", GPU_BDF),
         ),
         PciDeviceRecord(
             "0000:08:00.1",
@@ -45,7 +55,7 @@ def g1_records():
             "0xab30",
             "0x040300",
             "snd_hda_intel",
-            (*ancestry, "0000:08:00.1"),
+            (*ancestry, DOWNSTREAM_BDF, "0000:06:00.0", "0000:07:00.0", "0000:08:00.1"),
         ),
         PciDeviceRecord(
             "0000:09:00.0",
@@ -68,13 +78,19 @@ class HardwareProfileTests(unittest.TestCase):
 
     def test_verifies_exact_g1_topology(self):
         card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")
-        usb4 = Usb4DeviceRecord("0-1", "Intel", "Tapex Creek", True, "a" * 64)
+        usb4 = (
+            Usb4DeviceRecord("0-0", "", "", True, "h" * 64),
+            Usb4DeviceRecord("0-2", "Intel", "Tapex Creek", True, "a" * 64),
+        )
 
-        result = match_gpd_g1((card,), g1_records(), (usb4,))
+        result = match_gpd_g1((card,), g1_records(), usb4)
 
         self.assertTrue(result.verified)
         self.assertEqual(result.stable_id, "gpd-g1:" + "a" * 16)
         self.assertEqual(result.gpu_bdf, GPU_BDF)
+        self.assertEqual(result.root_bdf, ROOT_BDF)
+        self.assertEqual(result.audio_bdf, "0000:08:00.1")
+        self.assertEqual(result.xhci_bdf, "0000:09:00.0")
 
     def test_rejects_same_gpu_id_without_complete_topology(self):
         card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")

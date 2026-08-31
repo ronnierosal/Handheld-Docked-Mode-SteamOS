@@ -15,12 +15,16 @@ const LABELS: Record<string, string> = {
   certified: "Certified",
   degraded: "Degraded",
   experimental: "Experimental",
+  game: "Game",
   idle: "No game running",
   portable: "Portable",
   running: "Game running",
+  protected: "Protected",
+  system: "System",
   tv_docked: "TV Docked",
   unknown: "Unknown",
   unsupported: "Unsupported",
+  user: "User",
 };
 
 function label(value: string): string {
@@ -79,6 +83,16 @@ function Content() {
   const snapshot = payload?.snapshot;
   const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
   const display = snapshot?.displays.find((item) => item.active === true);
+  const disconnect = snapshot?.disconnect_readiness;
+  const disconnectStatus = loading
+    ? "Reading…"
+    : !disconnect?.applicable
+      ? "eGPU not connected"
+      : !disconnect.scan_complete
+        ? "Scan incomplete — blocked"
+        : disconnect.ready
+          ? "Ready"
+          : "Blocked";
 
   return (
     <>
@@ -88,6 +102,36 @@ function Content() {
         <DiagnosticRow name="Render GPU" value={renderer ? label(renderer.role) : "Unknown"} />
         <DiagnosticRow name="Active display" value={display ? label(display.kind) : "Unknown"} />
         <DiagnosticRow name="Hardware" value={label(snapshot?.support_tier ?? "unknown")} />
+      </PanelSection>
+
+      <PanelSection title="Disconnect readiness">
+        <DiagnosticRow name="Status" value={disconnectStatus} />
+        {disconnect?.applicable && (
+          <DiagnosticRow
+            name="Resource clients"
+            value={String(disconnect.clients.length)}
+          />
+        )}
+        {disconnect?.clients.map((client) => (
+          <PanelSectionRow key={client.instance_id}>
+            <div>
+              <div>{client.name} · PID {client.pid} · {label(client.kind)}</div>
+              <div style={{ fontSize: "0.85em", opacity: 0.7 }}>
+                {client.resources.map(label).join(", ")} · {client.reason}
+              </div>
+            </div>
+          </PanelSectionRow>
+        ))}
+        {(disconnect?.storage_devices ?? 0) > 0 && (
+          <DiagnosticRow
+            name="eGPU storage"
+            value={disconnect?.storage_in_use ? "In use — blocked" : "Not mounted"}
+          />
+        )}
+        {disconnect?.error && <PanelSectionRow>{disconnect.error}</PanelSectionRow>}
+        <PanelSectionRow>
+          Read-only evidence. HDM did not close processes or disconnect hardware.
+        </PanelSectionRow>
       </PanelSection>
 
       {(error || (snapshot?.blockers.length ?? 0) > 0) && (
@@ -101,7 +145,7 @@ function Content() {
 
       <PanelSection title="Diagnostics only">
         <PanelSectionRow>
-          HDM 0.1 observes the current state. It cannot switch displays, GPUs, or Gamescope.
+          HDM 0.1 observes the current state. It cannot switch displays, GPUs, Gamescope, or close processes.
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => void refresh()} disabled={loading}>

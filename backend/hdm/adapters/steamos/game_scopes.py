@@ -20,6 +20,17 @@ CURRENT_SCOPE_PATTERN = re.compile(r"app-steam-app[0-9]+-[A-Za-z0-9_-]+\.scope")
 CURRENT_SCOPE_PREFIX = "app-steam-app"
 
 
+def is_game_scope_path(value: str) -> bool:
+    """Return true only for a recognized Steam game scope path component."""
+    names = (part for part in "/".join(value.split("\\")).split("/") if part)
+    return any(
+        any(pattern.fullmatch(name) for pattern in LEGACY_SCOPE_PATTERNS)
+        or CURRENT_SCOPE_PATTERN.fullmatch(name) is not None
+        or name.startswith(CURRENT_SCOPE_PREFIX)
+        for name in names
+    )
+
+
 class Runner(Protocol):
     def run(self, argv: Sequence[str]) -> CommandResult: ...
 

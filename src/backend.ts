@@ -24,6 +24,34 @@ export interface DisplayPayload {
   confidence: "unknown" | "observed" | "verified";
 }
 
+export interface EgpuClientPayload {
+  instance_id: string;
+  pid: number;
+  name: string;
+  kind: "game" | "user" | "protected" | "system" | "unknown";
+  resources: Array<
+    | "drm_card"
+    | "drm_render"
+    | "drm_control"
+    | "audio_pcm"
+    | "audio_control"
+    | "audio_hardware"
+  >;
+  close_eligible: boolean;
+  reason: string;
+}
+
+export interface DisconnectReadinessPayload {
+  applicable: boolean;
+  scan_complete: boolean;
+  ready: boolean;
+  egpu_stable_id: string;
+  clients: EgpuClientPayload[];
+  storage_devices: number;
+  storage_in_use: boolean;
+  error: string;
+}
+
 export interface SnapshotPayload {
   snapshot: {
     schema_version: number;
@@ -41,6 +69,7 @@ export interface SnapshotPayload {
       render_vendor_device: string;
       confidence: string;
     };
+    disconnect_readiness: DisconnectReadinessPayload;
     blockers: BlockerPayload[];
   };
   inference: {

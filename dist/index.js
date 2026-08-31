@@ -29,12 +29,16 @@ const LABELS = {
     certified: "Certified",
     degraded: "Degraded",
     experimental: "Experimental",
+    game: "Game",
     idle: "No game running",
     portable: "Portable",
     running: "Game running",
+    protected: "Protected",
+    system: "System",
     tv_docked: "TV Docked",
     unknown: "Unknown",
     unsupported: "Unsupported",
+    user: "User",
 };
 function label(value) {
     return LABELS[value] ?? value.replaceAll("_", " ");
@@ -69,7 +73,17 @@ function Content() {
     const snapshot = payload?.snapshot;
     const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
     const display = snapshot?.displays.find((item) => item.active === true);
-    return (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsxs(DFL.PanelSection, { title: "Observed state", children: [SP_JSX.jsx(DiagnosticRow, { name: "Mode", value: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Game", value: label(snapshot?.game_state ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Render GPU", value: renderer ? label(renderer.role) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Active display", value: display ? label(display.kind) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Hardware", value: label(snapshot?.support_tier ?? "unknown") })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Diagnostics only", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "HDM 0.1 observes the current state. It cannot switch displays, GPUs, or Gamescope." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void refresh(), disabled: loading, children: loading ? "Reading…" : "Refresh" }) })] })] }));
+    const disconnect = snapshot?.disconnect_readiness;
+    const disconnectStatus = loading
+        ? "Reading…"
+        : !disconnect?.applicable
+            ? "eGPU not connected"
+            : !disconnect.scan_complete
+                ? "Scan incomplete — blocked"
+                : disconnect.ready
+                    ? "Ready"
+                    : "Blocked";
+    return (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsxs(DFL.PanelSection, { title: "Observed state", children: [SP_JSX.jsx(DiagnosticRow, { name: "Mode", value: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Game", value: label(snapshot?.game_state ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Render GPU", value: renderer ? label(renderer.role) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Active display", value: display ? label(display.kind) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Hardware", value: label(snapshot?.support_tier ?? "unknown") })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), disconnect?.clients.map((client) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { children: [SP_JSX.jsxs("div", { children: [client.name, " \u00B7 PID ", client.pid, " \u00B7 ", label(client.kind)] }), SP_JSX.jsxs("div", { style: { fontSize: "0.85em", opacity: 0.7 }, children: [client.resources.map(label).join(", "), " \u00B7 ", client.reason] })] }) }, client.instance_id))), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only evidence. HDM did not close processes or disconnect hardware." })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Diagnostics only", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "HDM 0.1 observes the current state. It cannot switch displays, GPUs, Gamescope, or close processes." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void refresh(), disabled: loading, children: loading ? "Reading…" : "Refresh" }) })] })] }));
 }
 var index = definePlugin(() => ({
     name: "Handheld Dock Mode",

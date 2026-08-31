@@ -18,7 +18,7 @@ native Decky UI; its monolithic backend and legacy UI are not ported.
 | Running-game transition block | Reimplement | 0.2 | Required safety invariant; unknown game state also blocks. |
 | eGPU sleep warning and resume observation | Reimplement | 0.2 | The certified Ally X/GPD G1 immediately wakes from attached sleep. |
 | Sleep blocking while the G1 is attached | New HDM behavior | 0.2 | Prevent a known-broken sleep attempt instead of merely observing its result. |
-| Exact disconnect readiness report | Reimplement | 0.2 | Needed to explain GPU, game, audio, storage, and topology blockers. |
+| Exact disconnect readiness report | Read-only core implemented | 0.1/0.2 | Schema 2 now explains exact GPU/audio process clients and mounted/swap storage; transition actions remain 0.2. |
 | Close processes using the exact eGPU | New guarded workflow | 0.2 | Addresses stale non-game clients without presenting live unplug as safe. |
 | Hot-plug observation and internal failback | Reimplement | 0.2 | Protects the next Gamescope session when the configured eGPU is absent. |
 | PCIe/USB4 link-health diagnostics | Reimplement read-only | 0.2 | Useful for the degraded G1 link; not a transition prerequisite by itself. |
@@ -98,8 +98,8 @@ only a short-lived approval token issued for the backend-computed candidate set.
 
 ## Proposed 0.2 slices
 
-1. Expand read-only observations: exact DRM clients, audio/storage users, sleep
-   compatibility, and inhibitor capability.
+1. Expand read-only observations: exact DRM clients and audio/storage users are
+   implemented; sleep compatibility and inhibitor capability remain.
 2. Add pure policy for sleep eligibility, process classification, and disconnect
    readiness.
 3. Add the durable transition journal and manual Portable / TV Docked engine.

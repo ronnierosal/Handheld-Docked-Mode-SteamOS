@@ -41,11 +41,13 @@ adapters observe:
 - PCI and USB4 topology
 - Gamescope PID, arguments, active output, and render device
 - Steam user-systemd game scopes
+- exact certified-eGPU DRM/audio resource holders and mounted/swap storage
 - bounded kernel link-health evidence
 
 Kernel link-health collection remains pending. The implemented snapshot adapter
 cross-correlates the other sources and emits blockers when any required source is
-missing, conflicting, or ambiguous.
+missing, conflicting, or ambiguous. Process classification is pure domain
+policy; procfs and sysfs enumeration remain read-only SteamOS adapters.
 
 Hardware profiles classify observations and quirks. They do not select devices
 by enumeration order.

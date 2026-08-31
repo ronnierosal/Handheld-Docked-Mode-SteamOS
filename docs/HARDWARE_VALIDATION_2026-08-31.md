@@ -68,3 +68,35 @@ Loader, and SteamGridDB. This validates the native plugin lifecycle, root
 snapshot boundary, frontend registration, and Portable read-only path. TV
 Docked validation remains pending until the G1 and TV are naturally connected;
 HDM performed no transition or hardware mutation during this check.
+
+## Live G1 disconnect-readiness validation
+
+The schema 2 package was then deployed through Decky's authenticated installer.
+With the G1 naturally attached while Gamescope remained in Portable mode, the
+first scan failed closed because the captured topology contains several Intel
+`8086:15ef` bridge functions plus an identity-less authorized USB4 host-router
+record. The original profile had incorrectly required one `15ef` function in
+the full GPU ancestry and counted the host-router record as an external device.
+
+The profile was corrected to require one top-level removable `15ef` bridge,
+allow downstream PCI bridge functions, and ignore only the identity-less USB4
+host-router node. Any additional or unidentified external authorized USB4 node
+still blocks certification. Unit fixtures now cover the observed multi-bridge
+topology and host-router record.
+
+After reinstall, the live root RPC reported:
+
+- exact G1 identity: verified (raw USB4 identity omitted)
+- host/G1 support tier: `certified`
+- mode: `portable`; Gamescope remained on the internal GPU and panel
+- game state: `idle`
+- disconnect scan: complete
+- storage routed through the G1: none observed
+- exact resource client: `wireplumber`, holding G1 `audio_control`
+- client classification: protected SteamOS session process, not close-eligible
+- disconnect readiness: blocked
+
+The native Quick Access panel rendered the same blocker and the explicit
+read-only notice. No process was signaled, no GPU/display selector changed, and
+no disconnect or hardware removal was attempted. TV Docked transition
+validation remains pending.

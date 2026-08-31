@@ -46,6 +46,23 @@ class OperatingMode(StrEnum):
     DEGRADED = "degraded"
 
 
+class EgpuClientKind(StrEnum):
+    GAME = "game"
+    USER = "user"
+    PROTECTED = "protected"
+    SYSTEM = "system"
+    UNKNOWN = "unknown"
+
+
+class EgpuResourceKind(StrEnum):
+    DRM_CARD = "drm_card"
+    DRM_RENDER = "drm_render"
+    DRM_CONTROL = "drm_control"
+    AUDIO_PCM = "audio_pcm"
+    AUDIO_CONTROL = "audio_control"
+    AUDIO_HARDWARE = "audio_hardware"
+
+
 class TransitionPhase(StrEnum):
     IDLE = "idle"
     DETECTING = "detecting"
@@ -109,6 +126,29 @@ class Blocker:
 
 
 @dataclass(frozen=True, slots=True)
+class EgpuClientObservation:
+    instance_id: str
+    pid: int
+    name: str
+    kind: EgpuClientKind
+    resources: tuple[EgpuResourceKind, ...]
+    close_eligible: bool
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class DisconnectReadinessObservation:
+    applicable: bool
+    scan_complete: bool
+    ready: bool
+    egpu_stable_id: str = ""
+    clients: tuple[EgpuClientObservation, ...] = field(default_factory=tuple)
+    storage_devices: int = 0
+    storage_in_use: bool = False
+    error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class ObservedSnapshot:
     schema_version: int
     observed_at: str
@@ -118,6 +158,9 @@ class ObservedSnapshot:
     gpus: tuple[GpuObservation, ...]
     displays: tuple[DisplayObservation, ...]
     gamescope: GamescopeObservation
+    disconnect_readiness: DisconnectReadinessObservation = field(
+        default_factory=lambda: DisconnectReadinessObservation(False, True, True)
+    )
     blockers: tuple[Blocker, ...] = field(default_factory=tuple)
 
 

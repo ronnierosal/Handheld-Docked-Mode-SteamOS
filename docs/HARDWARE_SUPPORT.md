@@ -20,7 +20,11 @@
 | Observed USB4 device | Intel Tapex Creek |
 
 The complete topology and privacy-preserving USB4 identity must be verified; the
-GPU PCI ID alone does not prove that the device is the certified G1.
+GPU PCI ID alone does not prove that the device is the certified G1. The live G1
+topology contains one top-level removable Titan Ridge bridge and multiple
+downstream `8086:15ef` bridge functions. The USB4 host-router record has no
+external-device identity and is not counted as a connected peripheral; any
+other unidentified authorized USB4 node remains a certification blocker.
 
 ## Validated reference behavior
 

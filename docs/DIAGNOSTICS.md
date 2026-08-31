@@ -31,7 +31,8 @@ python scripts/build_plugin.py
 
 The distributable archive is written under `out/`. Its Quick Access view shows
 the inferred mode, running-game state, render GPU role, active display kind,
-hardware support tier, and blockers. Refresh is its only action.
+hardware support tier, blockers, and read-only eGPU disconnect readiness.
+Refresh is its only action.
 
 ## Evidence sources
 
@@ -41,6 +42,11 @@ hardware support tier, and blockers. Refresh is its only action.
 - `/sys/bus/thunderbolt/devices`: authorization and hashed USB4 identity
 - `/proc/<pid>/cmdline`: unique Steam Gamescope session and output arguments
 - `/proc/<pid>/environ`: Mesa Vulkan selector cross-check
+- `/proc/<pid>/fd`, `comm`, `stat`, and `cgroup`: exact certified-eGPU DRM and
+  audio resource holders, bounded process names, process-instance fingerprints,
+  and Steam-game ownership
+- `/sys/class/block`, `/proc/self/mountinfo`, and `/proc/swaps`: storage routed
+  through the certified G1 topology and whether it is mounted or swap-backed
 - `/sys/fs/cgroup/user.slice`: running Steam game scopes for the observed
   Gamescope owner
 - `systemctl --user list-units`: fallback scope inventory when the user cgroup
@@ -66,6 +72,13 @@ boundary.
 diagnostic command can still report an Unknown or Degraded mode; command success
 means the report was produced, not that the machine is safe to mutate.
 
+Snapshot schema 2 adds `disconnect_readiness`. A disconnected eGPU is not an
+error and reports `applicable: false`. With an exact certified G1 present, the
+scan fails closed unless both card and render nodes, every visible process FD,
+and attached-storage usage can be inspected. Any exact resource holder or
+mounted/swap storage makes `ready` false. This is evidence only: milestone 0.1
+does not signal a process or remove hardware.
+
 HDM verifies Portable only when the unique Steam Gamescope process, its
 environment, one boot VGA GPU, and one active internal connector agree. It
 verifies TV Docked only when the exact certified G1 topology, Gamescope GPU
@@ -83,6 +96,10 @@ observable without changing the snapshot or inference policy.
 Normal JSON output excludes command lines, DMI strings, PCI bus addresses, raw
 EDID, raw USB4 unique IDs, usernames, hostnames, home paths, IP addresses, and
 systemd stderr. EDID and USB4 identities are represented by bounded hashes only.
+eGPU clients expose a bounded `comm` name, PID, categorical resource types, and
+a short hash bound to the eGPU identity, PID, and process start time. Raw process
+start times, cgroup paths, file-descriptor targets, and device paths are not
+serialized.
 
 Raw hardware evidence belongs in supervised, redacted test captures and is not
 part of this default payload.

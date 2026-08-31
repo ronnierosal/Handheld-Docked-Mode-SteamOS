@@ -33,7 +33,7 @@ class ModeInferenceTests(unittest.TestCase):
 
     def test_unknown_schema_version_is_rejected(self):
         value, _ = load_fixture("portable.json")
-        value["schema_version"] = 2
+        value["schema_version"] = 99
         with self.assertRaisesRegex(ValueError, "Unsupported snapshot schema"):
             snapshot_from_dict(value)
 

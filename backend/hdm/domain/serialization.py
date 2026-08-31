@@ -7,8 +7,12 @@ from typing import Any
 from .models import (
     Blocker,
     Confidence,
+    DisconnectReadinessObservation,
     DisplayKind,
     DisplayObservation,
+    EgpuClientKind,
+    EgpuClientObservation,
+    EgpuResourceKind,
     Evidence,
     GameState,
     GamescopeObservation,
@@ -71,6 +75,27 @@ def snapshot_to_dict(snapshot: ObservedSnapshot) -> dict[str, Any]:
             "confidence": snapshot.gamescope.confidence.value,
             "evidence": _evidence_to_dict(snapshot.gamescope.evidence),
         },
+        "disconnect_readiness": {
+            "applicable": snapshot.disconnect_readiness.applicable,
+            "scan_complete": snapshot.disconnect_readiness.scan_complete,
+            "ready": snapshot.disconnect_readiness.ready,
+            "egpu_stable_id": snapshot.disconnect_readiness.egpu_stable_id,
+            "clients": [
+                {
+                    "instance_id": client.instance_id,
+                    "pid": client.pid,
+                    "name": client.name,
+                    "kind": client.kind.value,
+                    "resources": [resource.value for resource in client.resources],
+                    "close_eligible": client.close_eligible,
+                    "reason": client.reason,
+                }
+                for client in snapshot.disconnect_readiness.clients
+            ],
+            "storage_devices": snapshot.disconnect_readiness.storage_devices,
+            "storage_in_use": snapshot.disconnect_readiness.storage_in_use,
+            "error": snapshot.disconnect_readiness.error,
+        },
         "blockers": [
             {"code": blocker.code, "message": blocker.message}
             for blocker in snapshot.blockers
@@ -112,7 +137,7 @@ def _evidence(values: list[dict[str, Any]] | None) -> tuple[Evidence, ...]:
 
 def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
     version = int(value["schema_version"])
-    if version != 1:
+    if version not in (1, 2):
         raise ValueError(f"Unsupported snapshot schema version: {version}")
 
     gpus = tuple(
@@ -152,6 +177,37 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         confidence=Confidence(gamescope_value.get("confidence", "unknown")),
         evidence=_evidence(gamescope_value.get("evidence")),
     )
+    readiness_value = value.get("disconnect_readiness", {})
+    clients = tuple(
+        EgpuClientObservation(
+            instance_id=str(client["instance_id"]),
+            pid=int(client["pid"]),
+            name=str(client["name"]),
+            kind=EgpuClientKind(client["kind"]),
+            resources=tuple(EgpuResourceKind(item) for item in client.get("resources", [])),
+            close_eligible=_required_bool(
+                client["close_eligible"], "disconnect client.close_eligible"
+            ),
+            reason=str(client.get("reason", "")),
+        )
+        for client in readiness_value.get("clients", [])
+    )
+    readiness = DisconnectReadinessObservation(
+        applicable=_required_bool(
+            readiness_value.get("applicable", False), "disconnect.applicable"
+        ),
+        scan_complete=_required_bool(
+            readiness_value.get("scan_complete", True), "disconnect.scan_complete"
+        ),
+        ready=_required_bool(readiness_value.get("ready", True), "disconnect.ready"),
+        egpu_stable_id=str(readiness_value.get("egpu_stable_id", "")),
+        clients=clients,
+        storage_devices=int(readiness_value.get("storage_devices", 0)),
+        storage_in_use=_required_bool(
+            readiness_value.get("storage_in_use", False), "disconnect.storage_in_use"
+        ),
+        error=str(readiness_value.get("error", "")),
+    )
     blockers = tuple(
         Blocker(code=str(blocker["code"]), message=str(blocker["message"]))
         for blocker in value.get("blockers", [])
@@ -165,5 +221,6 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         gpus=gpus,
         displays=displays,
         gamescope=gamescope,
+        disconnect_readiness=readiness,
         blockers=blockers,
     )

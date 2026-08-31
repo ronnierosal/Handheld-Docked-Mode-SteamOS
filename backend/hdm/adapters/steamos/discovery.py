@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from ...domain.models import (
     Blocker,
     Confidence,
+    DisconnectReadinessObservation,
     DisplayKind,
     DisplayObservation,
     Evidence,
@@ -22,6 +23,7 @@ from ...profiles.ally_x import PROFILE_ID as ALLY_X_PROFILE_ID
 from ...profiles.ally_x import matches_ally_x
 from ...profiles.gpd_g1 import GpdG1Match, match_gpd_g1
 from .drm import DrmCardRecord, DrmConnectorRecord, DrmDiscovery
+from .egpu_clients import EgpuClientDiscovery, EgpuClientScan
 from .game_scopes import GameScopeScan, SystemdGameScopeDiscovery
 from .gamescope import GamescopeDiscovery, GamescopeScan
 from .host import HostDiscovery, HostRecord
@@ -67,6 +69,7 @@ class SteamOsDiscovery:
         game_scopes: SystemdGameScopeDiscovery | None = None,
         pci_usb4: PciUsb4Discovery | None = None,
         host: HostDiscovery | None = None,
+        egpu_clients: EgpuClientDiscovery | None = None,
         clock: Callable[[], datetime] = _default_clock,
     ) -> None:
         self._drm = drm or DrmDiscovery()
@@ -74,6 +77,7 @@ class SteamOsDiscovery:
         self._game_scopes = game_scopes or SystemdGameScopeDiscovery()
         self._pci_usb4 = pci_usb4 or PciUsb4Discovery()
         self._host = host or HostDiscovery()
+        self._egpu_clients = egpu_clients or EgpuClientDiscovery()
         self._clock = clock
 
     def collect_snapshot(self) -> ObservedSnapshot:
@@ -88,6 +92,28 @@ class SteamOsDiscovery:
         host = self._host.scan()
         g1 = match_gpd_g1(cards, pci_devices, usb4_devices)
 
+        if g1.verified:
+            client_scan = self._egpu_clients.scan(
+                gpu_bdf=g1.gpu_bdf,
+                audio_bdf=g1.audio_bdf,
+                root_bdf=g1.root_bdf,
+                xhci_bdf=g1.xhci_bdf,
+                egpu_stable_id=g1.stable_id,
+                gamescope_pid=(
+                    gamescope_scan.process.pid
+                    if gamescope_scan.process is not None
+                    else None
+                ),
+                session_uid=gamescope_uid,
+            )
+        else:
+            client_scan = EgpuClientScan(
+                applicable=g1.detected,
+                complete=not g1.detected,
+                error=g1.reason if g1.detected else "",
+            )
+        disconnect_readiness = self._disconnect_readiness(g1, client_scan)
+
         gpu_rows = self._build_gpus(cards, gamescope_scan, g1)
         display_rows = self._build_displays(cards, gamescope_scan)
         gamescope = self._build_gamescope(gamescope_scan, gpu_rows)
@@ -99,12 +125,13 @@ class SteamOsDiscovery:
             g1,
             gpu_rows,
             display_rows,
+            disconnect_readiness,
         )
         host_profile = ALLY_X_PROFILE_ID if matches_ally_x(host) else "unknown"
         support_tier = self._support_tier(host_profile, cards, g1)
         observed_at = self._clock().astimezone(timezone.utc).isoformat()
         return ObservedSnapshot(
-            schema_version=1,
+            schema_version=2,
             observed_at=observed_at,
             host_profile=host_profile,
             support_tier=support_tier,
@@ -112,7 +139,27 @@ class SteamOsDiscovery:
             gpus=gpu_rows,
             displays=display_rows,
             gamescope=gamescope,
+            disconnect_readiness=disconnect_readiness,
             blockers=blockers,
+        )
+
+    @staticmethod
+    def _disconnect_readiness(
+        g1: GpdG1Match, scan: EgpuClientScan
+    ) -> DisconnectReadinessObservation:
+        ready = (
+            not scan.applicable
+            or (scan.complete and not scan.clients and not scan.storage_in_use)
+        )
+        return DisconnectReadinessObservation(
+            applicable=scan.applicable,
+            scan_complete=scan.complete,
+            ready=ready,
+            egpu_stable_id=g1.stable_id if g1.verified else "",
+            clients=scan.clients,
+            storage_devices=scan.storage_devices,
+            storage_in_use=scan.storage_in_use,
+            error=scan.error,
         )
 
     @staticmethod
@@ -288,6 +335,7 @@ class SteamOsDiscovery:
         g1: GpdG1Match,
         gpus: tuple[GpuObservation, ...],
         displays: tuple[DisplayObservation, ...],
+        disconnect: DisconnectReadinessObservation,
     ) -> tuple[Blocker, ...]:
         blockers: list[Blocker] = []
         if not matches_ally_x(host):
@@ -327,6 +375,37 @@ class SteamOsDiscovery:
             blockers.append(Blocker("game_state_unknown", games.error))
         if g1.detected and not g1.verified:
             blockers.append(Blocker("egpu_identity_unverified", g1.reason))
+        if disconnect.applicable and not disconnect.scan_complete:
+            blockers.append(
+                Blocker(
+                    "egpu_client_scan_incomplete",
+                    disconnect.error or "eGPU resource clients could not be verified.",
+                )
+            )
+        if any(client.kind.value == "game" for client in disconnect.clients):
+            blockers.append(
+                Blocker(
+                    "egpu_game_in_use",
+                    "A running Steam game is using the eGPU.",
+                )
+            )
+        non_game_clients = tuple(
+            client for client in disconnect.clients if client.kind.value != "game"
+        )
+        if non_game_clients:
+            blockers.append(
+                Blocker(
+                    "egpu_clients_active",
+                    f"{len(non_game_clients)} process(es) are using certified eGPU resources.",
+                )
+            )
+        if disconnect.storage_in_use:
+            blockers.append(
+                Blocker(
+                    "egpu_storage_in_use",
+                    "Storage attached through the eGPU is mounted or used as swap.",
+                )
+            )
         if len([gpu for gpu in gpus if gpu.selected_for_render is True]) != 1:
             blockers.append(Blocker("render_gpu_unknown", "Active render GPU is not verified."))
         if len([display for display in displays if display.active is True]) != 1:
