@@ -36,8 +36,11 @@ Evidence is single-use within each dimension; one intentional test report may
 support both independent dimensions when it contains both exact outcomes. The
 bounded promotion history preserves which dimension changed without storing
 process details, account identity, or private paths. The schema is currently
-pure policy: it does not collect tests, write a catalog, publish results, or
-modify launch behavior.
+pure policy plus a dormant fixed-path local store: it does not collect tests,
+expose a Decky RPC, publish results, or modify launch behavior. The store
+accepts only domain-validated records, rejects corrupt/unknown schemas and
+catalog-history regression, writes atomically beneath an application-owned
+state root, and never accepts a frontend-selected path or raw JSON.
 
 Evidence cannot be reused across games: both the catalog record identity and
 Steam AppID (when present) must match the reviewed test evidence exactly.

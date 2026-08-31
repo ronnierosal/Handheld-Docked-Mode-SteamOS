@@ -34,9 +34,11 @@ recovery. Live-removal verification additionally requires expected removal,
 verified Portable recovery, and clean kernel evidence.
 
 Known Issue and Unsupported remain first-class outcomes rather than being
-silently translated into support. The schema and tests do not create or promote
-an installed catalog record; existing claims remain limited to the evidence in
-this document and dated validation records.
+silently translated into support. The schema and tests now have a dormant,
+fixed-path atomic local store for already validated catalog records; it cannot
+collect evidence, expose a Decky write path, or promote a claim. Existing
+claims remain limited to the evidence in this document and dated validation
+records.
 
 ## First certified profile
 

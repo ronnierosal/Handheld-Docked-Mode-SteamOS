@@ -54,4 +54,7 @@ Reviewed evidence is bound to the session's backend-owned catalog game identity
 and the exact baseline Steam AppID, preventing a result from being reused for a
 different title.
 
-No production construction, Decky RPC, UI, or catalog persistence is enabled.
+No production test-mode construction, Decky RPC, or UI is enabled. A dormant
+fixed-path atomic catalog store is available only for already domain-validated
+records; it has no production writer yet and cannot promote simulation or
+unreviewed results.
