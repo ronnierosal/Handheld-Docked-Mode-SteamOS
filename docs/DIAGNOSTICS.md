@@ -60,7 +60,7 @@ or process IDs. Closing/reopening the plugin hides it again.
 - `/sys/class/block`, `/proc/self/mountinfo`, and `/proc/swaps`: storage routed
   through the certified G1 topology and whether it is mounted or swap-backed
 - `/sys/fs/cgroup/user.slice`: running Steam game scopes for the observed
-  Gamescope owner
+  Gamescope owner and an exact AppID only when recognized scope names agree
 - `systemctl --user list-units`: fallback scope inventory when the user cgroup
   hierarchy is unavailable
 
@@ -71,6 +71,10 @@ It runs without a shell. The root fallback uses a fixed `runuser`/`env` prefix
 whose username and UID are derived from the Gamescope process owner. All
 alternate commands and mutation-shaped arguments are rejected by the command
 boundary.
+
+Scope-derived AppID identity is currently retained only inside the read-only
+game scan. Multiple/future scope formats leave it unknown, and it is not present
+in the public schema or support bundle.
 
 ## Interpretation
 

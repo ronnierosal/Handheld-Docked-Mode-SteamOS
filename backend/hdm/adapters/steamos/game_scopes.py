@@ -13,10 +13,12 @@ from .commands import CommandResult, ReadOnlyCommandRunner
 
 
 LEGACY_SCOPE_PATTERNS = (
-    re.compile(r"app-steam-[0-9]+\.scope"),
-    re.compile(r"steam-app-[0-9]+\.scope"),
+    re.compile(r"app-steam-(?P<appid>[1-9][0-9]*)\.scope"),
+    re.compile(r"steam-app-(?P<appid>[1-9][0-9]*)\.scope"),
 )
-CURRENT_SCOPE_PATTERN = re.compile(r"app-steam-app[0-9]+-[A-Za-z0-9_-]+\.scope")
+CURRENT_SCOPE_PATTERN = re.compile(
+    r"app-steam-app(?P<appid>[1-9][0-9]*)-[A-Za-z0-9_-]+\.scope"
+)
 CURRENT_SCOPE_PREFIX = "app-steam-app"
 
 
@@ -39,12 +41,23 @@ class Runner(Protocol):
 class GameScopeScan:
     state: GameState
     scopes: tuple[str, ...] = field(default_factory=tuple)
+    app_ids: tuple[str, ...] = field(default_factory=tuple)
     unparsed_current_scopes: tuple[str, ...] = field(default_factory=tuple)
     error: str = ""
 
     @property
     def ok(self) -> bool:
         return self.state is not GameState.UNKNOWN and not self.error
+
+    @property
+    def active_app_id(self) -> str:
+        if (
+            self.state is GameState.RUNNING
+            and len(self.app_ids) == 1
+            and not self.unparsed_current_scopes
+        ):
+            return self.app_ids[0]
+        return ""
 
 
 def parse_game_scopes(output: str) -> GameScopeScan:
@@ -54,18 +67,27 @@ def parse_game_scopes(output: str) -> GameScopeScan:
         if line.strip() and line.split(maxsplit=1)[0].endswith(".scope")
     )
     known: list[str] = []
+    app_ids: list[str] = []
     unparsed_current: list[str] = []
     for name in unit_names:
-        if any(pattern.fullmatch(name) for pattern in LEGACY_SCOPE_PATTERNS):
+        match = next(
+            (
+                candidate
+                for pattern in (*LEGACY_SCOPE_PATTERNS, CURRENT_SCOPE_PATTERN)
+                if (candidate := pattern.fullmatch(name)) is not None
+            ),
+            None,
+        )
+        if match is not None:
             known.append(name)
-        elif CURRENT_SCOPE_PATTERN.fullmatch(name):
-            known.append(name)
+            app_ids.append(match.group("appid"))
         elif name.startswith(CURRENT_SCOPE_PREFIX):
             unparsed_current.append(name)
     running = tuple(sorted(set(known + unparsed_current)))
     return GameScopeScan(
         GameState.RUNNING if running else GameState.IDLE,
         running,
+        tuple(sorted(set(app_ids), key=int)),
         tuple(sorted(set(unparsed_current))),
     )
 

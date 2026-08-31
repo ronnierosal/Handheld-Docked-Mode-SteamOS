@@ -144,6 +144,8 @@ class GameScopeDiscoveryTests(unittest.TestCase):
 
             self.assertEqual(result.state, GameState.RUNNING)
             self.assertEqual(result.scopes, ("app-steam-app2909400-43899.scope",))
+            self.assertEqual(result.app_ids, ("2909400",))
+            self.assertEqual(result.active_app_id, "2909400")
 
     def test_empty_readable_user_cgroup_means_idle(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -171,7 +173,30 @@ gamescope-session.scope loaded active running compositor
         result = parse_game_scopes(output)
         self.assertEqual(result.state, GameState.RUNNING)
         self.assertEqual(len(result.scopes), 4)
+        self.assertEqual(result.app_ids, ("123", "456", "2909400"))
         self.assertEqual(result.unparsed_current_scopes, ("app-steam-appfuture.scope",))
+        self.assertEqual(result.active_app_id, "")
+
+    def test_duplicate_scope_for_one_app_retains_one_unambiguous_appid(self):
+        result = parse_game_scopes(
+            "app-steam-app1234-first.scope loaded active running\n"
+            "app-steam-app1234-second.scope loaded active running\n"
+        )
+        self.assertEqual(result.app_ids, ("1234",))
+        self.assertEqual(result.active_app_id, "1234")
+
+    def test_multiple_apps_or_future_scope_keep_identity_unknown(self):
+        multiple = parse_game_scopes(
+            "app-steam-app1234-first.scope loaded active running\n"
+            "app-steam-app5678-second.scope loaded active running\n"
+        )
+        self.assertEqual(multiple.state, GameState.RUNNING)
+        self.assertEqual(multiple.active_app_id, "")
+        future = parse_game_scopes(
+            "app-steam-app1234-first.scope loaded active running\n"
+            "app-steam-appfuture.scope loaded active running\n"
+        )
+        self.assertEqual(future.active_app_id, "")
 
     def test_unrelated_scopes_mean_idle(self):
         result = parse_game_scopes("gamescope-session.scope loaded active running\n")

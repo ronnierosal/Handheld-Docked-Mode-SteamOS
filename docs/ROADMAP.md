@@ -46,6 +46,7 @@ No broader label may be inferred from a narrower one.
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
+| Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Process-tree/title/Proton identity and public schema design remain. |
 
 ## Required architecture corrections
 
