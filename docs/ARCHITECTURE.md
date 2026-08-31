@@ -216,6 +216,14 @@ capability but is never assumed. Audio selection requires a verified usable
 rollback output; otherwise the current usable output is preserved or Action
 Required is reported. No input/audio observation or mechanism adapter is wired.
 
+Exact Steam scope identity can now be enriched by a dormant read-only cgroup
+and procfs adapter. It binds PID plus start time, captures private parent and
+executable-basename evidence, and classifies native versus Proton only from
+allowlisted environment-key presence. Incomplete or changing evidence discards
+the entire process graph and returns a categorical Unknown result. No process
+identity is public or journaled, and no Decky route or game mechanism uses this
+adapter. See [Active game runtime evidence](GAME_RUNTIME.md).
+
 ## Application layer
 
 Application services coordinate ports and domain policy. The snapshot,

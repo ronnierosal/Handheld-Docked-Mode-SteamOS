@@ -49,7 +49,8 @@ No broader label may be inferred from a narrower one.
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
-| Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Process-tree/title/Proton identity and public schema design remain. |
+| Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Steam title/version and consumer wiring remain. |
+| Private active-game process/runtime evidence | Implemented and unit tested, dormant read-only | Exact Proton version, render-GPU ownership, consumers, Decky wiring, and hardware proof remain. |
 | Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 | Reduced transition/compatibility support context | Implemented and privacy tested, dormant optional input | Live owners and controller-visible preview acceptance remain. |
 | Compatibility Test Mode session policy | Implemented and simulated, dormant | Hardware observation/mechanism adapters, UI, persistence, and reviewed tests remain. |
@@ -240,6 +241,13 @@ hardware test on a profile with verified live removal. Any test that can strand
 SSH remains supervised; the GPD G1 is not eligible.
 
 ### R6 — Docked-iGPU research and game-aware launch policy
+
+**Status:** PARTIAL READ-ONLY FOUNDATION IMPLEMENTED — exact Steam AppID/scope
+identity can be enriched with bounded PID/start-time process instances,
+parent/launcher relationships, executable basenames, and native-versus-Proton
+classification. All evidence remains private and fail closed; no consumer,
+mutation, relaunch path, or Decky RPC exists. See
+[Active game runtime evidence](GAME_RUNTIME.md).
 
 - Complete the existing read-only experiment and prove unchanged Gamescope and
   game identity, iGPU rendering, and TV presentation.
