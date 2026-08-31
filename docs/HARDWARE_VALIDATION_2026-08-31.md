@@ -124,3 +124,29 @@ remained the protected audio client blocking disconnect readiness. No sleep
 request, process signal, GPU/display change, disconnect, or physical removal was
 attempted. Quick Access, physical-button, idle, and direct login1 sleep-request
 tests remain separate supervised acceptance work.
+
+## Steam active-session Sleep acceptance
+
+With the same exact G1 still attached, Steam's visible **Power → Sleep** menu
+item was activated through the live active-session UI. A bounded before/after
+capture showed:
+
+- the Sleep menu item was found and invoked in Steam's power menu
+- the kernel boot ID remained identical before and after the request (raw value
+  omitted)
+- uptime advanced continuously from `9520.61` to `9538.91` seconds
+- login1 `PreparingForSleep` remained `false`
+- the same root HDM inhibitor process remained active
+- the internal and G1 DRM card/render device identities remained unchanged
+- continuous network reachability showed no suspend/resume interruption
+
+This validates that Steam's active-session Sleep request did not enter suspend
+while HDM held the G1 sleep inhibitor. An SSH-issued `systemctl suspend` request
+also returned `Access denied` without changing state, but that result is not
+counted as direct-login1 acceptance because the remote session may have failed
+active-seat PolicyKit authorization before inhibitor evaluation.
+
+The installed logind configuration reports `HandlePowerKey=ignore`, so Steam
+owns the visible physical-button behavior on this build. A user-initiated
+physical power-button press, idle-sleep path, and an authorized direct login1
+request remain pending. No inhibitor-bypass option was used.

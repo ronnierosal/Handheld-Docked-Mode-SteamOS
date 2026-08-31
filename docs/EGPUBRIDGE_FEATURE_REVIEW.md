@@ -17,7 +17,7 @@ native Decky UI; its monolithic backend and legacy UI are not ported.
 | Restore Internal recovery | Reimplement | 0.2 | Required rollback and black-screen recovery path. |
 | Running-game transition block | Reimplement | 0.2 | Required safety invariant; unknown game state also blocks. |
 | eGPU sleep warning and resume observation | Reimplement | 0.2 | The certified Ally X/GPD G1 immediately wakes from attached sleep. |
-| Sleep blocking while the G1 is attached | Implemented; live lease/UI validated | 0.2 | A crash-safe login1 lease and Decky warnings are active on the certified Ally X/G1; supervised sleep-request paths remain pending. |
+| Sleep blocking while the G1 is attached | Implemented; Steam Sleep path validated | 0.2 | A crash-safe login1 lease and Decky warnings are active on the certified Ally X/G1; the active-session Steam Sleep request was blocked without entering sleep. |
 | Exact disconnect readiness report | Read-only core implemented | 0.1/0.2 | Schema 2 now explains exact GPU/audio process clients and mounted/swap storage; transition actions remain 0.2. |
 | Close processes using the exact eGPU | New guarded workflow | 0.2 | Addresses stale non-game clients without presenting live unplug as safe. |
 | Hot-plug observation and internal failback | Reimplement | 0.2 | Protects the next Gamescope session when the configured eGPU is absent. |
@@ -57,11 +57,11 @@ covered by the root login1 inhibitor. HDM must test the Decky/Steam UI hook and
 the inhibitor independently.
 
 On the validated Ally build, logind reports `HandlePowerKey=ignore`; Steam owns
-the visible power-button path. Therefore HDM cannot assume that acquiring a
-login1 lock is sufficient. Acceptance requires separate supervised tests for the
-Quick Access Sleep action, the physical power button, idle sleep, and direct
-login1/system sleep requests, including whether any privileged caller bypasses
-inhibitors.
+the visible power-button path. The Steam active-session power-menu Sleep action
+has now been tested with the G1 attached and was refused without a suspend
+transition. Physical power-button, idle-sleep, and authorized direct
+login1/system requests remain separate supervised tests, including whether any
+privileged caller bypasses inhibitors.
 
 ## Close eGPU processes workflow
 
@@ -103,8 +103,9 @@ only a short-lived approval token issued for the backend-computed candidate set.
 2. Add pure policy for sleep eligibility, process classification, and disconnect
    readiness.
 3. Add the durable transition journal and manual Portable / TV Docked engine.
-4. Add the sleep inhibitor and native warning preferences. Implemented; direct
-   sleep-request path validation remains.
+4. Add the sleep inhibitor and native warning preferences. Implemented; Steam
+   power-menu validation passed, while physical, idle, and authorized direct
+   request paths remain.
 5. Add graceful close and separately confirmed force-close for eligible clients.
 6. Add supervised Ally X/G1 tests for transitions, sleep attempts, process
    closure, failure injection, and internal recovery.

@@ -43,5 +43,7 @@ lease, hide inactive-protection failures, or alter blockers.
 - No sleep request is initiated by HDM.
 - No power-menu interception is treated as the safety boundary.
 - No display/GPU transition, process signal, or physical removal is added.
-- Quick Access, physical power button, idle sleep, and direct login1 sleep paths
+- The Steam active-session power-menu Sleep path is validated on the certified
+  Ally X/G1 profile: the request was refused without entering sleep.
+- Physical power-button, idle-sleep, and authorized direct login1 paths still
   require separate supervised hardware validation.
