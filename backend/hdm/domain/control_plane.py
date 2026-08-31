@@ -94,6 +94,8 @@ class HostCapabilities:
     audio_handoff: CapabilitySupport = CapabilitySupport.UNKNOWN
     internal_controller_suppression: CapabilitySupport = CapabilitySupport.UNKNOWN
     external_controller_promotion: CapabilitySupport = CapabilitySupport.UNKNOWN
+    external_controller_disconnect: CapabilitySupport = CapabilitySupport.UNKNOWN
+    external_controller_power_off: CapabilitySupport = CapabilitySupport.UNKNOWN
     power_button_interception: CapabilitySupport = CapabilitySupport.UNKNOWN
 
 
@@ -116,6 +118,8 @@ class EffectiveCapabilities:
     audio_handoff: CapabilitySupport
     internal_controller_suppression: CapabilitySupport
     external_controller_promotion: CapabilitySupport
+    external_controller_disconnect: CapabilitySupport
+    external_controller_power_off: CapabilitySupport
     power_button_interception: CapabilitySupport
     sleep_behavior: SleepBehavior
     removal_behavior: RemovalBehavior
@@ -227,6 +231,8 @@ def compose_capabilities(
         audio_handoff=combine_capability(host.audio_handoff, egpu.audio_output),
         internal_controller_suppression=host.internal_controller_suppression,
         external_controller_promotion=host.external_controller_promotion,
+        external_controller_disconnect=host.external_controller_disconnect,
+        external_controller_power_off=host.external_controller_power_off,
         power_button_interception=host.power_button_interception,
         sleep_behavior=egpu.sleep_behavior,
         removal_behavior=egpu.removal_behavior,

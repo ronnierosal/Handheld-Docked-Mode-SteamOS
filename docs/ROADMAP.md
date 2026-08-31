@@ -201,6 +201,11 @@ dimensions. Docked-iGPU remains experimental until real proof exists.
 
 ### R7 — Controller and audio handoff
 
+**Status:** PURE POLICY IMPLEMENTED — typed observations and controller/audio
+decisions preserve verified fallbacks, separate promotion from suppression, and
+gate optional disconnect/power-off independently. Real Ally/G1 capabilities
+remain Unknown/Experimental; no observation/mechanism adapter or RPC exists.
+
 - Add profile capabilities and independently observable input/audio state.
 - Preserve a usable fallback before suppressing built-in controls or changing
   audio output.

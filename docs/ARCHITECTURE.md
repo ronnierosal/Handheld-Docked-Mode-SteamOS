@@ -85,6 +85,17 @@ readiness, and a verified source-placement rollback path. Docked-iGPU, Boosted H
 unknown, and degraded sources are not silently coerced into that path. The real
 Ally X/G1 profile remains blocked because display handoff is Experimental.
 
+Controller and audio handoff also have pure decision policies only. External
+controller promotion is independent from built-in suppression; suppression is
+never planned without verified external input and a verified built-in recovery
+path. Controller loss/undock restores and promotes built-in input first.
+When promotion is verified but suppression is not, HDM keeps the built-in
+controller active instead of failing the entire dock handoff.
+External power-off may fall back to an independently verified disconnect
+capability but is never assumed. Audio selection requires a verified usable
+rollback output; otherwise the current usable output is preserved or Action
+Required is reported. No input/audio observation or mechanism adapter is wired.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a
