@@ -263,6 +263,13 @@ identities. Partial safe work remains distinguishable from a fully ready plan.
 No production observer, mechanism, or RPC is wired.
 See [Controller and audio handoff foundation](PERIPHERAL_HANDOFF.md).
 
+The initial SteamOS peripheral adapter is read-only sysfs inventory only. It
+recognizes gamepad-capable input nodes and sound-card nodes, hashes their paths
+into private opaque bindings, and never opens an input node or invokes an audio
+session command. Unmapped controller identity and unobserved default audio both
+remain non-exact and non-actionable. Profile-specific mapping, delivery, and
+mechanisms remain absent.
+
 Exact Steam scope identity can now be enriched by a dormant read-only cgroup
 and procfs adapter. It binds PID plus start time, captures private parent and
 executable-basename evidence, and classifies native versus Proton only from

@@ -308,7 +308,10 @@ suppression, order external disconnect/power-off last, and require verification
 after every future step. Each subsystem fails closed independently; changed or
 repeated shared evidence emits no steps at all. Partial safe work is distinct
 from a fully ready plan. Real Ally/G1 capabilities remain
-Unknown/Experimental; no live observation/mechanism adapter or RPC exists. See
+Unknown/Experimental; no live mechanism adapter or RPC exists. A bounded
+read-only sysfs inventory now discovers gamepad and sound-card candidates using
+hashed private bindings; absent supervised mapping it reports controller
+identity/default audio as unverified and authorizes no steps. See
 [Controller and audio handoff foundation](PERIPHERAL_HANDOFF.md).
 
 - Add profile capabilities and independently observable input/audio state.

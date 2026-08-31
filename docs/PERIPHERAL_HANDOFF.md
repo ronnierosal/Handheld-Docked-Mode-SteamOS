@@ -14,9 +14,17 @@ R7a implements a pure, delivery-independent planning foundation:
 - categorical blockers and privacy-safe public traces
 - a composite ordered plan in which every step requires fresh verification
 
-There is no SteamOS observation adapter, mechanism adapter, Decky RPC, or live
-handoff authority in this slice. The Ally X and GPD G1 profile values remain
-Unknown or Experimental and authorize no unsupervised controller/audio change.
+R7b adds a bounded read-only SteamOS sysfs inventory for gamepad-capable input
+nodes and sound cards. It hashes node paths into private opaque bindings and
+retains no names or paths. By default every controller identity remains
+unmapped and audio's current default output remains unobserved, so the adapter
+cannot authorize a handoff. Exact private hints may be supplied only after a
+supervised mapping test; even then the adapter never claims input verification
+or audio-output verification.
+
+There is no mechanism adapter, Decky RPC, or live handoff authority. The Ally X
+and GPD G1 profile values remain Unknown or Experimental and authorize no
+unsupervised controller/audio change.
 
 ## Ordering and recovery rules
 
@@ -55,8 +63,8 @@ audio node identity.
 
 ## Required follow-on
 
-1. Add bounded read-only SteamOS controller/audio observation adapters and
-   fixture parsers.
+1. Extend the read-only inventory with supervised identity/default-output
+   mapping evidence and fixture parsers for SteamOS variants.
 2. Re-plan from the same semantic generation and a new sample immediately
    before each step.
 3. Execute one typed step through the shared transition journal.

@@ -1,0 +1,204 @@
+"""Bounded read-only controller and audio inventory from sysfs.
+
+This module observes only. It does not open input devices, invoke PipeWire,
+change the default output, manipulate Steam Input, or retain raw paths/names.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from ...domain.peripheral_handoff import (
+    AudioOutput,
+    AudioPeripheralState,
+    ControllerPeripheralState,
+    PeripheralObservation,
+)
+
+
+EVENT_PATTERN = re.compile(r"event[0-9]+$")
+CARD_PATTERN = re.compile(r"card[0-9]+$")
+BTN_GAMEPAD = 0x130
+
+
+def _read_text(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return None
+
+
+def _opaque_binding(prefix: str, path: Path) -> str:
+    try:
+        value = str(path.resolve(strict=True))
+    except OSError:
+        value = str(path)
+    return f"{prefix}-{hashlib.sha256(value.encode()).hexdigest()[:32]}"
+
+
+def _bitmap_has(value: str, bit: int) -> bool:
+    try:
+        return bool(int("".join(value.split()), 16) & (1 << bit))
+    except ValueError:
+        return False
+
+
+@dataclass(frozen=True, slots=True)
+class PeripheralInventory:
+    controller_complete: bool
+    controller_bindings: tuple[str, ...] = field(default_factory=tuple)
+    controller_error: str = ""
+    audio_complete: bool = False
+    audio_bindings: tuple[str, ...] = field(default_factory=tuple)
+    audio_error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class PeripheralIdentityHints:
+    """Private backend-only bindings captured during a supervised mapping test."""
+
+    builtin_controller_binding: str = ""
+    external_controller_binding: str = ""
+    current_audio_binding: str = ""
+    external_audio_binding: str = ""
+    portable_audio_binding: str = ""
+
+
+class SteamOsPeripheralInventory:
+    def __init__(
+        self,
+        *,
+        input_root: Path = Path("/sys/class/input"),
+        sound_root: Path = Path("/sys/class/sound"),
+    ) -> None:
+        self._input_root = input_root
+        self._sound_root = sound_root
+
+    def scan(self) -> PeripheralInventory:
+        controller_complete, controllers, controller_error = self._controllers()
+        audio_complete, audio, audio_error = self._audio()
+        return PeripheralInventory(
+            controller_complete,
+            controllers,
+            controller_error,
+            audio_complete,
+            audio,
+            audio_error,
+        )
+
+    def _controllers(self) -> tuple[bool, tuple[str, ...], str]:
+        try:
+            entries = tuple(self._input_root.iterdir())
+        except OSError:
+            return False, (), "controller.input_root_unreadable"
+        bindings: list[str] = []
+        for event in sorted(entries, key=lambda item: item.name):
+            if not EVENT_PATTERN.fullmatch(event.name):
+                continue
+            key = _read_text(event / "device" / "capabilities" / "key")
+            if key is None:
+                return False, (), "controller.capabilities_unreadable"
+            if _bitmap_has(key, BTN_GAMEPAD):
+                bindings.append(_opaque_binding("controller", event / "device"))
+        return True, tuple(sorted(set(bindings))), ""
+
+    def _audio(self) -> tuple[bool, tuple[str, ...], str]:
+        try:
+            entries = tuple(self._sound_root.iterdir())
+        except OSError:
+            return False, (), "audio.sound_root_unreadable"
+        bindings = [
+            _opaque_binding("audio", entry / "device")
+            for entry in sorted(entries, key=lambda item: item.name)
+            if CARD_PATTERN.fullmatch(entry.name)
+        ]
+        return True, tuple(sorted(set(bindings))), ""
+
+
+class SteamOsPeripheralObservationAdapter:
+    """Map inventory through explicit private hints; unknown mappings fail closed."""
+
+    def __init__(
+        self,
+        inventory: SteamOsPeripheralInventory | None = None,
+        hints: PeripheralIdentityHints = PeripheralIdentityHints(),
+        *,
+        generation_factory=None,
+        sample_factory=None,
+    ) -> None:
+        self._inventory = inventory or SteamOsPeripheralInventory()
+        self._hints = hints
+        self._generation_factory = generation_factory or (lambda: "peripheral-unknown")
+        self._sample_factory = sample_factory or (lambda: "peripheral-sample-unknown")
+
+    def observe(self) -> PeripheralObservation:
+        inventory = self._inventory.scan()
+        return PeripheralObservation(
+            schema_version=1,
+            generation=self._generation_factory(),
+            sample_id=self._sample_factory(),
+            controller=self._controller(inventory),
+            audio=self._audio(inventory),
+        )
+
+    def _controller(self, inventory: PeripheralInventory) -> ControllerPeripheralState:
+        if not inventory.controller_complete:
+            return ControllerPeripheralState(
+                False, False, inventory.controller_error, "", None, False, False, "", None, False
+            )
+        hints = self._hints
+        known = {value for value in (hints.builtin_controller_binding, hints.external_controller_binding) if value}
+        if not hints.builtin_controller_binding or set(inventory.controller_bindings) != known:
+            return ControllerPeripheralState(
+                True, False, "controller.identity_unmapped", "", None, False, False, "", None, False
+            )
+        return ControllerPeripheralState(
+            True,
+            True,
+            "",
+            hints.builtin_controller_binding,
+            True,
+            False,
+            False,
+            hints.external_controller_binding,
+            bool(hints.external_controller_binding),
+            False,
+        )
+
+    def _audio(self, inventory: PeripheralInventory) -> AudioPeripheralState:
+        if not inventory.audio_complete:
+            return AudioPeripheralState(
+                False, False, inventory.audio_error, AudioOutput.UNKNOWN, "", False, "", None, False, "", None, False, False
+            )
+        hints = self._hints
+        known = {
+            value
+            for value in (
+                hints.current_audio_binding,
+                hints.external_audio_binding,
+                hints.portable_audio_binding,
+            )
+            if value
+        }
+        if not known or not set(inventory.audio_bindings).issuperset(known):
+            return AudioPeripheralState(
+                True, False, "audio.identity_unmapped", AudioOutput.UNKNOWN, "", False, "", None, False, "", None, False, False
+            )
+        return AudioPeripheralState(
+            True,
+            False,
+            "audio.default_output_unobserved",
+            AudioOutput.UNKNOWN,
+            hints.current_audio_binding,
+            False,
+            hints.external_audio_binding,
+            bool(hints.external_audio_binding),
+            False,
+            hints.portable_audio_binding,
+            bool(hints.portable_audio_binding),
+            False,
+            False,
+        )
