@@ -81,7 +81,10 @@ before signaling, and startup recovery terminalizes an incomplete release
 without repeating a signal. The presentation runtime orchestrator and mechanism
 remain unconstructed; no display/GPU transition endpoint is enabled.
 
-The pure canonical sleep journal projection uses the same contract. An
-interrupted journal never resumes an original sleep request after restart;
-verified Portable recovery is terminal recovery evidence only, while unknown or
-docked state fails closed into Action Required.
+The canonical sleep coordinator uses the same port in deterministic tests and
+persists each active stage before returning its directives. It remains unwired
+from Decky. An interrupted journal never resumes an original sleep request after
+restart; verified Portable recovery is terminal recovery evidence only, while
+unknown or docked state fails closed into Action Required. A pending sleep
+transaction also cannot open a second process-release journal; a same-journal
+child-step protocol is required before those engines are composed.

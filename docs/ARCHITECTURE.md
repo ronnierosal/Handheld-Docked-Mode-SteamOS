@@ -136,9 +136,15 @@ force approval consumes that receipt; force is always a second confirmation.
 
 The canonical sleep reducer is pure policy over exact eGPU presence/identity,
 profile capabilities, game/save state, disconnect evidence, placement, and a
-bounded original-request deadline. It cannot show Safe to disconnect from
+bounded original-request deadline. A delivery-independent coordinator now
+normalizes Steam-menu/physical-button sources, binds the request to an exact
+generation and eGPU/profile capability identity, persists every stage boundary,
+requires fresh verification samples, and performs no directive itself. It
+cannot show Safe to disconnect from
 software-client readiness alone and cannot continue the original sleep request
-before verified Portable recovery. See [Canonical sleep workflow](SLEEP_WORKFLOW.md).
+before verified Portable recovery. It remains unwired until process release can
+participate as a child of the same authoritative journal. See
+[Canonical sleep workflow](SLEEP_WORKFLOW.md).
 
 Asynchronous cable-loss policy can request Portable recovery but can never
 continue sleep. Even when the observed workflow is SleepPendingDisconnect, only

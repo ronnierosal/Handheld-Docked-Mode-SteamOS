@@ -1,8 +1,19 @@
-# Canonical sleep workflow policy
+# Canonical sleep workflow
 
-The canonical sleep reducer models one original player request without calling
-Steam, login1, game processes, display mechanisms, or eGPU mechanisms. It is a
-simulation/policy foundation, not an enabled sleep workflow.
+The canonical sleep reducer and durable application coordinator model one
+original player request without calling Steam, login1, game processes, display
+mechanisms, or eGPU mechanisms. They are an implementation/simulation
+foundation, not an enabled live sleep workflow.
+
+Steam-menu and physical-button intents enter the same coordinator. Physical
+button intent is accepted only when the resolved host profile declares
+interception Experimental or Verified; unknown profiles fail closed. The
+snapshot adapter keeps ambiguous eGPU evidence Unknown and never treats a
+missing DRM inventory or an unverified external GPU as verified absence.
+The session binds the exact present eGPU identity and effective capability
+profiles. An identity or host-profile change terminalizes the transaction before
+the next directive; after verified removal, the bound capability policy remains
+authoritative while the live snapshot proves absence and Portable recovery.
 
 ## Entry policy
 
@@ -49,10 +60,12 @@ of suspending from stale consent or stale hardware evidence.
 
 ## Durable journal projection
 
-Every simulated sleep stage can be projected into the shared strict transition
-journal and persisted atomically by the dormant fixed-path journal store. The
-projection binds the active step to the exact sleep request and stage and only
-allows append-only progress.
+Every coordinator stage is projected into the shared strict transition journal
+and persisted atomically through its injected store before any external caller
+could act on a directive. The projection binds the active step to the exact
+sleep request and stage and only allows append-only progress. Verification
+events for game exit, client release, eGPU removal, and Portable recovery require
+a different observation sample from the active step.
 
 On service restart, an incomplete sleep journal never resumes the original
 sleep request. Work that had not begun is blocked. A started transition records
@@ -60,11 +73,19 @@ recovery as verified only when exact eGPU absence and Portable placement are
 both freshly verified; all other restart states require action. Even verified
 restart recovery terminates as recovery, not as a committed sleep request.
 
-## Current boundary
+## Application coordinator status
 
-The reducer, game-save capability vocabulary, and journal projection are pure
-and unit tested. Journal persistence is dormant and not constructed by the
-Decky runtime. There is no game-close adapter, save adapter,
-sleep-continuation adapter, power-button integration, or Decky workflow RPC.
-Current login1 and Steam preflight behavior remains governed by the existing
-sleep ADRs.
+The reducer, game-save capability vocabulary, conservative snapshot adapter,
+durable coordinator, journal projection, exact acknowledgement, source
+normalization, freshness rules, request expiry, and no-resume restart recovery
+are implemented and simulated. The coordinator is not constructed by Decky.
+
+The next architecture dependency is a single-journal child-step protocol for
+the existing guarded process-release engine. A sleep journal cannot be left
+active while a second authoritative process journal is opened, and HDM will not
+weaken pre-signal durability to work around that conflict.
+
+There is still no game-close adapter, save adapter, removal mechanism,
+sleep-continuation adapter, physical-button interception adapter, or Decky sleep
+workflow RPC. Current login1 and Steam preflight behavior remains governed by
+the existing sleep ADRs.

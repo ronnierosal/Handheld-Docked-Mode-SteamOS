@@ -42,7 +42,7 @@ No broader label may be inferred from a narrower one.
 | Guarded process-release approvals | Implemented and simulated in Decky-native flow | Supervised disposable-process proof remains. |
 | Process-release signal/re-scan runner, audit, and journal | Implemented and simulated | Supervised mechanism proof remains; hardware removal authority is always false. |
 | Exact-instance Linux pidfd signal adapter | Implemented, unit tested, and guarded by Decky orchestration | Supervised disposable-process proof remains. |
-| Canonical sleep/disconnect reducer + durable journal projection | Implemented and unit tested, dormant policy only | Game/save/process/display/sleep mechanisms and supervised proof remain. |
+| Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Same-journal process child steps, game/save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
@@ -175,11 +175,13 @@ connected naturally and no live unplug.
 
 ### R4 — Canonical sleep request orchestration
 
-**Status:** POLICY IMPLEMENTED AND SIMULATED — request expiry, consent/save
+**Status:** COORDINATOR IMPLEMENTED AND SIMULATED — Steam-menu and physical
+button sources enter one generation-bound service; request expiry, consent/save
 branching, process-release routing, removal capability, independent removal
-readiness, Portable recovery, and original-request continuation are covered.
-Append-only journal projection and fail-closed restart recovery are also covered.
-No live sleep mechanism or sleep-continuation RPC is enabled.
+readiness, Portable recovery, original-request continuation, fresh verification
+samples, append-only persistence, exact acknowledgement, and fail-closed restart
+recovery are covered. No live sleep mechanism or sleep-continuation RPC is
+enabled.
 
 - Normalize Steam menu and physical-button attempts into one request intent
   where the platform exposes a verified interception mechanism.
@@ -192,6 +194,10 @@ No live sleep mechanism or sleep-continuation RPC is enabled.
 
 Exit: simulator covers every branch. G1 certification remains limited by its
 removal capability.
+
+Composition gate: guarded process release must become a child step of the same
+sleep transaction journal. HDM must not run two authoritative journals or drop
+pre-signal persistence merely to connect the existing engines.
 
 ### R5 — Unexpected-undock recovery
 
@@ -259,7 +265,7 @@ Exit: privacy/security tests pass; no client credentials or silent upload.
 ## Smallest safe next milestone
 
 Unattended-safe R1 policy/replay, guarded process-release implementation,
-canonical sleep policy/journaling, compatibility policy, temporary logging
+canonical sleep policy/coordinator, compatibility policy, temporary logging
 policy, and the optional overlay are complete. The next release-facing gates are
 R0's supervised controller-visible warning/support-preview acceptance and R2's
 separate supervised disposable-process validation.
