@@ -35,6 +35,8 @@ def record() -> GameCompatibilityRecord:
 def evidence(**changes) -> CompatibilityEvidence:
     value = CompatibilityEvidence(
         evidence_id="test-report-1",
+        game_catalog_id="steam-1234",
+        steam_app_id="1234",
         kind=CompatibilityEvidenceKind.HARDWARE_TEST,
         intentional_test=True,
         reviewed=True,
@@ -111,6 +113,12 @@ class GameCompatibilityTests(unittest.TestCase):
                 record(),
                 EgpuHandoffStatus.VERIFIED,
                 evidence(host_profile_id="different-host"),
+            )
+        with self.assertRaisesRegex(ValueError, "game identity"):
+            promote_egpu_handoff(
+                record(),
+                EgpuHandoffStatus.VERIFIED,
+                evidence(game_catalog_id="steam-5678", steam_app_id="5678"),
             )
         promoted = promote_egpu_handoff(
             record(), EgpuHandoffStatus.VERIFIED, evidence()

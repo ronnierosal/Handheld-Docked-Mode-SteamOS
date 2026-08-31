@@ -72,6 +72,7 @@ class CompatibilityTestSession:
     directives: tuple[CompatibilityTestDirective, ...]
     options: CompatibilityTestOptions
     evidence_kind: CompatibilityEvidenceKind
+    game_catalog_id: str
     host_profile_id: str
     egpu_profile_id: str
     hdm_version: str
@@ -93,6 +94,7 @@ class CompatibilityTestSession:
             self.egpu_profile_id,
             self.hdm_version,
             self.steamos_version,
+            self.game_catalog_id,
         ):
             if not value or len(value) > 96 or not re.fullmatch(r"[A-Za-z0-9_.:-]+", value):
                 raise ValueError("compatibility session identity is invalid")
@@ -142,6 +144,7 @@ def start_compatibility_test(
     session_id: str,
     options: CompatibilityTestOptions,
     evidence_kind: CompatibilityEvidenceKind,
+    game_catalog_id: str,
     host_profile_id: str,
     egpu_profile_id: str,
     hdm_version: str,
@@ -169,6 +172,7 @@ def start_compatibility_test(
         ),
         options=options,
         evidence_kind=evidence_kind,
+        game_catalog_id=game_catalog_id,
         host_profile_id=host_profile_id,
         egpu_profile_id=egpu_profile_id,
         hdm_version=hdm_version,
@@ -321,6 +325,8 @@ def review_compatibility_test(
         completed,
         CompatibilityEvidence(
             evidence_id=evidence_id,
+            game_catalog_id=session.game_catalog_id,
+            steam_app_id=session.baseline.steam_app_id,
             kind=session.evidence_kind,
             intentional_test=True,
             reviewed=True,

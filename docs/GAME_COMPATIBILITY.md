@@ -28,7 +28,7 @@ untested, or the reverse.
 Passive telemetry and simulator results cannot change catalog status. Every
 non-Untested status requires a separately identified intentional hardware test,
 human review, an exact handheld/eGPU profile match, HDM and SteamOS versions,
-and a timestamp. A Verified eGPU result additionally requires an observed
+an exact catalog game/AppID match, and a timestamp. A Verified eGPU result additionally requires an observed
 external rendering GPU; it cannot be inferred from launch success. Save claims
 must match the exact reviewed save outcome.
 
@@ -38,6 +38,9 @@ bounded promotion history preserves which dimension changed without storing
 process details, account identity, or private paths. The schema is currently
 pure policy: it does not collect tests, write a catalog, publish results, or
 modify launch behavior.
+
+Evidence cannot be reused across games: both the catalog record identity and
+Steam AppID (when present) must match the reviewed test evidence exactly.
 
 ## Read-only game identity foundation
 

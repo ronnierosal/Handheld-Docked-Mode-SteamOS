@@ -34,4 +34,8 @@ frontend boolean or general RPC argument. Immutable stage validation rejects a
 reviewable record without its baseline, fresh generation history, and every
 requested result.
 
+Reviewed evidence is bound to the session's backend-owned catalog game identity
+and the exact baseline Steam AppID, preventing a result from being reused for a
+different title.
+
 No runtime adapter, Decky RPC, UI, or catalog persistence is enabled.

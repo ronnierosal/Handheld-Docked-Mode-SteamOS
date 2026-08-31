@@ -37,6 +37,7 @@ def start(*, kind=CompatibilityEvidenceKind.SIMULATION, ttl_ms=1000):
         session_id="compat-session-1",
         options=CompatibilityTestOptions(),
         evidence_kind=kind,
+        game_catalog_id="steam-1234",
         host_profile_id="asus-rog-ally-x",
         egpu_profile_id="gpd-g1-rx7600mxt-titan-ridge",
         hdm_version="0.2.0",
@@ -68,6 +69,7 @@ class CompatibilityTestModeTests(unittest.TestCase):
                 session_id="compat-session-1",
                 options=CompatibilityTestOptions(),
                 evidence_kind=CompatibilityEvidenceKind.SIMULATION,
+                game_catalog_id="steam-1234",
                 host_profile_id="host",
                 egpu_profile_id="egpu",
                 hdm_version="0.2.0",
@@ -88,6 +90,7 @@ class CompatibilityTestModeTests(unittest.TestCase):
             session_id="compat-session-2",
             options=CompatibilityTestOptions(),
             evidence_kind=CompatibilityEvidenceKind.HARDWARE_TEST,
+            game_catalog_id="steam-1234",
             host_profile_id="asus-rog-ally-x",
             egpu_profile_id="gpd-g1-rx7600mxt-titan-ridge",
             hdm_version="0.2.0",
@@ -192,6 +195,8 @@ class CompatibilityTestModeTests(unittest.TestCase):
             now_ms=105,
         )
         self.assertEqual(review.session.stage, CompatibilityTestStage.COMPLETED)
+        self.assertEqual(review.evidence.game_catalog_id, "steam-1234")
+        self.assertEqual(review.evidence.steam_app_id, "1234")
         record = GameCompatibilityRecord(
             catalog_id="steam-1234",
             title="Test Game",

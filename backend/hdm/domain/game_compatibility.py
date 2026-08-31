@@ -60,6 +60,8 @@ class SaveTestOutcome(StrEnum):
 @dataclass(frozen=True, slots=True)
 class CompatibilityEvidence:
     evidence_id: str
+    game_catalog_id: str
+    steam_app_id: str
     kind: CompatibilityEvidenceKind
     intentional_test: bool
     reviewed: bool
@@ -74,6 +76,7 @@ class CompatibilityEvidence:
     def __post_init__(self) -> None:
         for value in (
             self.evidence_id,
+            self.game_catalog_id,
             self.host_profile_id,
             self.egpu_profile_id,
             self.hdm_version,
@@ -83,6 +86,8 @@ class CompatibilityEvidence:
                 raise ValueError("compatibility evidence identity is invalid")
         if not self.tested_at:
             raise ValueError("compatibility test timestamp is required")
+        if self.steam_app_id and not STEAM_APP_ID_RE.fullmatch(self.steam_app_id):
+            raise ValueError("compatibility evidence Steam AppID is invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,6 +231,11 @@ def _require_reviewed_hardware_evidence(
         raise ValueError("simulation cannot promote compatibility status")
     if not evidence.intentional_test or not evidence.reviewed:
         raise ValueError("compatibility evidence requires intentional review")
+    if (
+        evidence.game_catalog_id != record.catalog_id
+        or evidence.steam_app_id != record.steam_app_id
+    ):
+        raise ValueError("compatibility evidence game identity does not match")
     if (
         evidence.host_profile_id != record.host_profile_id
         or evidence.egpu_profile_id != record.egpu_profile_id
