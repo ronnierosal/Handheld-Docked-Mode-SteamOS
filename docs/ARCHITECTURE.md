@@ -234,8 +234,10 @@ A stronger dormant read-only path samples bounded DRM `fdinfo` engine counters
 twice for an exact backend-resolved GPU binding. It requires stable game
 processes, exact render node and PCI identity, unchanged DRM client/engine sets,
 and monotonic counters. Only an observed counter increase proves activity on
-that GPU for the sample window. The private binding provider remains unwired;
-the evidence cannot authorize a transition or certify a game by itself.
+that GPU for the sample window. The private G1 binding resolver independently
+re-runs exact DRM/PCI/USB4 matching and accepts one character-device render node
+under the exact GPU PCI device. It remains unwired; the evidence cannot
+authorize a transition or certify a game by itself.
 
 ## Application layer
 

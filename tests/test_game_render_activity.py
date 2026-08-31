@@ -14,6 +14,14 @@ sys.path.insert(0, str(ROOT / "backend"))
 from hdm.adapters.drm_engine_activity import (  # noqa: E402
     ProcfsDrmEngineCounterAdapter,
 )
+from hdm.adapters.steamos.drm import DrmCardRecord  # noqa: E402
+from hdm.adapters.steamos.game_render_binding import (  # noqa: E402
+    GpdG1DrmRenderBindingResolver,
+)
+from hdm.adapters.steamos.pci import (  # noqa: E402
+    PciDeviceRecord,
+    Usb4DeviceRecord,
+)
 from hdm.application.game_render_activity import (  # noqa: E402
     GameRenderActivityEvidenceService,
 )
@@ -139,6 +147,136 @@ class DrmEngineAdapterTests(unittest.TestCase):
         self.assertEqual(
             result.error_code, "render_activity.process_identity_changed"
         )
+
+
+def g1_pci_records():
+    root = "0000:04:00.0"
+    downstream = "0000:05:01.0"
+    ancestry = ("0000:00:03.1", root)
+    return (
+        PciDeviceRecord(
+            root,
+            "0x8086",
+            "0x15ef",
+            "0x060400",
+            "pcieport",
+            ("0000:00:03.1", root),
+            True,
+        ),
+        PciDeviceRecord(
+            downstream,
+            "0x8086",
+            "0x15ef",
+            "0x060400",
+            "pcieport",
+            ("0000:00:03.1", root, downstream),
+            True,
+        ),
+        PciDeviceRecord(
+            "0000:08:00.0",
+            "0x1002",
+            "0x7480",
+            "0x030000",
+            "amdgpu",
+            (*ancestry, downstream, "0000:06:00.0", "0000:07:00.0", "0000:08:00.0"),
+        ),
+        PciDeviceRecord(
+            "0000:08:00.1",
+            "0x1002",
+            "0xab30",
+            "0x040300",
+            "snd_hda_intel",
+            (*ancestry, downstream, "0000:06:00.0", "0000:07:00.0", "0000:08:00.1"),
+        ),
+        PciDeviceRecord(
+            "0000:09:00.0",
+            "0x8086",
+            "0x15f0",
+            "0x0c0330",
+            "xhci_hcd",
+            (*ancestry, "0000:09:00.0"),
+        ),
+    )
+
+
+class FakeDrm:
+    def __init__(self, cards):
+        self.cards = cards
+
+    def scan(self):
+        return self.cards
+
+
+class FakePciUsb4:
+    def __init__(self, *, usb_hash="0123456789abcdef" + "0" * 48):
+        self.usb_hash = usb_hash
+
+    def scan_pci(self):
+        return g1_pci_records()
+
+    def scan_usb4(self):
+        return (
+            Usb4DeviceRecord("0-2", "Intel", "Tapex Creek", True, self.usb_hash),
+        )
+
+
+class DrmRenderBindingResolverTests(unittest.TestCase):
+    def test_exact_fresh_topology_resolves_one_private_render_node(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pci = root / "pci"
+            (pci / "0000_08_00.0" / "drm" / "renderD131").mkdir(parents=True)
+            resolver = GpdG1DrmRenderBindingResolver(
+                drm=FakeDrm(
+                    (
+                        DrmCardRecord(
+                            "card9",
+                            "0000:08:00.0",
+                            "0x1002",
+                            "0x7480",
+                            False,
+                            "amdgpu",
+                        ),
+                    )
+                ),
+                pci_usb4=FakePciUsb4(),
+                pci_path_resolver=lambda bdf: pci / bdf.replace(":", "_"),
+                dri_root=Path("/dev/dri"),
+                node_validator=lambda path: path.name == "renderD131",
+            )
+            result = resolver.resolve(snapshot())
+
+        self.assertEqual(result, BINDING)
+
+    def test_ambiguous_node_or_changed_usb_identity_fails_closed(self):
+        card = DrmCardRecord(
+            "card9",
+            "0000:08:00.0",
+            "0x1002",
+            "0x7480",
+            False,
+            "amdgpu",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pci = root / "pci"
+            drm = pci / "0000_08_00.0" / "drm"
+            (drm / "renderD131").mkdir(parents=True)
+            (drm / "renderD132").mkdir()
+            kwargs = dict(
+                drm=FakeDrm((card,)),
+                pci_path_resolver=lambda bdf: pci / bdf.replace(":", "_"),
+                node_validator=lambda path: True,
+            )
+            ambiguous = GpdG1DrmRenderBindingResolver(
+                pci_usb4=FakePciUsb4(), **kwargs
+            ).resolve(snapshot())
+            changed = GpdG1DrmRenderBindingResolver(
+                pci_usb4=FakePciUsb4(usb_hash="f" * 64), **kwargs
+            ).resolve(snapshot())
+
+        self.assertIsNone(ambiguous)
+        self.assertIsNone(changed)
 
 
 def runtime(*, generation="a" * 64, sample="b" * 64):

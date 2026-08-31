@@ -77,5 +77,10 @@ runtime race, unreadable evidence, or binding conflict is `unknown`.
 
 `active` proves that an exact game process accumulated DRM engine time on that
 exact GPU during that bounded window. It does not prove exclusive use, future
-use, display placement, or broad compatibility. The binding provider is not yet
-implemented or wired, and the path has no Decky RPC or hardware proof.
+use, display placement, or broad compatibility.
+
+The read-only GPD G1 binding resolver is implemented and unwired. It requires
+the exact snapshot profile/identity, independently re-runs the complete
+DRM/PCI/USB4 G1 matcher, requires the same stable ID and GPU BDF, accepts exactly
+one render node under that PCI device, and verifies that its `/dev/dri` target is
+a character device. The complete path still has no Decky RPC or hardware proof.
