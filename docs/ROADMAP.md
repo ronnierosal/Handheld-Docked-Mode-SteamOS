@@ -50,6 +50,7 @@ No broader label may be inferred from a narrower one.
 | Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 | Reduced transition/compatibility support context | Implemented and privacy tested, dormant optional input | Live owners and controller-visible preview acceptance remain. |
 | Compatibility Test Mode session policy | Implemented and simulated, dormant | Hardware observation/mechanism adapters, UI, persistence, and reviewed tests remain. |
+| Secure support-submission approval/protocol | Implemented and unit tested, dormant | Cloudflare Worker/R2 deployment, fixed network adapter, abuse controls, and UI remain. |
 
 ## Required architecture corrections
 

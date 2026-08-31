@@ -242,7 +242,7 @@ class SupportBundlePreviewStore:
     def _expire_locked(self) -> None:
         cutoff = self._monotonic() - self._ttl_seconds
         expired = [
-            token for token, (created, _) in self._previews.items() if created < cutoff
+            token for token, (created, _) in self._previews.items() if created <= cutoff
         ]
         for token in expired:
             self._previews.pop(token, None)

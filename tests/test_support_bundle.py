@@ -230,7 +230,7 @@ class SupportBundleTests(unittest.TestCase):
             store.consume(first.token)
 
         second = store.issue(bundle)
-        now[0] = 16.0
+        now[0] = 15.0
         with self.assertRaisesRegex(ValueError, "expired or was already used"):
             store.consume(second.token)
 

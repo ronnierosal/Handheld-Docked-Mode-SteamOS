@@ -50,6 +50,7 @@ Start with:
 - [Game compatibility catalog](docs/GAME_COMPATIBILITY.md)
 - [Game developer compatibility notes](docs/GAME_DEVELOPER_COMPATIBILITY.md)
 - [Compatibility Test Mode policy](docs/COMPATIBILITY_TEST_MODE.md)
+- [Secure support submission design](docs/SUPPORT_SUBMISSION.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
