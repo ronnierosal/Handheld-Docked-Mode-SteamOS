@@ -12,6 +12,12 @@ promotion cannot verify, recovery can restore that source rather than guessing
 Portable. The wrapper still falls back to the internal panel when boot,
 connector, or GPU evidence is stale or ambiguous.
 
+A bounded read-only Docked-iGPU game-exit watcher is also implemented. It binds
+one exact running Steam game, brackets observations to avoid partial-order
+races, and emits only a privacy-safe `promotion_ready` state after verified
+natural exit. It cannot issue approval or invoke this transition path. See
+[Docked-iGPU workflow](DOCKED_IGPU.md).
+
 Hardware validation is a certification gate, not an implementation gate. HDM
 may implement an Experimental mechanism before certification when the operation
 is exact, observable, bounded, recoverable, and explicitly approved for a

@@ -208,8 +208,15 @@ operation ID is acknowledged. No Decky RPC constructs this facade yet.
 That same durable path now treats exact idle Docked-iGPU as a supported source
 for a Docked-eGPU target. Boot config represents Docked-iGPU explicitly as TV
 output plus the exact internal render GPU, and recovery can restore it. The path
-remains experimental, approval-gated, and unwired; it does not watch for game
-exit or initiate promotion automatically.
+remains experimental, approval-gated, and unwired; the durable path itself does
+not watch for game exit or initiate promotion automatically.
+
+A separate dormant read-only watcher now binds an exact running Steam game in
+Docked-iGPU and emits only a one-shot `promotion_ready` state after two exact
+Idle samples bracket a fresh, unchanged-profile Docked-iGPU snapshot. It is
+bounded, cancels on context change, exposes no private identity in its payload,
+and has no transition/approval port. See
+[Docked-iGPU workflow](DOCKED_IGPU.md).
 
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is

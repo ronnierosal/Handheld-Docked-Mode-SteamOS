@@ -33,7 +33,7 @@ No broader label may be inferred from a narrower one.
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
 | Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, and unwired supervised transition facade implemented and simulated | Decky transition controls, startup recovery wiring, and hardware proof remain; preparation cannot restart Gamescope. |
-| Docked-iGPU promotion/recovery path | Implemented and simulated inside the existing durable supervised transition engine | Automatic natural-game-exit trigger, Decky delivery, and hardware proof remain. |
+| Docked-iGPU promotion/recovery path | Implemented and simulated inside the existing durable supervised transition engine, with a separate bounded read-only natural-exit watcher | Watcher lifecycle/transition composition, Decky delivery, and hardware proof remain. |
 | Process release/termination | Approval/classification, redacted Decky inspect/confirm flow, guarded facade, Linux pidfd adapter, mandatory re-scan runner, root-owned durable pre-signal journal, and no-repeat startup recovery implemented and simulated | Supervised disposable-process proof remains. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
@@ -265,7 +265,9 @@ review, promote, or publish the result.
 Exact idle Docked-iGPU can now be previewed and promoted to Docked-eGPU through
 the existing experimental approval and durable transition engine, with
 Docked-iGPU as the verified rollback target. Automatic natural-game-exit
-detection and delivery remain absent.
+detection now exists as a bounded read-only one-shot watcher, but it has no
+scheduler, approval port, transition port, or Decky delivery. See
+[Docked-iGPU workflow](DOCKED_IGPU.md).
 
 - Complete the existing read-only experiment and prove unchanged Gamescope and
   game identity, iGPU rendering, and TV presentation.
