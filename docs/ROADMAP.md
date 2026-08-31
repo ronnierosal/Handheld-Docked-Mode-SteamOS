@@ -45,6 +45,7 @@ No broader label may be inferred from a narrower one.
 | Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
 | Exact-identity guarded game-close child | Implemented and simulated, mechanism-injected | Production SteamOS close mechanism, Decky delivery, and supervised proof remain. |
 | Exact-recipe verified game-save child | Implemented and simulated, proof/mechanism-injected | Reviewed production recipes, proof/mechanism adapters, Decky delivery, and per-game hardware proof remain. |
+| Backend-owned canonical sleep delivery facade | Implemented and unit tested, dormant | Decky RPC/UI wiring, physical-button interception, all directive mechanisms, and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
@@ -188,7 +189,10 @@ mechanism, and advances only after a fresh verified Idle observation. No
 production game-close or live sleep mechanism and no sleep-continuation RPC is
 enabled. A verified-save child now binds the already-granted close consent to
 one exact reviewed recipe and requires an independent new Verified proof before
-unlocking close; no production recipe or adapter is present.
+unlocking close; no production recipe or adapter is present. A dormant delivery
+facade now owns request IDs/generations and exposes privacy-safe result/status,
+exact operation-bound consent/cancel, recovery, and acknowledgement without
+executing any directive.
 
 - Normalize Steam menu and physical-button attempts into one request intent
   where the platform exposes a verified interception mechanism.

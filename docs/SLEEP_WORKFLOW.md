@@ -88,6 +88,14 @@ graceful and force evidence cannot cross transactions, and cleared clients
 advance only that same sleep request. No second authoritative journal is opened
 and pre-signal durability remains intact. Decky sleep delivery is still unwired.
 
+A dormant delivery facade now creates the request ID and binds a fresh semantic
+generation entirely in the backend for Steam-menu or physical-button intent.
+The frontend never supplies either value. Game-consent grant/deny and cancel
+operations must match the opaque active operation ID; status/result payloads
+exclude the private request ID and observation generation. The facade can
+recover and acknowledge only through the canonical coordinator. It has no
+Decky RPC and cannot execute a directive or continue sleep.
+
 Guarded graceful game close also composes as a child of the same sleep journal.
 The read-only adapter accepts only one exact Steam AppID and its bounded exact
 scope set; ambiguity fails closed. Explicit confirmation issues a bounded,

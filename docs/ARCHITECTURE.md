@@ -160,6 +160,13 @@ privacy/capacity tests are implemented and simulated. No production recipe,
 proof adapter, save mechanism, or Decky route exists. See
 [Verified game-save child](GAME_SAVE.md).
 
+The dormant canonical-sleep delivery facade keeps request identity and snapshot
+generation backend-owned. It accepts only typed Steam-menu/physical-button
+intent, re-observes through the coordinator, and binds consent/cancel to the
+opaque active operation. Its payload mapper exposes only categorical flow
+state, directives, durability, and the operation ID needed for exact consent or
+acknowledgement. It is not constructed by Decky and has no directive mechanism.
+
 Asynchronous cable-loss policy can request Portable recovery but can never
 continue sleep. Even when the observed workflow is SleepPendingDisconnect, only
 the canonical reducer may continue the exact unexpired request after separate
