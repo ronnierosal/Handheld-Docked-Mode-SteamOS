@@ -34,6 +34,7 @@ TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{16,96}$")
 DEFAULT_APPROVAL_TTL_SECONDS = 120.0
 MAX_APPROVAL_TOKENS = 3
 MAX_RELEASE_TARGETS = 32
+MAX_SLEEP_CHILD_RELEASE_TARGETS = 27
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,12 +42,17 @@ class GracefulReleaseEvidence:
     operation_id: str
     attempted_instance_ids: tuple[str, ...]
     observed_generation: str
+    parent_operation_id: str = ""
 
     def __post_init__(self) -> None:
         if not TOKEN_RE.fullmatch(self.operation_id):
             raise ValueError("graceful release operation ID is invalid")
         if not self.attempted_instance_ids or not self.observed_generation:
             raise ValueError("graceful release evidence is incomplete")
+        if self.parent_operation_id and not TOKEN_RE.fullmatch(
+            self.parent_operation_id
+        ):
+            raise ValueError("graceful release parent operation ID is invalid")
 
 
 class GracefulReleaseReceiptStore:
@@ -199,6 +205,7 @@ class ProcessReleaseApprovalStore:
         observed_generation: str,
         phase: ReleasePhase,
         graceful_evidence: GracefulReleaseEvidence | None = None,
+        parent_operation_id: str = "",
     ) -> ProcessReleasePreview:
         """Build a redacted preview without creating executable authority."""
         targets, _ = self._validate_candidate(
@@ -206,6 +213,7 @@ class ProcessReleaseApprovalStore:
             observed_generation=observed_generation,
             phase=phase,
             graceful_evidence=graceful_evidence,
+            parent_operation_id=parent_operation_id,
         )
         return self._preview(
             snapshot,
@@ -221,12 +229,14 @@ class ProcessReleaseApprovalStore:
         observed_generation: str,
         phase: ReleasePhase,
         graceful_evidence: GracefulReleaseEvidence | None = None,
+        parent_operation_id: str = "",
     ) -> ProcessReleasePreview:
         targets, prior_graceful_operation_id = self._validate_candidate(
             snapshot,
             observed_generation=observed_generation,
             phase=phase,
             graceful_evidence=graceful_evidence,
+            parent_operation_id=parent_operation_id,
         )
         readiness = snapshot.disconnect_readiness
         with self._lock:
@@ -251,6 +261,7 @@ class ProcessReleaseApprovalStore:
                 targets=targets,
                 observed_clients=_client_facts(readiness.clients),
                 prior_graceful_operation_id=prior_graceful_operation_id,
+                parent_operation_id=parent_operation_id,
             )
             self._values[token] = (self._monotonic(), approval)
         return self._preview(
@@ -284,8 +295,11 @@ class ProcessReleaseApprovalStore:
         observed_generation: str,
         phase: ReleasePhase,
         graceful_evidence: GracefulReleaseEvidence | None,
+        parent_operation_id: str,
     ) -> tuple[tuple[ProcessReleaseTarget, ...], str]:
         readiness = snapshot.disconnect_readiness
+        if parent_operation_id and not TOKEN_RE.fullmatch(parent_operation_id):
+            raise ValueError("process release parent operation ID is invalid")
         if not observed_generation:
             raise ValueError("process approval observation generation is required")
         if not readiness.applicable or not readiness.egpu_stable_id:
@@ -297,12 +311,19 @@ class ProcessReleaseApprovalStore:
         targets = _eligible_targets(readiness.clients)
         if not targets:
             raise ValueError("no close-eligible eGPU user process was observed")
+        if (
+            parent_operation_id
+            and len(targets) > MAX_SLEEP_CHILD_RELEASE_TARGETS
+        ):
+            raise ValueError("sleep child process target count exceeds journal capacity")
         prior_graceful_operation_id = ""
         if phase is ReleasePhase.FORCE:
             if graceful_evidence is None:
                 raise ValueError("force approval requires a prior graceful attempt")
             if observed_generation == graceful_evidence.observed_generation:
                 raise ValueError("force approval requires a post-graceful observation")
+            if graceful_evidence.parent_operation_id != parent_operation_id:
+                raise ValueError("force approval parent operation changed")
             previously_attempted = frozenset(graceful_evidence.attempted_instance_ids)
             if any(target.instance_id not in previously_attempted for target in targets):
                 raise ValueError("force approval cannot add a new process target")

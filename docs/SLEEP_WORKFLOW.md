@@ -80,10 +80,11 @@ durable coordinator, journal projection, exact acknowledgement, source
 normalization, freshness rules, request expiry, and no-resume restart recovery
 are implemented and simulated. The coordinator is not constructed by Decky.
 
-The next architecture dependency is a single-journal child-step protocol for
-the existing guarded process-release engine. A sleep journal cannot be left
-active while a second authoritative process journal is opened, and HDM will not
-weaken pre-signal durability to work around that conflict.
+Guarded process release now composes as a child of the same sleep journal in the
+application/simulation layer. The backend injects the active parent identity;
+graceful and force evidence cannot cross transactions, and cleared clients
+advance only that same sleep request. No second authoritative journal is opened
+and pre-signal durability remains intact. Decky sleep delivery is still unwired.
 
 There is still no game-close adapter, save adapter, removal mechanism,
 sleep-continuation adapter, physical-button interception adapter, or Decky sleep

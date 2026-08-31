@@ -42,7 +42,7 @@ No broader label may be inferred from a narrower one.
 | Guarded process-release approvals | Implemented and simulated in Decky-native flow | Supervised disposable-process proof remains. |
 | Process-release signal/re-scan runner, audit, and journal | Implemented and simulated | Supervised mechanism proof remains; hardware removal authority is always false. |
 | Exact-instance Linux pidfd signal adapter | Implemented, unit tested, and guarded by Decky orchestration | Supervised disposable-process proof remains. |
-| Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Same-journal process child steps, game/save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
+| Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Game/save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
@@ -195,9 +195,10 @@ enabled.
 Exit: simulator covers every branch. G1 certification remains limited by its
 removal capability.
 
-Composition gate: guarded process release must become a child step of the same
-sleep transaction journal. HDM must not run two authoritative journals or drop
-pre-signal persistence merely to connect the existing engines.
+Composition status: guarded process release is now a child step of the same
+sleep transaction journal in the application/simulation layer. It does not run
+two authoritative journals or drop pre-signal persistence. Decky sleep delivery
+and live mechanisms remain gated.
 
 ### R5 — Unexpected-undock recovery
 

@@ -85,9 +85,15 @@ The canonical sleep coordinator uses the same port in deterministic tests and
 persists each active stage before returning its directives. It remains unwired
 from Decky. An interrupted journal never resumes an original sleep request after
 restart; verified Portable recovery is terminal recovery evidence only, while
-unknown or docked state fails closed into Action Required. A pending sleep
-transaction also cannot open a second process-release journal; a same-journal
-child-step protocol is required before those engines are composed.
+unknown or docked state fails closed into Action Required.
+
+The journal now has strict `substep_started` / `substep_verified` events inside
+an active parent step. Canonical sleep uses them for guarded process release:
+every signal is preceded by a durable identity-free substep, every rescan closes
+that substep, and graceful plus force phases remain inside the original sleep
+operation. A second authoritative process journal is never opened. The sleep
+child target bound is 27 so the worst-case two-phase release plus all remaining
+sleep/recovery events still fit the 128-entry journal.
 
 Every recovery/acknowledgement service first verifies the journal's categorical
 owner marker. Process-release startup recovery cannot terminalize, clear, or

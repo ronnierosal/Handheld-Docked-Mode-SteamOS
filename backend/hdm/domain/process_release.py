@@ -53,6 +53,7 @@ class ProcessReleaseApproval:
     targets: tuple[ProcessReleaseTarget, ...]
     observed_clients: tuple[ProcessClientFact, ...]
     prior_graceful_operation_id: str = ""
+    parent_operation_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)

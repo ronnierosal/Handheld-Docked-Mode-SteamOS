@@ -164,7 +164,12 @@ def recover_interrupted_sleep_journal(
             occurred_at,
             (("blocker_code", "sleep.restart_interrupted"),),
         )
-    if last not in {JournalEventKind.STEP_STARTED, JournalEventKind.STEP_VERIFIED}:
+    if last not in {
+        JournalEventKind.STEP_STARTED,
+        JournalEventKind.SUBSTEP_STARTED,
+        JournalEventKind.SUBSTEP_VERIFIED,
+        JournalEventKind.STEP_VERIFIED,
+    }:
         raise ValueError("sleep journal is not recoverable from its current event")
     journal = _append(
         journal,
@@ -239,9 +244,20 @@ def _validate_active_sleep_journal(
     if journal.request_id != flow.request_id:
         raise ValueError("sleep journal request identity does not match")
     last = journal.entries[-1]
-    if last.kind is not JournalEventKind.STEP_STARTED:
+    if last.kind not in {
+        JournalEventKind.STEP_STARTED,
+        JournalEventKind.SUBSTEP_VERIFIED,
+    }:
         raise ValueError("sleep journal has no active step")
-    if dict(last.details).get("step_code") != flow.stage.value:
+    active = next(
+        (
+            entry
+            for entry in reversed(journal.entries)
+            if entry.kind is JournalEventKind.STEP_STARTED
+        ),
+        None,
+    )
+    if active is None or dict(active.details).get("step_code") != flow.stage.value:
         raise ValueError("sleep journal active step does not match the flow")
 
 

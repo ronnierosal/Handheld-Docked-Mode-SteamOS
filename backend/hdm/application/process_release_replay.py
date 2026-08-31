@@ -130,18 +130,54 @@ class ProcessReleaseRunner:
         approval: ProcessReleaseApproval,
         current: VersionedObservation,
     ) -> ProcessReleaseReplayResult:
-        if (
-            self._journal_store is not None
-            and self._journal_store.load_current() is not None
-        ):
+        child_mode = bool(approval.parent_operation_id)
+        current_journal = (
+            self._journal_store.load_current()
+            if self._journal_store is not None
+            else None
+        )
+        if child_mode:
+            if self._journal_store is None or current_journal is None:
+                raise ValueError("process release parent journal is unavailable")
+            self._validate_child_parent(current_journal, approval.parent_operation_id)
+        elif current_journal is not None:
             raise ValueError("another process release journal requires attention")
         audit: list[ProcessReleaseAuditEvent] = []
         results: list[ProcessTargetResult] = []
         placement = infer_placement(current.snapshot)
-        journal = TransitionJournal(approval.operation_id, approval.operation_id)
+        journal = (
+            current_journal
+            if child_mode and current_journal is not None
+            else TransitionJournal(approval.operation_id, approval.operation_id)
+        )
 
-        def journal_event(kind: JournalEventKind, code: str) -> None:
+        def journal_event(
+            kind: JournalEventKind,
+            code: str,
+            *,
+            child_step_code: str = "",
+        ) -> None:
             nonlocal journal, placement
+            if child_mode:
+                if kind in {
+                    JournalEventKind.REQUESTED,
+                    JournalEventKind.OBSERVED,
+                    JournalEventKind.VALIDATED,
+                    JournalEventKind.PLANNED,
+                    JournalEventKind.COMMITTED,
+                }:
+                    return
+                if kind is JournalEventKind.STEP_STARTED:
+                    kind = JournalEventKind.SUBSTEP_STARTED
+                    code = "process_release.substep_started"
+                elif kind is JournalEventKind.STEP_VERIFIED:
+                    kind = JournalEventKind.SUBSTEP_VERIFIED
+                    code = "process_release.substep_verified"
+                if kind in {
+                    JournalEventKind.SUBSTEP_STARTED,
+                    JournalEventKind.SUBSTEP_VERIFIED,
+                } and not child_step_code:
+                    raise ValueError("process release child step identity is required")
             journal = append_journal_entry(
                 journal,
                 kind=kind,
@@ -149,10 +185,24 @@ class ProcessReleaseRunner:
                 workflow_state=(
                     WorkflowState.ACTION_REQUIRED
                     if kind in (JournalEventKind.BLOCKED, JournalEventKind.FAILED)
-                    else WorkflowState.PREPARING_TO_DISCONNECT
+                    else (
+                        WorkflowState.SLEEP_PENDING_DISCONNECT
+                        if child_mode
+                        else WorkflowState.PREPARING_TO_DISCONNECT
+                    )
                 ),
                 placement=placement,
                 code=code,
+                details=(
+                    (("step_code", child_step_code),)
+                    if child_mode
+                    and kind
+                    in {
+                        JournalEventKind.SUBSTEP_STARTED,
+                        JournalEventKind.SUBSTEP_VERIFIED,
+                    }
+                    else ()
+                ),
             )
             if self._journal_store is not None:
                 self._journal_store.save(journal)
@@ -203,6 +253,11 @@ class ProcessReleaseRunner:
         previous_generation = approval.observed_generation
 
         for index, target in enumerate(approval.targets, start=1):
+            child_step_code = (
+                f"process_release.{approval.phase.value}.{index}"
+                if child_mode
+                else ""
+            )
             try:
                 live_target = revalidate_process_release_target(
                     approval,
@@ -229,8 +284,16 @@ class ProcessReleaseRunner:
                     "target.revalidation_failed",
                 )
             if live_target is None:
-                journal_event(JournalEventKind.STEP_STARTED, "process_release.step_started")
-                journal_event(JournalEventKind.STEP_VERIFIED, "process_release.step_no_op")
+                journal_event(
+                    JournalEventKind.STEP_STARTED,
+                    "process_release.step_started",
+                    child_step_code=child_step_code,
+                )
+                journal_event(
+                    JournalEventKind.STEP_VERIFIED,
+                    "process_release.step_no_op",
+                    child_step_code=child_step_code,
+                )
                 results.append(
                     ProcessTargetResult(index, False, True, "target.already_released")
                 )
@@ -253,7 +316,11 @@ class ProcessReleaseRunner:
                 resources=target.resources,
                 outcome=action.value,
             )
-            journal_event(JournalEventKind.STEP_STARTED, "process_release.step_started")
+            journal_event(
+                JournalEventKind.STEP_STARTED,
+                "process_release.step_started",
+                child_step_code=child_step_code,
+            )
             started = self._clock.now_ms()
             signal_result = self._signals.signal(live_target, action)
             elapsed = self._clock.now_ms() - started
@@ -322,7 +389,11 @@ class ProcessReleaseRunner:
                 outcome="released" if released else "remaining",
             )
             placement = infer_placement(current.snapshot)
-            journal_event(JournalEventKind.STEP_VERIFIED, "process_release.rescanned")
+            journal_event(
+                JournalEventKind.STEP_VERIFIED,
+                "process_release.rescanned",
+                child_step_code=child_step_code,
+            )
             if elapsed < 0 or elapsed > self._deadline_ms:
                 journal_event(JournalEventKind.FAILED, "process_release.signal_timeout")
                 return self._result(
@@ -368,6 +439,36 @@ class ProcessReleaseRunner:
             journal,
             "" if software_ready else "software_blockers_remain",
         )
+
+    @staticmethod
+    def _validate_child_parent(
+        journal: TransitionJournal, parent_operation_id: str
+    ) -> None:
+        if (
+            journal.operation_id != parent_operation_id
+            or journal.terminal
+            or not journal.entries
+            or journal.entries[0].code != "sleep.requested"
+        ):
+            raise ValueError("process release parent journal does not match")
+        active = next(
+            (
+                entry
+                for entry in reversed(journal.entries)
+                if entry.kind is JournalEventKind.STEP_STARTED
+            ),
+            None,
+        )
+        if (
+            active is None
+            or dict(active.details).get("step_code") != "releasing_clients"
+            or journal.entries[-1].kind
+            not in {
+                JournalEventKind.STEP_STARTED,
+                JournalEventKind.SUBSTEP_VERIFIED,
+            }
+        ):
+            raise ValueError("process release parent journal step is invalid")
 
     @staticmethod
     def _result(

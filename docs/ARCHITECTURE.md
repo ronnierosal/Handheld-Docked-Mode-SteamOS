@@ -142,8 +142,9 @@ generation and eGPU/profile capability identity, persists every stage boundary,
 requires fresh verification samples, and performs no directive itself. It
 cannot show Safe to disconnect from
 software-client readiness alone and cannot continue the original sleep request
-before verified Portable recovery. It remains unwired until process release can
-participate as a child of the same authoritative journal. See
+before verified Portable recovery. Process release now participates as a child
+of the same authoritative journal in simulation through strict substep events
+and a backend-injected parent ID; Decky sleep delivery remains unwired. See
 [Canonical sleep workflow](SLEEP_WORKFLOW.md).
 
 Asynchronous cable-loss policy can request Portable recovery but can never

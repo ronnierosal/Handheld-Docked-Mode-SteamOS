@@ -122,3 +122,12 @@ supports inspection without authority, explicit graceful approval, a separate
 force confirmation through the opaque receipt, terminal acknowledgement, and
 startup no-repeat recovery. It remains experimental until supervised
 disposable-process validation passes.
+
+The same runner also supports a delivery-independent canonical-sleep child
+mode. Its approval binds the backend-owned parent operation ID; the frontend
+cannot provide that ID. Each target is recorded as a bounded, identity-free
+substep in the active sleep journal before the pidfd signal and verified after
+the mandatory rescan. Graceful evidence and force receipts cannot cross sleep
+transactions. Child mode never creates or commits a second journal and is
+bounded to 27 targets to reserve full journal capacity for force and recovery.
+This composition is simulated and remains unwired from Decky sleep requests.

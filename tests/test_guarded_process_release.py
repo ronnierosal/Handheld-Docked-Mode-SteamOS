@@ -21,7 +21,12 @@ from hdm.application.process_release_replay import (  # noqa: E402
     ProcessReleaseJournalRecovery,
     ProcessReleaseReplaySimulator,
 )
+from hdm.application.sleep_workflow_journal import (  # noqa: E402
+    advance_sleep_journal,
+    start_sleep_journal,
+)
 from hdm.domain.control_plane import PlacementState, WorkflowState  # noqa: E402
+from hdm.domain.game_compatibility import GameSaveCapability  # noqa: E402
 from hdm.domain.models import (  # noqa: E402
     EgpuClientKind,
     EgpuClientObservation,
@@ -29,6 +34,7 @@ from hdm.domain.models import (  # noqa: E402
 )
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
+from hdm.domain.sleep_workflow import SleepFlow, SleepFlowStage  # noqa: E402
 from hdm.domain.transition_journal import (  # noqa: E402
     JournalEventKind,
     TransitionJournal,
@@ -201,6 +207,150 @@ class GuardedProcessReleaseTests(unittest.TestCase):
         self.assertFalse(value.acknowledge("sleep-operation-1"))
         self.assertEqual(store.current, foreign)
         self.assertEqual(signals.actions, [])
+
+    def test_sleep_child_release_uses_parent_journal_substeps(self):
+        target = client()
+        initial = with_clients(base_snapshot(), target)
+        cleared = with_clients(initial)
+        observed = Observations(
+            VersionedObservation("semantic-1", initial, "sample-1"),
+            VersionedObservation("semantic-1", initial, "sample-2"),
+            VersionedObservation("semantic-2", cleared, "sample-3"),
+        )
+        value, signals, store = service(observed)
+        before = SleepFlow(
+            "sleep-request-0001",
+            SleepFlowStage.RELEASING_CLIENTS,
+            (),
+            True,
+            "disconnect.release_clients",
+            0,
+            900_000,
+            save_capability=GameSaveCapability.UNTESTED,
+        )
+        store.current = start_sleep_journal(
+            "sleep-operation-0001",
+            before,
+            PlacementState.DOCKED_EGPU,
+            occurred_at="test",
+        )
+        approved = value.preview(
+            ReleasePhase.GRACEFUL,
+            user_confirmed=True,
+            parent_operation_id="sleep-operation-0001",
+        )
+        self.assertTrue(approved.ready)
+        result = value.execute(approved.details.token)
+        self.assertTrue(result.result.software_blockers_cleared)
+        self.assertEqual(store.current.operation_id, "sleep-operation-0001")
+        self.assertFalse(store.current.terminal)
+        self.assertEqual(
+            store.current.entries[-2].kind, JournalEventKind.SUBSTEP_STARTED
+        )
+        self.assertEqual(
+            store.current.entries[-1].kind, JournalEventKind.SUBSTEP_VERIFIED
+        )
+        self.assertNotIn(
+            "process_release.requested",
+            tuple(entry.code for entry in store.current.entries),
+        )
+        after = SleepFlow(
+            "sleep-request-0001",
+            SleepFlowStage.AWAITING_DISCONNECT,
+            (),
+            True,
+            "disconnect.live_removal_verified",
+            0,
+            900_000,
+            history=(SleepFlowStage.RELEASING_CLIENTS,),
+            save_capability=GameSaveCapability.UNTESTED,
+        )
+        advanced = advance_sleep_journal(
+            store.current,
+            before,
+            after,
+            PlacementState.DOCKED_EGPU,
+            occurred_at="test",
+        )
+        self.assertEqual(advanced.entries[-2].kind, JournalEventKind.STEP_VERIFIED)
+        self.assertEqual(advanced.entries[-1].kind, JournalEventKind.STEP_STARTED)
+        self.assertEqual(
+            signals.actions,
+            [("instance-1", ProcessSignalAction.GRACEFUL_TERMINATE)],
+        )
+
+    def test_sleep_child_force_receipt_stays_in_same_parent_journal(self):
+        target = client()
+        remaining = with_clients(base_snapshot(), target)
+        cleared = with_clients(remaining)
+        observed = Observations(
+            VersionedObservation("semantic-1", remaining, "sample-1"),
+            VersionedObservation("semantic-1", remaining, "sample-2"),
+            VersionedObservation("semantic-1", remaining, "sample-3"),
+            VersionedObservation("semantic-1", remaining, "sample-4"),
+            VersionedObservation("semantic-1", remaining, "sample-5"),
+            VersionedObservation("semantic-2", cleared, "sample-6"),
+        )
+        value, signals, store = service(observed)
+        flow = SleepFlow(
+            "sleep-request-0001",
+            SleepFlowStage.RELEASING_CLIENTS,
+            (),
+            True,
+            "disconnect.release_clients",
+            0,
+            900_000,
+            save_capability=GameSaveCapability.UNTESTED,
+        )
+        store.current = start_sleep_journal(
+            "sleep-operation-0001",
+            flow,
+            PlacementState.DOCKED_EGPU,
+            occurred_at="test",
+        )
+        graceful = value.preview(
+            ReleasePhase.GRACEFUL,
+            user_confirmed=True,
+            parent_operation_id="sleep-operation-0001",
+        )
+        graceful_result = value.execute(graceful.details.token)
+        self.assertTrue(graceful_result.force_receipt_token)
+        self.assertFalse(store.current.terminal)
+
+        force = value.preview(
+            ReleasePhase.FORCE,
+            user_confirmed=True,
+            graceful_receipt_token=graceful_result.force_receipt_token,
+            parent_operation_id="sleep-operation-0001",
+        )
+        force_result = value.execute(force.details.token)
+        self.assertTrue(force_result.result.software_blockers_cleared)
+        self.assertEqual(store.current.operation_id, "sleep-operation-0001")
+        self.assertFalse(store.current.terminal)
+        self.assertEqual(
+            tuple(
+                entry.kind
+                for entry in store.current.entries
+                if entry.kind
+                in {
+                    JournalEventKind.SUBSTEP_STARTED,
+                    JournalEventKind.SUBSTEP_VERIFIED,
+                }
+            ),
+            (
+                JournalEventKind.SUBSTEP_STARTED,
+                JournalEventKind.SUBSTEP_VERIFIED,
+                JournalEventKind.SUBSTEP_STARTED,
+                JournalEventKind.SUBSTEP_VERIFIED,
+            ),
+        )
+        self.assertEqual(
+            signals.actions,
+            [
+                ("instance-1", ProcessSignalAction.GRACEFUL_TERMINATE),
+                ("instance-1", ProcessSignalAction.FORCE_TERMINATE),
+            ],
+        )
 
     def test_read_only_preview_has_no_token(self):
         initial = with_clients(base_snapshot(), client())

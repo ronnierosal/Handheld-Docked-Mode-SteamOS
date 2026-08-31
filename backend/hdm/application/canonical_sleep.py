@@ -430,6 +430,29 @@ class CanonicalSleepWorkflowService:
             action_required=session is None,
         )
 
+    def release_parent_operation_id(self, request_id: str) -> str:
+        """Return the backend-owned parent only during the client-release step."""
+        with self._lock:
+            session = self._session
+            if (
+                session is None
+                or session.request.request_id != request_id
+                or session.flow.stage is not SleepFlowStage.RELEASING_CLIENTS
+            ):
+                return ""
+            try:
+                journal = self._journal_store.load_current()
+            except Exception:
+                return ""
+            if (
+                journal is None
+                or journal.terminal
+                or journal.operation_id != session.operation_id
+                or not self._is_sleep_journal(journal)
+            ):
+                return ""
+            return session.operation_id
+
     def _journal_blocker(self) -> str:
         try:
             current = self._journal_store.load_current()

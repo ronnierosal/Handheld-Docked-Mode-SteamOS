@@ -40,6 +40,8 @@ class JournalEventKind(StrEnum):
     VALIDATED = "validated"
     PLANNED = "planned"
     STEP_STARTED = "step_started"
+    SUBSTEP_STARTED = "substep_started"
+    SUBSTEP_VERIFIED = "substep_verified"
     STEP_VERIFIED = "step_verified"
     COMMITTED = "committed"
     BLOCKED = "blocked"
@@ -91,6 +93,24 @@ ALLOWED_NEXT: dict[JournalEventKind | None, frozenset[JournalEventKind]] = {
     ),
     JournalEventKind.STEP_STARTED: frozenset(
         {
+            JournalEventKind.SUBSTEP_STARTED,
+            JournalEventKind.STEP_VERIFIED,
+            JournalEventKind.BLOCKED,
+            JournalEventKind.RECOVERY_STARTED,
+            JournalEventKind.FAILED,
+        }
+    ),
+    JournalEventKind.SUBSTEP_STARTED: frozenset(
+        {
+            JournalEventKind.SUBSTEP_VERIFIED,
+            JournalEventKind.BLOCKED,
+            JournalEventKind.RECOVERY_STARTED,
+            JournalEventKind.FAILED,
+        }
+    ),
+    JournalEventKind.SUBSTEP_VERIFIED: frozenset(
+        {
+            JournalEventKind.SUBSTEP_STARTED,
             JournalEventKind.STEP_VERIFIED,
             JournalEventKind.BLOCKED,
             JournalEventKind.RECOVERY_STARTED,

@@ -98,11 +98,12 @@ class GuardedProcessReleaseService:
         *,
         user_confirmed: bool,
         graceful_receipt_token: str = "",
+        parent_operation_id: str = "",
     ) -> GuardedProcessReleasePreview:
         runtime_blocker = self._runner.preflight()
         if runtime_blocker:
             return GuardedProcessReleasePreview(phase, blockers=(runtime_blocker,))
-        journal_blocker = self._journal_blocker()
+        journal_blocker = self._journal_blocker(parent_operation_id)
         if journal_blocker:
             return GuardedProcessReleasePreview(phase, blockers=(journal_blocker,))
         observed = self._observe()
@@ -122,6 +123,7 @@ class GuardedProcessReleaseService:
                 observed_generation=observed.sample_id,
                 phase=phase,
                 graceful_evidence=graceful_evidence,
+                parent_operation_id=parent_operation_id,
             )
         except ValueError as error:
             return GuardedProcessReleasePreview(
@@ -182,7 +184,8 @@ class GuardedProcessReleaseService:
             approval.operation_id,
             result,
             receipt,
-            result.status is ProcessReleaseStatus.ACTION_REQUIRED,
+            result.status
+            in (ProcessReleaseStatus.ACTION_REQUIRED, ProcessReleaseStatus.BLOCKED),
         )
 
     def recover_interrupted(self) -> ProcessReleaseRecoveryResult:
@@ -222,12 +225,39 @@ class GuardedProcessReleaseService:
             operation_id=current.operation_id,
         )
 
-    def _journal_blocker(self) -> str:
+    def _journal_blocker(self, parent_operation_id: str = "") -> str:
         try:
             current = self._journal_store.load_current()
         except Exception:
             return "journal.unavailable"
         if current is None:
+            return "journal.parent_missing" if parent_operation_id else ""
+        if parent_operation_id:
+            if (
+                current.operation_id != parent_operation_id
+                or current.terminal
+                or not current.entries
+                or current.entries[0].code != "sleep.requested"
+            ):
+                return "journal.parent_mismatch"
+            active = next(
+                (
+                    entry
+                    for entry in reversed(current.entries)
+                    if entry.kind is JournalEventKind.STEP_STARTED
+                ),
+                None,
+            )
+            if (
+                active is None
+                or dict(active.details).get("step_code") != "releasing_clients"
+                or current.entries[-1].kind
+                not in {
+                    JournalEventKind.STEP_STARTED,
+                    JournalEventKind.SUBSTEP_VERIFIED,
+                }
+            ):
+                return "journal.parent_step_invalid"
             return ""
         if not self._recovery.is_process_release_journal(current):
             return "journal.foreign_operation"
@@ -277,6 +307,7 @@ class GuardedProcessReleaseService:
             approval.operation_id,
             attempted,
             approval.observed_generation,
+            approval.parent_operation_id,
         )
 
     @staticmethod

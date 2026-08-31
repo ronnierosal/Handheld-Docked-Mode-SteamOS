@@ -188,6 +188,43 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
                 graceful_evidence=evidence,
             )
 
+    def test_force_evidence_cannot_cross_parent_sleep_transaction(self):
+        snapshot = with_clients(base_snapshot(), client())
+        evidence = GracefulReleaseEvidence(
+            "process-release-operation-1",
+            ("instance-1",),
+            "sample-1",
+            "sleep-operation-0001",
+        )
+        with self.assertRaisesRegex(ValueError, "parent operation changed"):
+            self.store().inspect(
+                snapshot,
+                observed_generation="sample-2",
+                phase=ReleasePhase.FORCE,
+                graceful_evidence=evidence,
+                parent_operation_id="sleep-operation-0002",
+            )
+
+    def test_sleep_child_target_bound_reserves_full_journal_recovery_capacity(self):
+        clients = tuple(
+            client(instance_id=f"instance-{index}", pid=100 + index)
+            for index in range(28)
+        )
+        snapshot = with_clients(base_snapshot(), *clients)
+        with self.assertRaisesRegex(ValueError, "journal capacity"):
+            self.store().inspect(
+                snapshot,
+                observed_generation="sample-1",
+                phase=ReleasePhase.GRACEFUL,
+                parent_operation_id="sleep-operation-0001",
+            )
+        standalone = self.store().inspect(
+            snapshot,
+            observed_generation="sample-1",
+            phase=ReleasePhase.GRACEFUL,
+        )
+        self.assertEqual(len(standalone.targets), 28)
+
     def test_revalidation_requires_fresh_identical_evidence(self):
         snapshot = with_clients(base_snapshot(), client())
         store = self.store()
