@@ -40,16 +40,17 @@ class GamescopeLaunchConfig:
     def __post_init__(self) -> None:
         if self.schema_version != 1 or not SHA256_RE.fullmatch(self.boot_id_sha256):
             raise ValueError("Gamescope launch config identity is invalid")
-        if self.target not in {"portable", "docked_egpu"}:
+        if self.target not in {"portable", "docked_igpu", "docked_egpu"}:
             raise ValueError("Gamescope launch target is invalid")
         if not CONNECTOR_RE.fullmatch(self.internal_connector):
             raise ValueError("internal connector is invalid")
-        if self.target == "docked_egpu":
+        if self.target in {"docked_igpu", "docked_egpu"}:
             if (
                 not CONNECTOR_RE.fullmatch(self.external_connector)
-                or not VENDOR_DEVICE_RE.fullmatch(self.vendor_device)
                 or self.external_connector == self.internal_connector
             ):
+                raise ValueError("docked Gamescope launch target is incomplete")
+            if not VENDOR_DEVICE_RE.fullmatch(self.vendor_device):
                 raise ValueError("docked Gamescope launch target is incomplete")
         elif self.external_connector or self.vendor_device:
             raise ValueError("portable Gamescope launch cannot select an eGPU")
@@ -169,6 +170,24 @@ def select_launch_configuration(
         and present_vendor_devices.count(config.vendor_device) == 1
     ):
         return config.external_connector, config.vendor_device
+    if (
+        config is not None
+        and config.boot_id_sha256 == current_boot_id_sha256
+        and config.target == "docked_igpu"
+        and connected.count(config.external_connector) == 1
+        and config.external_connector not in internal
+        and present_vendor_devices.count(config.vendor_device) == 1
+    ):
+        return config.external_connector, config.vendor_device
+    if (
+        config is not None
+        and config.boot_id_sha256 == current_boot_id_sha256
+        and config.target == "docked_igpu"
+        and connected.count(config.internal_connector) == 1
+        and config.internal_connector in internal
+        and present_vendor_devices.count(config.vendor_device) == 1
+    ):
+        return f"*,{config.internal_connector}", config.vendor_device
     if (
         config is not None
         and config.boot_id_sha256 == current_boot_id_sha256

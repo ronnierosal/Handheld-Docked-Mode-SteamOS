@@ -205,6 +205,12 @@ the exact plan, and delegates to the orchestrator. An incomplete journal blocks
 new approval until recovery; a terminal journal blocks until its exact random
 operation ID is acknowledged. No Decky RPC constructs this facade yet.
 
+That same durable path now treats exact idle Docked-iGPU as a supported source
+for a Docked-eGPU target. Boot config represents Docked-iGPU explicitly as TV
+output plus the exact internal render GPU, and recovery can restore it. The path
+remains experimental, approval-gated, and unwired; it does not watch for game
+exit or initiate promotion automatically.
+
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is
 never planned without verified external input and a verified built-in recovery

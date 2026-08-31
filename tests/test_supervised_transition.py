@@ -47,6 +47,17 @@ def snapshot(name="connected-internal.json", *, game_state=None):
     return snapshot_from_dict(value)
 
 
+def docked_igpu_snapshot():
+    value = json.loads((FIXTURES / "tv-docked.json").read_text(encoding="utf-8"))
+    for gpu in value["gpus"]:
+        gpu["selected_for_render"] = gpu["role"] == "internal"
+        if gpu["role"] == "external":
+            gpu["stable_id"] = "gpd-g1:0123456789abcdef"
+    value["gamescope"]["render_gpu_stable_id"] = "internal-gpu"
+    value["gamescope"]["render_vendor_device"] = "1002:0000"
+    return snapshot_from_dict(value)
+
+
 class Observations:
     def __init__(self, *values):
         self.values = list(values)
@@ -162,6 +173,27 @@ class SupervisedTransitionTests(unittest.TestCase):
             orchestrator.plans[0].target_placement, PlacementState.DOCKED_EGPU
         )
         self.assertEqual(value.execute(token).code, "transition.approval_invalid")
+
+    def test_idle_docked_igpu_uses_same_preview_approval_and_execution(self):
+        source = docked_igpu_snapshot()
+        value, orchestrator, _ = service(
+            Observations(
+                VersionedObservation("generation-1", source),
+                VersionedObservation("generation-1", source),
+            )
+        )
+
+        preview = value.preview(
+            PlacementState.DOCKED_EGPU, user_confirmed=True
+        )
+        result = value.execute(preview.approval_token)
+
+        self.assertEqual(preview.current, PlacementState.DOCKED_IGPU)
+        self.assertTrue(result.accepted)
+        self.assertEqual(
+            orchestrator.plans[0].from_placement,
+            PlacementState.DOCKED_IGPU,
+        )
 
     def test_changed_generation_or_game_blocks_without_orchestrator(self):
         value, orchestrator, _ = service(

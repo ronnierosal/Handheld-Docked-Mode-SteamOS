@@ -80,7 +80,11 @@ class PresentationTransitionMechanism:
         binding: TransitionBinding | None,
         observation: ObservedSnapshot | None,
     ) -> MechanismResult:
-        if source not in {PlacementState.PORTABLE, PlacementState.DOCKED_EGPU}:
+        if source not in {
+            PlacementState.PORTABLE,
+            PlacementState.DOCKED_IGPU,
+            PlacementState.DOCKED_EGPU,
+        }:
             return MechanismResult(False, "recovery.target_unsupported")
         if observation is None or observation.game_state is not GameState.IDLE:
             return MechanismResult(False, "recovery.observation_unusable")
@@ -101,7 +105,7 @@ class PresentationTransitionMechanism:
         current_binding = self._derive_binding(observation)
         if current_binding is None or current_binding != binding:
             return MechanismResult(False, f"{prefix}.binding_changed")
-        if target is PlacementState.DOCKED_EGPU:
+        if target in {PlacementState.DOCKED_IGPU, PlacementState.DOCKED_EGPU}:
             external = tuple(
                 item
                 for item in observation.displays
@@ -154,7 +158,11 @@ class PresentationTransitionMechanism:
             return False
 
     def _restore_current_config(self, current, binding, observation) -> bool:
-        if current not in {PlacementState.PORTABLE, PlacementState.DOCKED_EGPU}:
+        if current not in {
+            PlacementState.PORTABLE,
+            PlacementState.DOCKED_IGPU,
+            PlacementState.DOCKED_EGPU,
+        }:
             return False
         try:
             self._config.write_target(

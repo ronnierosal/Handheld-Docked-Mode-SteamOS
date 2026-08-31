@@ -112,6 +112,11 @@ def evidence_from_snapshot(
         placement is PlacementState.DOCKED_EGPU
         and external_gpu is not None
         and external_display is not None
+    ) or (
+        placement is PlacementState.DOCKED_IGPU
+        and internal_gpu is not None
+        and external_gpu is not None
+        and external_display is not None
     )
     egpu_stable_id = external_gpu.stable_id if external_gpu is not None else ""
     return ManualTransitionEvidence(
@@ -179,7 +184,11 @@ def plan_manual_transition(
         blockers.append("placement.current_unverified")
     if target not in {PlacementState.PORTABLE, PlacementState.DOCKED_EGPU}:
         blockers.append("placement.target_unsupported")
-    if current not in {PlacementState.PORTABLE, PlacementState.DOCKED_EGPU}:
+    if current not in {
+        PlacementState.PORTABLE,
+        PlacementState.DOCKED_IGPU,
+        PlacementState.DOCKED_EGPU,
+    }:
         blockers.append("placement.path_unsupported")
     if evidence.host_profile_id != capabilities.host_profile_id:
         blockers.append("identity.host_unverified")

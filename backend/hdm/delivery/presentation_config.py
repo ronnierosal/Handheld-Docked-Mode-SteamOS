@@ -79,7 +79,17 @@ class PresentationConfigStore:
             for item in snapshot.gpus
             if item.stable_id == binding.external_gpu_stable_id
         )
-        if len(internal) != 1 or len(external) != 1 or len(gpu) != 1:
+        internal_gpu = tuple(
+            item
+            for item in snapshot.gpus
+            if item.stable_id == binding.internal_gpu_stable_id
+        )
+        if (
+            len(internal) != 1
+            or len(external) != 1
+            or len(gpu) != 1
+            or len(internal_gpu) != 1
+        ):
             raise ValueError("presentation target identities changed")
         boot_hash = hashlib.sha256(boot_id.encode("utf-8")).hexdigest()
         if target is PlacementState.PORTABLE:
@@ -95,6 +105,14 @@ class PresentationConfigStore:
                 internal_connector=internal[0].connector,
                 external_connector=external[0].connector,
                 vendor_device=gpu[0].vendor_device,
+            )
+        elif target is PlacementState.DOCKED_IGPU:
+            config = GamescopeLaunchConfig(
+                boot_id_sha256=boot_hash,
+                target="docked_igpu",
+                internal_connector=internal[0].connector,
+                external_connector=external[0].connector,
+                vendor_device=internal_gpu[0].vendor_device,
             )
         else:
             raise ValueError("presentation target is unsupported")

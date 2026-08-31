@@ -37,6 +37,18 @@ def docked_config(**changes: str) -> GamescopeLaunchConfig:
     return GamescopeLaunchConfig(**values)
 
 
+def docked_igpu_config(**changes: str) -> GamescopeLaunchConfig:
+    values = {
+        "boot_id_sha256": BOOT_HASH,
+        "target": "docked_igpu",
+        "internal_connector": "eDP-1",
+        "external_connector": "HDMI-A-1",
+        "vendor_device": "1002:0000",
+    }
+    values.update(changes)
+    return GamescopeLaunchConfig(**values)
+
+
 class GamescopeConfigTests(unittest.TestCase):
     def test_round_trip_has_exact_shape_and_types(self):
         config = docked_config()
@@ -101,6 +113,42 @@ class GamescopeSelectionTests(unittest.TestCase):
                     select_launch_configuration(docked_config(), **(defaults | changes)),
                     ("*,eDP-1", ""),
                 )
+
+    def test_exact_docked_igpu_selects_tv_and_internal_renderer(self):
+        self.assertEqual(
+            select_launch_configuration(
+                docked_igpu_config(),
+                current_boot_id_sha256=BOOT_HASH,
+                connected_connectors=("eDP-1", "HDMI-A-1"),
+                internal_connectors=("eDP-1",),
+                present_vendor_devices=("1002:0000", "1002:7480"),
+            ),
+            ("HDMI-A-1", "1002:0000"),
+        )
+
+    def test_docked_igpu_without_exact_internal_gpu_falls_back_to_panel(self):
+        self.assertEqual(
+            select_launch_configuration(
+                docked_igpu_config(),
+                current_boot_id_sha256=BOOT_HASH,
+                connected_connectors=("eDP-1", "HDMI-A-1"),
+                internal_connectors=("eDP-1",),
+                present_vendor_devices=("1002:7480",),
+            ),
+            ("*,eDP-1", ""),
+        )
+
+    def test_docked_igpu_without_tv_preserves_exact_internal_gpu_and_panel(self):
+        self.assertEqual(
+            select_launch_configuration(
+                docked_igpu_config(),
+                current_boot_id_sha256=BOOT_HASH,
+                connected_connectors=("eDP-1",),
+                internal_connectors=("eDP-1",),
+                present_vendor_devices=("1002:0000", "1002:7480"),
+            ),
+            ("*,eDP-1", "1002:0000"),
+        )
 
     def test_no_unique_internal_panel_preserves_existing_output_selection(self):
         self.assertEqual(

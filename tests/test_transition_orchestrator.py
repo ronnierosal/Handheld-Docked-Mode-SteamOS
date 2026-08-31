@@ -50,7 +50,23 @@ def snapshot(name: str, *, game_state: str | None = None, egpu_id: str | None = 
     return snapshot_from_dict(value)
 
 
-def experimental_plan(initial, generation="generation-1"):
+def docked_igpu_snapshot():
+    value = json.loads((FIXTURES / "tv-docked.json").read_text(encoding="utf-8"))
+    for gpu in value["gpus"]:
+        gpu["selected_for_render"] = gpu["role"] == "internal"
+        if gpu["role"] == "external":
+            gpu["stable_id"] = "gpd-g1:0123456789abcdef"
+    value["gamescope"]["render_gpu_stable_id"] = "internal-gpu"
+    value["gamescope"]["render_vendor_device"] = "1002:0000"
+    return snapshot_from_dict(value)
+
+
+def experimental_plan(
+    initial,
+    generation="generation-1",
+    *,
+    current=PlacementState.PORTABLE,
+):
     resolved = resolve_runtime_profiles(initial)
     evidence = evidence_from_snapshot(
         initial,
@@ -69,7 +85,7 @@ def experimental_plan(initial, generation="generation-1"):
     decision = plan_manual_transition(
         plan_id="operation-1",
         request_id="request-1",
-        current=PlacementState.PORTABLE,
+        current=current,
         target=PlacementState.DOCKED_EGPU,
         capabilities=resolved.capabilities,
         evidence=evidence,
@@ -214,6 +230,34 @@ class TransitionOrchestratorTests(unittest.TestCase):
         self.assertLess(kinds.index(JournalEventKind.STEP_STARTED), len(kinds) - 1)
         self.assertEqual(kinds[-1], JournalEventKind.COMMITTED)
         self.assertEqual(len(mechanism.applied), 1)
+
+    def test_docked_igpu_promotes_through_same_journaled_orchestrator(self):
+        source = docked_igpu_snapshot()
+        docked = snapshot("tv-docked.json")
+        plan = experimental_plan(
+            source, current=PlacementState.DOCKED_IGPU
+        )
+        clock = FakeClockWaiter()
+        store = MemoryJournalStore()
+        mechanism = FakeMechanism(clock)
+
+        result = orchestrator(
+            ScriptedObservations(
+                observation("generation-1", source),
+                observation("generation-1b", source),
+                observation("generation-2", docked),
+            ),
+            mechanism,
+            store,
+            clock,
+        ).run(plan)
+
+        self.assertEqual(result.outcome.kind, TransitionOutcomeKind.SUCCEEDED)
+        self.assertEqual(result.outcome.placement, PlacementState.DOCKED_EGPU)
+        self.assertEqual(
+            result.journal.entries[0].placement, PlacementState.DOCKED_IGPU
+        )
+        self.assertEqual(result.journal.entries[-1].kind, JournalEventKind.COMMITTED)
 
     def test_game_or_identity_change_before_step_blocks_without_mutation(self):
         portable = snapshot("connected-internal.json")

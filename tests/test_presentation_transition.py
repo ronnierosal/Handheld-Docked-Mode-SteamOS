@@ -42,6 +42,20 @@ def observed(name="connected-internal.json"):
     return snapshot_from_dict(value)
 
 
+def observed_docked_igpu():
+    value = json.loads((FIXTURES / "tv-docked.json").read_text(encoding="utf-8"))
+    for gpu in value["gpus"]:
+        gpu["selected_for_render"] = gpu["role"] == "internal"
+        if gpu["role"] == "external":
+            gpu["stable_id"] = "gpd-g1:0123456789abcdef"
+    for display in value["displays"]:
+        display["active"] = display["kind"] == "external"
+    value["gamescope"]["render_gpu_stable_id"] = "internal-gpu"
+    value["gamescope"]["render_vendor_device"] = "1002:0000"
+    value["gamescope"]["output_order"] = ["HDMI-A-1"]
+    return snapshot_from_dict(value)
+
+
 def binding():
     return TransitionBinding(
         "asus-rog-ally-x",
@@ -283,6 +297,16 @@ class PresentationTransitionMechanismTests(unittest.TestCase):
         self.assertTrue(result.succeeded)
         self.assertEqual(result.code, "recovery.restart_queued")
         self.assertEqual(config.targets, [PlacementState.PORTABLE])
+
+    def test_recovery_can_restore_docked_igpu_source(self):
+        value, config, _ = mechanism()
+        result = value.recover(
+            PlacementState.DOCKED_IGPU, None, observed_docked_igpu()
+        )
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(result.code, "recovery.restart_queued")
+        self.assertEqual(config.targets, [PlacementState.DOCKED_IGPU])
 
     def test_changed_binding_fails_before_integration_or_command(self):
         value, config, events = mechanism()

@@ -56,6 +56,17 @@ class PresentationConfigStoreTests(unittest.TestCase):
             )
             self.assertEqual(store.load(), docked)
 
+            docked_igpu = store.write_target(
+                target=PlacementState.DOCKED_IGPU,
+                binding=binding(),
+                snapshot=snapshot(),
+                boot_id=BOOT_ID,
+            )
+            self.assertEqual(docked_igpu.target, "docked_igpu")
+            self.assertEqual(docked_igpu.external_connector, "HDMI-A-1")
+            self.assertEqual(docked_igpu.vendor_device, "1002:0000")
+            self.assertEqual(store.load(), docked_igpu)
+
             portable = store.write_target(
                 target=PlacementState.PORTABLE,
                 binding=binding(),

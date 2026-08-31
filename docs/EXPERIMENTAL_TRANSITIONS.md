@@ -1,5 +1,17 @@
 # Guarded experimental transitions
 
+The existing supervised Portable-to-Docked-eGPU path now also accepts an exact,
+idle Docked-iGPU source. It uses the same preview, short-lived single-use
+approval, durable journal, Gamescope mechanism, verification, acknowledgement,
+and interrupted-recovery flow. No automatic game-exit watcher or Decky RPC is
+enabled.
+
+Docked-iGPU is also a real recovery target. Its boot-scoped config selects the
+external TV connector and explicitly selects the exact internal GPU. If G1
+promotion cannot verify, recovery can restore that source rather than guessing
+Portable. The wrapper still falls back to the internal panel when boot,
+connector, or GPU evidence is stale or ambiguous.
+
 Hardware validation is a certification gate, not an implementation gate. HDM
 may implement an Experimental mechanism before certification when the operation
 is exact, observable, bounded, recoverable, and explicitly approved for a

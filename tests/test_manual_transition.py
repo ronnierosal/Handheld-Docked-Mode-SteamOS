@@ -172,11 +172,25 @@ class ManualTransitionPlanningTests(unittest.TestCase):
         for current in (
             PlacementState.UNKNOWN,
             PlacementState.DEGRADED,
-            PlacementState.DOCKED_IGPU,
             PlacementState.BOOSTED_HANDHELD,
         ):
             with self.subTest(current=current):
                 self.assertIsNone(decide(current=current).plan)
+
+    def test_idle_docked_igpu_can_promote_through_the_same_durable_path(self):
+        decision = decide(current=PlacementState.DOCKED_IGPU)
+
+        self.assertIsNotNone(decision.plan)
+        self.assertEqual(
+            decision.plan.from_placement, PlacementState.DOCKED_IGPU
+        )
+        self.assertEqual(
+            decision.plan.target_placement, PlacementState.DOCKED_EGPU
+        )
+        self.assertEqual(
+            decision.plan.steps[0].code,
+            "presentation.apply_docked_egpu",
+        )
 
     def test_verified_no_op_has_no_step_or_mechanism_preconditions(self):
         decision = decide(
