@@ -86,6 +86,7 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
             ttl_seconds=10,
             monotonic=clock or (lambda: 0.0),
             token_factory=lambda: next(token_values),
+            operation_id_factory=lambda: "process-release-operation-1",
         )
 
     def test_preview_targets_only_close_eligible_user_processes(self):

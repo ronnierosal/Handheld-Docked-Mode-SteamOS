@@ -31,6 +31,7 @@ from hdm.ports.process_signal import (  # noqa: E402
     ProcessSignalResult,
 )
 from hdm.ports.transition import VersionedObservation  # noqa: E402
+from hdm.domain.transition_journal import JournalEventKind  # noqa: E402
 
 
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -108,7 +109,9 @@ class Signals:
 def approval(snapshot, phase=ReleasePhase.GRACEFUL):
     tokens = iter(["approval_token_123456"])
     store = ProcessReleaseApprovalStore(
-        token_factory=lambda: next(tokens), monotonic=lambda: 0.0
+        token_factory=lambda: next(tokens),
+        operation_id_factory=lambda: "process-release-operation-1",
+        monotonic=lambda: 0.0,
     )
     kwargs = {}
     generation = "generation-1"
@@ -156,6 +159,8 @@ class ProcessReleaseReplayTests(unittest.TestCase):
         self.assertFalse(result.hardware_removal_authorized)
         self.assertEqual(len(signals.calls), 2)
         self.assertTrue(all(item.released for item in result.target_results))
+        self.assertEqual(result.journal.entries[-1].kind, JournalEventKind.COMMITTED)
+        self.assertTrue(result.journal.terminal)
 
     def test_remaining_process_is_reported_without_force_escalation(self):
         target = client("instance-1", 100)
@@ -241,6 +246,9 @@ class ProcessReleaseReplayTests(unittest.TestCase):
                 )
                 self.assertEqual(result.status, ProcessReleaseStatus.ACTION_REQUIRED)
                 self.assertEqual(result.reason_code, reason)
+                self.assertEqual(
+                    result.journal.entries[-1].kind, JournalEventKind.FAILED
+                )
 
     def test_force_approval_uses_force_action_and_audit_has_no_identity(self):
         target = client("private-instance-token", 4242)

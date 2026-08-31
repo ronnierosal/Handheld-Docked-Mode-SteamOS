@@ -33,6 +33,7 @@ class ProcessClientFact:
 
 @dataclass(frozen=True, slots=True)
 class ProcessReleaseApproval:
+    operation_id: str
     phase: ReleasePhase
     egpu_stable_id: str
     observed_generation: str
@@ -55,4 +56,3 @@ class ProcessReleasePreview:
     expires_in_seconds: int
     targets: tuple[ProcessReleasePreviewRow, ...]
     protected_client_count: int
-

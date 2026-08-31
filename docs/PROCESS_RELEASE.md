@@ -55,6 +55,12 @@ deadlines, stale or missing scans, changed clients, incomplete evidence, and
 remaining blockers. Its privacy-safe audit contains sequence, phase, categorical
 event/outcome, target ordinal, and resource kinds only.
 
+The runner also writes the shared bounded transition journal from request,
+observation, validation, and plan through every fake step and terminal commit,
+block, or failure. The journal contains only categorical codes and observed
+placement; it does not contain approval tokens, PIDs, instance IDs, process
+names, eGPU identity, or commands.
+
 Even when every observed software blocker is cleared, the result exposes
 `software_blockers_cleared=true` and always keeps
 `hardware_removal_authorized=false`. The certified G1 profile still requires
@@ -62,11 +68,9 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- integrate the simulator outcome with the transaction journal
 - design and test a narrow production signal adapter
 - add a Decky preview/consent flow only after the adapter review
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 
 There is currently no production signal adapter and no process-release RPC.
-

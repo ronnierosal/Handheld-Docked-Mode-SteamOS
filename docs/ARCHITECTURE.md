@@ -52,6 +52,11 @@ every next action, enforces per-signal deadlines, and exports an identity-free
 audit. Clearing software clients never sets hardware-removal authority. See
 [Guarded eGPU process-release contract](PROCESS_RELEASE.md).
 
+Each simulated release operation owns a generated operation ID and records its
+request, fresh observation, approval validation, plan, per-target fake steps,
+re-scans, and terminal result in the shared transition journal. Tokens and
+process/hardware identity never enter the exported journal.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

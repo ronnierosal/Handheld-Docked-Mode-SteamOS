@@ -65,6 +65,8 @@ Implemented simulator evidence:
   signal-rejection, and already-exited-target paths.
 - Identity-free bounded audit and an explicit distinction between cleared
   software blockers and hardware removal authority.
+- Shared transaction-journal integration from request through terminal result,
+  without tokens, process identity, or raw hardware identity.
 
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1

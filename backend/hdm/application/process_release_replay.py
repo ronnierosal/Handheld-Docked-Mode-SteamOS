@@ -12,9 +12,16 @@ from .process_release import (
     revalidate_process_release_target,
 )
 from ..domain.models import EgpuResourceKind
+from ..domain.inference import infer_placement
 from ..domain.process_release import (
     ProcessReleaseApproval,
     ReleasePhase,
+)
+from ..domain.control_plane import WorkflowState
+from ..domain.transition_journal import (
+    JournalEventKind,
+    TransitionJournal,
+    append_journal_entry,
 )
 from ..ports.process_signal import (
     ProcessSignalAction,
@@ -72,6 +79,7 @@ class ProcessReleaseReplayResult:
     target_results: tuple[ProcessTargetResult, ...]
     remaining_client_count: int | None
     audit: tuple[ProcessReleaseAuditEvent, ...]
+    journal: TransitionJournal
     reason_code: str = ""
 
 
@@ -114,6 +122,25 @@ class ProcessReleaseReplaySimulator:
     ) -> ProcessReleaseReplayResult:
         audit: list[ProcessReleaseAuditEvent] = []
         results: list[ProcessTargetResult] = []
+        placement = infer_placement(current.snapshot)
+        journal = TransitionJournal(
+            approval.operation_id, f"{approval.operation_id}.request"
+        )
+
+        def journal_event(kind: JournalEventKind, code: str) -> None:
+            nonlocal journal, placement
+            journal = append_journal_entry(
+                journal,
+                kind=kind,
+                occurred_at="replay",
+                workflow_state=(
+                    WorkflowState.ACTION_REQUIRED
+                    if kind in (JournalEventKind.BLOCKED, JournalEventKind.FAILED)
+                    else WorkflowState.PREPARING_TO_DISCONNECT
+                ),
+                placement=placement,
+                code=code,
+            )
 
         def record(
             code: str,
@@ -135,6 +162,8 @@ class ProcessReleaseReplaySimulator:
                 )
             )
 
+        journal_event(JournalEventKind.REQUESTED, "process_release.requested")
+        journal_event(JournalEventKind.OBSERVED, "process_release.observed")
         try:
             revalidate_process_release(
                 approval,
@@ -143,15 +172,19 @@ class ProcessReleaseReplaySimulator:
             )
         except ValueError:
             record("approval.revalidation_failed", outcome="blocked")
+            journal_event(JournalEventKind.BLOCKED, "process_release.blocked")
             return self._result(
                 ProcessReleaseStatus.BLOCKED,
                 False,
                 results,
                 current,
                 audit,
+                journal,
                 "approval.revalidation_failed",
             )
         record("approval.revalidated", outcome="verified")
+        journal_event(JournalEventKind.VALIDATED, "process_release.validated")
+        journal_event(JournalEventKind.PLANNED, "process_release.planned")
         previous_generation = approval.observed_generation
 
         for index, target in enumerate(approval.targets, start=1):
@@ -170,15 +203,19 @@ class ProcessReleaseReplaySimulator:
                     resources=target.resources,
                     outcome="blocked",
                 )
+                journal_event(JournalEventKind.FAILED, "process_release.revalidation_failed")
                 return self._result(
                     ProcessReleaseStatus.BLOCKED,
                     False,
                     results,
                     current,
                     audit,
+                    journal,
                     "target.revalidation_failed",
                 )
             if live_target is None:
+                journal_event(JournalEventKind.STEP_STARTED, "process_release.step_started")
+                journal_event(JournalEventKind.STEP_VERIFIED, "process_release.step_no_op")
                 results.append(
                     ProcessTargetResult(index, False, True, "target.already_released")
                 )
@@ -201,6 +238,7 @@ class ProcessReleaseReplaySimulator:
                 resources=target.resources,
                 outcome=action.value,
             )
+            journal_event(JournalEventKind.STEP_STARTED, "process_release.step_started")
             started = self._clock.now_ms()
             signal_result = self._signals.signal(live_target, action)
             elapsed = self._clock.now_ms() - started
@@ -216,12 +254,14 @@ class ProcessReleaseReplaySimulator:
                 results.append(
                     ProcessTargetResult(index, True, False, "rescan.unavailable")
                 )
+                journal_event(JournalEventKind.FAILED, "process_release.rescan_unavailable")
                 return self._result(
                     ProcessReleaseStatus.ACTION_REQUIRED,
                     False,
                     results,
                     None,
                     audit,
+                    journal,
                     "rescan.unavailable",
                 )
             current = rescanned
@@ -243,12 +283,14 @@ class ProcessReleaseReplaySimulator:
                 results.append(
                     ProcessTargetResult(index, True, False, "rescan.invalid")
                 )
+                journal_event(JournalEventKind.FAILED, "process_release.rescan_invalid")
                 return self._result(
                     ProcessReleaseStatus.ACTION_REQUIRED,
                     False,
                     results,
                     current,
                     audit,
+                    journal,
                     "rescan.invalid",
                 )
             target_present = any(
@@ -264,22 +306,28 @@ class ProcessReleaseReplaySimulator:
                 resources=target.resources,
                 outcome="released" if released else "remaining",
             )
+            placement = infer_placement(current.snapshot)
+            journal_event(JournalEventKind.STEP_VERIFIED, "process_release.rescanned")
             if elapsed < 0 or elapsed > self._deadline_ms:
+                journal_event(JournalEventKind.FAILED, "process_release.signal_timeout")
                 return self._result(
                     ProcessReleaseStatus.ACTION_REQUIRED,
                     False,
                     results,
                     current,
                     audit,
+                    journal,
                     "signal.deadline_exceeded",
                 )
             if not signal_result.accepted:
+                journal_event(JournalEventKind.FAILED, "process_release.signal_rejected")
                 return self._result(
                     ProcessReleaseStatus.ACTION_REQUIRED,
                     False,
                     results,
                     current,
                     audit,
+                    journal,
                     signal_result.code,
                 )
 
@@ -295,12 +343,14 @@ class ProcessReleaseReplaySimulator:
             "release.final_readiness",
             outcome="cleared" if software_ready else "blocked",
         )
+        journal_event(JournalEventKind.COMMITTED, "process_release.committed")
         return self._result(
             ProcessReleaseStatus.COMPLETED,
             software_ready,
             results,
             current,
             audit,
+            journal,
             "" if software_ready else "software_blockers_remain",
         )
 
@@ -311,6 +361,7 @@ class ProcessReleaseReplaySimulator:
         results: list[ProcessTargetResult],
         current: VersionedObservation | None,
         audit: list[ProcessReleaseAuditEvent],
+        journal: TransitionJournal,
         reason_code: str,
     ) -> ProcessReleaseReplayResult:
         remaining = (
@@ -325,5 +376,6 @@ class ProcessReleaseReplaySimulator:
             target_results=tuple(results),
             remaining_client_count=remaining,
             audit=tuple(audit),
+            journal=journal,
             reason_code=reason_code,
         )

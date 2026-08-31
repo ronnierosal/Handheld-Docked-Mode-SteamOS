@@ -107,6 +107,7 @@ class ProcessReleaseApprovalStore:
         max_tokens: int = MAX_APPROVAL_TOKENS,
         monotonic: Callable[[], float] = time.monotonic,
         token_factory: Callable[[], str] | None = None,
+        operation_id_factory: Callable[[], str] | None = None,
     ) -> None:
         if ttl_seconds <= 0 or ttl_seconds > 300:
             raise ValueError("process approval TTL must be between 0 and 300 seconds")
@@ -116,6 +117,9 @@ class ProcessReleaseApprovalStore:
         self._max_tokens = max_tokens
         self._monotonic = monotonic
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(18))
+        self._operation_id_factory = operation_id_factory or (
+            lambda: f"process-release-{secrets.token_hex(8)}"
+        )
         self._values: dict[str, tuple[float, ProcessReleaseApproval]] = {}
         self._lock = threading.Lock()
 
@@ -151,15 +155,6 @@ class ProcessReleaseApprovalStore:
             prior_graceful_operation_id = graceful_evidence.operation_id
         elif graceful_evidence is not None:
             raise ValueError("graceful evidence is valid only for force approval")
-        approval = ProcessReleaseApproval(
-            phase=phase,
-            egpu_stable_id=readiness.egpu_stable_id,
-            observed_generation=observed_generation,
-            client_fingerprint=_client_fingerprint(readiness.clients),
-            targets=targets,
-            observed_clients=_client_facts(readiness.clients),
-            prior_graceful_operation_id=prior_graceful_operation_id,
-        )
         with self._lock:
             self._expire_locked()
             while len(self._values) >= self._max_tokens:
@@ -168,6 +163,21 @@ class ProcessReleaseApprovalStore:
             token = self._token_factory()
             if not TOKEN_RE.fullmatch(token) or token in self._values:
                 raise ValueError("process approval token generator returned an invalid token")
+            operation_id = self._operation_id_factory()
+            if not TOKEN_RE.fullmatch(operation_id) or any(
+                item.operation_id == operation_id for _, item in self._values.values()
+            ):
+                raise ValueError("process release operation ID is invalid or duplicated")
+            approval = ProcessReleaseApproval(
+                operation_id=operation_id,
+                phase=phase,
+                egpu_stable_id=readiness.egpu_stable_id,
+                observed_generation=observed_generation,
+                client_fingerprint=_client_fingerprint(readiness.clients),
+                targets=targets,
+                observed_clients=_client_facts(readiness.clients),
+                prior_graceful_operation_id=prior_graceful_operation_id,
+            )
             self._values[token] = (self._monotonic(), approval)
         return ProcessReleasePreview(
             token=token,
