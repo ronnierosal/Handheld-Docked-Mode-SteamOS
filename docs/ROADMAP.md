@@ -55,7 +55,7 @@ No broader label may be inferred from a narrower one.
 | Bounded exact DRM engine-activity evidence | Implemented and simulated with exact unwired G1 binding resolver, dormant read-only | Decky/compatibility consumers and hardware proof remain. |
 | Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 | Reduced transition/compatibility support context | Implemented and privacy tested, dormant optional input | Live owners and controller-visible preview acceptance remain. |
-| Compatibility Test Mode session policy | Implemented and simulated, dormant | Hardware observation/mechanism adapters, UI, persistence, and reviewed tests remain. |
+| Compatibility Test Mode session policy | Implemented and simulated with dormant exact external-render collector | UI, persistence, save evidence consumer, trusted hardware runs, and reviewed tests remain. |
 | Secure support-submission approval/protocol | Implemented and unit tested, dormant | Fixed TLS client adapter is unwired; Cloudflare Worker/R2 deployment, endpoint configuration, abuse controls, and UI remain. |
 
 ## Required architecture corrections
@@ -256,7 +256,11 @@ rendering or identify another GPU. A separate bounded DRM `fdinfo` sampler can
 now prove that one exact game's engine counters increased on one exact GPU
 during a stable sample window. The exact read-only G1 binding resolver is
 implemented but unwired; it revalidates the complete topology and one render
-node before sampling. Hardware validation and all consumers remain absent.
+node before sampling. Hardware validation and production consumers remain
+absent. The dormant Compatibility Test Mode collector can consume this proof
+only for a
+same-AppID internal-GPU baseline and Docked-eGPU observation; it cannot finish,
+review, promote, or publish the result.
 
 - Complete the existing read-only experiment and prove unchanged Gamescope and
   game identity, iGPU rendering, and TV presentation.

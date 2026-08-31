@@ -239,6 +239,12 @@ re-runs exact DRM/PCI/USB4 matching and accepts one character-device render node
 under the exact GPU PCI device. It remains unwired; the evidence cannot
 authorize a transition or certify a game by itself.
 
+Compatibility Test Mode has one dormant application consumer for this evidence.
+It requires a same-AppID internal-GPU baseline plus active G1 counters in a
+Docked-eGPU snapshot, then records only a hashed generation and categorical
+result. Existing explicit finish/review and simulation-promotion prohibitions
+remain authoritative; no catalog update is automatic.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. The snapshot,

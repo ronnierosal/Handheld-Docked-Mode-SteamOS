@@ -84,3 +84,10 @@ the exact snapshot profile/identity, independently re-runs the complete
 DRM/PCI/USB4 G1 matcher, requires the same stable ID and GPU BDF, accepts exactly
 one render node under that PCI device, and verifies that its `/dev/dri` target is
 a character device. The complete path still has no Decky RPC or hardware proof.
+
+The dormant compatibility-test collector is the first consumer. It accepts an
+eGPU-handoff result only when the intentional test baseline names the same exact
+Steam AppID on the internal GPU, the bounded evidence is `active`, and the same
+evidence snapshot is Docked-eGPU. It records a hashed evidence generation in the
+active test session. It cannot finish, review, promote, or publish the result;
+those existing explicit gates remain separate.

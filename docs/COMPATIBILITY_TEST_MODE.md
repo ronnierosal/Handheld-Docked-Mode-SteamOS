@@ -1,8 +1,24 @@
 # Compatibility Test Mode
 
-Compatibility Test Mode is currently a pure session policy and simulator. It
-does not dock, undock, close a game, save, relaunch, signal a process, request
-sleep, or publish a catalog result.
+## Exact external-render evidence
+
+The dormant test policy can now consume bounded exact DRM engine activity for
+the eGPU-handoff dimension. The collector requires the same Steam AppID as the
+recorded internal-GPU baseline, observed engine-counter growth on the exact G1,
+and Docked-eGPU placement from that evidence snapshot. Idle, missing, raced, or
+non-docked evidence stops the session in Action Required and disables temporary
+diagnostics.
+
+Successful collection records only the hashed evidence generation and the
+categorical external-render result. It does not complete or review the session.
+Simulation still cannot promote a catalog record; a hardware result still
+requires trusted-runner authorization, explicit finish, and human review. No
+Decky UI or production Compatibility Test Mode construction exists.
+
+Compatibility Test Mode is currently a dormant session policy, simulator, and
+read-only external-render evidence collector. It does not dock, undock, close a
+game, save, relaunch, signal a process, request sleep, or publish a catalog
+result.
 
 ## Session flow
 
@@ -38,4 +54,4 @@ Reviewed evidence is bound to the session's backend-owned catalog game identity
 and the exact baseline Steam AppID, preventing a result from being reused for a
 different title.
 
-No runtime adapter, Decky RPC, UI, or catalog persistence is enabled.
+No production construction, Decky RPC, UI, or catalog persistence is enabled.

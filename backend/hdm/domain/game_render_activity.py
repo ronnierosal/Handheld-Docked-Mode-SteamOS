@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
+from .control_plane import PlacementState
 from .game_runtime import GameRuntimeKind
 
 
@@ -94,6 +95,8 @@ class GameRenderActivityEvidence:
     runtime_kind: GameRuntimeKind
     active_engine_count: int
     reason_code: str
+    evidence_generation: str = ""
+    placement: PlacementState = PlacementState.UNKNOWN
 
     def __post_init__(self) -> None:
         if not 0 <= self.active_engine_count <= (
@@ -102,6 +105,16 @@ class GameRenderActivityEvidence:
             raise ValueError("active DRM engine count is invalid")
         if not ERROR_RE.fullmatch(self.reason_code):
             raise ValueError("render activity reason must be categorical")
+        known = self.status is not GameRenderActivityStatus.UNKNOWN
+        if known and (
+            not re.fullmatch(r"[0-9a-f]{64}", self.evidence_generation)
+            or self.placement in {PlacementState.UNKNOWN, PlacementState.DEGRADED}
+        ):
+            raise ValueError("known render activity requires exact observation identity")
+        if not known and (
+            self.evidence_generation or self.placement is not PlacementState.UNKNOWN
+        ):
+            raise ValueError("unknown render activity cannot carry partial identity")
         if self.status is GameRenderActivityStatus.ACTIVE:
             if self.active_engine_count <= 0:
                 raise ValueError("active render evidence requires a counter delta")

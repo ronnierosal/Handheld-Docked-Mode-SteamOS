@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import hashlib
+
 from ..domain.game_render_activity import (
     DrmEngineCounterSample,
     GameRenderActivityEvidence,
     GameRenderActivityStatus,
 )
+from ..domain.control_plane import PlacementState
 from ..domain.game_runtime import GameRuntimeKind
 from ..domain.game_session import ActiveGameIdentity
 from ..domain.models import GameState
+from ..domain.inference import infer_placement
 from ..ports.game_render_activity import (
     DrmEngineCounterPort,
     DrmRenderBindingPort,
@@ -58,6 +62,8 @@ class GameRenderActivityEvidenceService:
             snapshot_observation = None
         if snapshot_observation is None:
             return self._unknown("render_activity.snapshot_unavailable")
+        if not snapshot_observation.generation:
+            return self._unknown("render_activity.snapshot_unavailable")
         snapshot = snapshot_observation.snapshot
         if snapshot.game_state is not GameState.RUNNING:
             return self._unknown("render_activity.game_state_changed")
@@ -72,6 +78,9 @@ class GameRenderActivityEvidenceService:
             or readiness.egpu_stable_id != profiles.egpu_stable_id
         ):
             return self._unknown("render_activity.egpu_unverified")
+        placement = infer_placement(snapshot)
+        if placement in {PlacementState.UNKNOWN, PlacementState.DEGRADED}:
+            return self._unknown("render_activity.placement_unverified")
         try:
             binding = self._bindings.resolve(snapshot)
         except Exception:
@@ -96,7 +105,17 @@ class GameRenderActivityEvidenceService:
             or before.sample_id == after.sample_id
         ):
             return self._unknown("render_activity.runtime_changed")
-        return self._compare(first, second, after.runtime_kind)
+        generation = self._evidence_generation(
+            before.generation,
+            snapshot_observation.generation,
+            binding,
+            first,
+            second,
+            after.generation,
+        )
+        return self._compare(
+            first, second, after.runtime_kind, generation, placement
+        )
 
     def _runtime_observation(self, identity, user_uid):
         try:
@@ -125,6 +144,8 @@ class GameRenderActivityEvidenceService:
         first: DrmEngineCounterSample,
         second: DrmEngineCounterSample,
         runtime_kind: GameRuntimeKind,
+        evidence_generation: str,
+        placement,
     ) -> GameRenderActivityEvidence:
         first_clients = {client.identity: client for client in first.clients}
         second_clients = {client.identity: client for client in second.clients}
@@ -136,6 +157,8 @@ class GameRenderActivityEvidenceService:
                 runtime_kind,
                 0,
                 "render_activity.no_client",
+                evidence_generation,
+                placement,
             )
         active = 0
         for identity, first_client in first_clients.items():
@@ -156,13 +179,51 @@ class GameRenderActivityEvidenceService:
                 runtime_kind,
                 active,
                 "render_activity.active",
+                evidence_generation,
+                placement,
             )
         return GameRenderActivityEvidence(
             GameRenderActivityStatus.IDLE_WINDOW,
             runtime_kind,
             0,
             "render_activity.idle_window",
+            evidence_generation,
+            placement,
         )
+
+    @staticmethod
+    def _evidence_generation(
+        before_generation,
+        snapshot_generation,
+        binding,
+        first,
+        second,
+        after_generation,
+    ):
+        def sample(value):
+            return ";".join(
+                f"{client.pid}:{client.process_start_time_ticks}:"
+                f"{client.drm_client_id}:"
+                + ",".join(
+                    f"{engine}={counter}"
+                    for engine, counter in client.counters_ns
+                )
+                for client in value.clients
+            )
+
+        material = "|".join(
+            (
+                before_generation,
+                snapshot_generation,
+                binding.gpu_stable_id,
+                binding.pci_bdf,
+                binding.render_node,
+                sample(first),
+                sample(second),
+                after_generation,
+            )
+        ).encode("utf-8")
+        return hashlib.sha256(material).hexdigest()
 
     @staticmethod
     def _unknown(reason: str) -> GameRenderActivityEvidence:
