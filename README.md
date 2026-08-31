@@ -45,6 +45,7 @@ Start with:
 - [Deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md)
 - [Remote read-only validation](docs/REMOTE_VALIDATION.md)
 - [Guarded process-release contract](docs/PROCESS_RELEASE.md)
+- [Durable transition journal](docs/TRANSITION_JOURNAL.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 

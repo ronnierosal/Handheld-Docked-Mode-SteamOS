@@ -35,7 +35,8 @@ No broader label may be inferred from a narrower one.
 | Display/GPU transitions | Designed only | Transaction engine, rollback, simulation, then supervised hardware proof. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
-| Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Durable storage adapter remains gated with live transitions. |
+| Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Live transition orchestration remains gated. |
+| Atomic fixed-path transition journal store | Implemented and unit tested, dormant | Decky wiring and startup recovery require the first approved live transition. |
 | Transition snapshot replay and failure injection | Implemented and simulated | No production mechanism adapter or mutation endpoint exists. |
 | Remote read-only capture harness | Implemented and hardware tested | It cannot observe the Decky-owned sleep lease and must not be used to claim lease state. |
 | Guarded process-release approvals | Implemented and unit tested, internal only | Production adapter, RPC, and hardware proof remain. |

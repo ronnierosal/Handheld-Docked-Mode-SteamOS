@@ -57,6 +57,11 @@ request, fresh observation, approval validation, plan, per-target fake steps,
 re-scans, and terminal result in the shared transition journal. Tokens and
 process/hardware identity never enter the exported journal.
 
+The journal's dormant fixed-path file adapter enforces atomic append-only
+progress for one operation, no-follow/exclusive temporary creation, byte bounds,
+file and directory synchronization, and matching-terminal-only cleanup. It is
+not constructed by Decky. See [Durable transition journal](TRANSITION_JOURNAL.md).
+
 The SteamOS signal adapter is a dormant leaf mechanism: it maps only typed
 graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess,
 and returns categorical results. It is not constructed by `main.py`; delivery
