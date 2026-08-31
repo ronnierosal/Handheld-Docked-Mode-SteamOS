@@ -121,3 +121,39 @@ export const previewSupportBundle = callable<[], SupportBundlePreviewPayload>(
 export const saveSupportBundle = callable<[string], SupportBundleSavePayload>(
   "save_support_bundle",
 );
+
+export interface PresentationPreparationPreviewPayload {
+  schema_version: number;
+  ready: boolean;
+  blockers: string[];
+  confirmation_required: boolean;
+}
+
+export interface PresentationPreparationApprovalPayload {
+  schema_version: number;
+  approval_token: string;
+  ready: boolean;
+  blockers: string[];
+}
+
+export interface PresentationPreparationOutcomePayload {
+  schema_version: number;
+  prepared: boolean;
+  changed: boolean;
+  code: string;
+  rollback_attempted: boolean;
+  rollback_succeeded: boolean;
+}
+
+export const previewPresentationPreparation = callable<
+  [],
+  PresentationPreparationPreviewPayload
+>("preview_presentation_preparation");
+export const approvePresentationPreparation = callable<
+  [],
+  PresentationPreparationApprovalPayload
+>("approve_presentation_preparation");
+export const preparePresentationIntegration = callable<
+  [string],
+  PresentationPreparationOutcomePayload
+>("prepare_presentation_integration");

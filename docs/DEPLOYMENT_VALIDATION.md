@@ -210,7 +210,7 @@ cause in source, rebuild one complete artifact, and repeat from D0.
 3. Complete controller-visible support preview/save acceptance separately.
 4. Inspect for the known eGPUBridge/HDM `PATH` conflict before any presentation
    preparation.
-5. Add and review the controller-facing supervised request facade; keep attach
-   automation disabled.
+5. Review the Decky-native preparation preview/confirm flow on the built
+   candidate; keep transition controls and attach automation disabled.
 6. Run D5 preparation, then schedule the first D6 Portable-only shim restart
    with the player watching. Do not combine it with a G1/TV transition.

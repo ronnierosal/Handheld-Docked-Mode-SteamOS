@@ -12,6 +12,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getSnapshot,
+  approvePresentationPreparation,
+  preparePresentationIntegration,
+  previewPresentationPreparation,
   previewSupportBundle,
   saveSupportBundle,
   type SnapshotPayload,
@@ -50,7 +53,7 @@ const SNAPSHOT_STALE_AFTER_MS = 10_000;
 const BLOCKED_ATTEMPT_MODAL_DELAY_MS = 750;
 
 function label(value: string): string {
-  return LABELS[value] ?? value.replaceAll("_", " ");
+  return LABELS[value] ?? value.replaceAll("_", " ").replaceAll(".", " ");
 }
 
 function DiagnosticRow({ name, value }: { name: string; value: string }) {
@@ -102,6 +105,45 @@ function showSupportBundlePreview(
   return modal;
 }
 
+function showPresentationPreparationConfirmation(
+  onConfirm: () => void,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle="Prepare experimental display validation?"
+      strOKButtonText="Prepare"
+      strCancelButtonText="Cancel"
+      bDestructiveWarning={true}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={() => {
+        close();
+        onConfirm();
+      }}
+      onCancel={close}
+    >
+      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
+        <p>
+          Continue only with the G1 disconnected, no game running, and the Ally screen visible.
+        </p>
+        <p>
+          This installs HDM&apos;s reversible Gamescope startup integration and reloads the user
+          service configuration. It does not restart Gamescope, switch displays, or select a GPU.
+        </p>
+      </div>
+    </ConfirmModal>,
+    undefined,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
 function MonitorIcon() {
   return (
     <svg
@@ -144,15 +186,20 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [supportBusy, setSupportBusy] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [presentationBusy, setPresentationBusy] = useState(false);
+  const [presentationMessage, setPresentationMessage] = useState("");
   const lastSnapshotAt = useRef<number | null>(null);
   const refreshInFlight = useRef(false);
   const warningToastShown = useRef(false);
   const inactiveToastShown = useRef(false);
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
+  const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
 
   useEffect(() => () => {
     supportModal.current?.Close();
     supportModal.current = null;
+    presentationModal.current?.Close();
+    presentationModal.current = null;
   }, []);
 
   const refresh = useCallback(async (quiet = false): Promise<SnapshotPayload | null> => {
@@ -338,6 +385,65 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
   }, [supportPreview]);
 
+  const preparePresentation = useCallback(async () => {
+    setPresentationBusy(true);
+    setPresentationMessage("");
+    try {
+      const approval = await approvePresentationPreparation();
+      if (!approval.approval_token || approval.blockers.length > 0) {
+        setPresentationMessage(
+          approval.blockers.length > 0
+            ? `Preparation blocked: ${approval.blockers.map(label).join(", ")}.`
+            : "Preparation approval was not issued. Inspect again.",
+        );
+        return;
+      }
+      const outcome = await preparePresentationIntegration(approval.approval_token);
+      setPresentationMessage(
+        outcome.prepared
+          ? outcome.changed
+            ? "Gamescope validation integration prepared. Gamescope was not restarted."
+            : "Gamescope validation integration was already prepared."
+          : outcome.rollback_attempted && !outcome.rollback_succeeded
+            ? "Preparation failed and rollback needs attention. Do not restart Gamescope."
+            : `Preparation did not complete: ${label(outcome.code)}.`,
+      );
+    } catch {
+      setPresentationMessage("Preparation failed safely. Gamescope was not intentionally restarted.");
+    } finally {
+      setPresentationBusy(false);
+    }
+  }, []);
+
+  const inspectPresentationPreparation = useCallback(async () => {
+    setPresentationBusy(true);
+    setPresentationMessage("");
+    try {
+      const preview = await previewPresentationPreparation();
+      if (preview.blockers.length > 0) {
+        setPresentationMessage(
+          `Preparation blocked: ${preview.blockers.map(label).join(", ")}.`,
+        );
+        return;
+      }
+      if (preview.ready) {
+        setPresentationMessage("Gamescope validation integration is already prepared.");
+        return;
+      }
+      presentationModal.current?.Close();
+      presentationModal.current = showPresentationPreparationConfirmation(
+        () => void preparePresentation(),
+        () => {
+          presentationModal.current = null;
+        },
+      );
+    } catch {
+      setPresentationMessage("Preparation inspection is unavailable. No change was made.");
+    } finally {
+      setPresentationBusy(false);
+    }
+  }, [preparePresentation]);
+
   return (
     <>
       <PanelSection title="Observed state">
@@ -501,6 +607,19 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           {overlayRows.map((row) => (
             <DiagnosticRow key={row.name} name={row.name} value={row.value} />
           ))}
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void inspectPresentationPreparation()}
+              disabled={presentationBusy}
+            >
+              {presentationBusy ? "Checking…" : "Prepare supervised display validation"}
+            </ButtonItem>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            Preparation only. This control cannot restart Gamescope or switch displays.
+          </PanelSectionRow>
+          {presentationMessage && <PanelSectionRow>{presentationMessage}</PanelSectionRow>}
         </PanelSection>
       )}
     </>

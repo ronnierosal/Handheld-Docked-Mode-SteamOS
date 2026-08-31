@@ -85,7 +85,7 @@ source config immediately; a rollback-write failure is reported separately.
 The orchestrator skips a redundant recovery restart when a fresh observation
 already proves the source placement. Neither component is constructed by Decky.
 
-A separate dormant preparation service owns reversible integration activation.
+A separate preparation service owns reversible integration activation.
 It issues a maximum-two-minute, single-use approval only from a verified
 Portable, idle, healthy Gamescope observation and binds it to the semantic
 generation, exact Gamescope user, and SHA-256 of the shim plus expected drop-in.
@@ -93,8 +93,9 @@ Execution re-observes all evidence, installs the fixed file, rechecks the
 fingerprint/user, reloads the fixed user manager, and verifies the fixed unit.
 It never restarts Gamescope. A reload/verification failure removes a newly
 installed drop-in and reloads again; incomplete rollback is Action Required.
-The application service depends only on narrow ports and is not exposed by
-Decky.
+The application service depends only on narrow ports. Decky exposes only its
+read-only preview, explicit approval, and token-consuming preparation methods;
+none can request a Gamescope restart or presentation transition.
 
 A packaged but inactive Gamescope shim provides the first presentation
 mechanism boundary. It reads one strict, bounded, boot-scoped config from a
@@ -188,10 +189,12 @@ resolves the single verified Gamescope process owner's passwd record and live
 user bus without username, UID, environment, or home-directory fallbacks. It
 accepts only unit verification, daemon-reload, and a non-blocking restart of the
 fixed `gamescope-session.target`; it uses absolute executables, a sanitized
-environment, no shell, bounded output, and categorical errors. No plugin code
-constructs it. Public RPCs are limited to `get_snapshot` and the
-preview/token-approved support-bundle flow. No RPC accepts a command, system
-path, device identity, or process target.
+environment, no shell, bounded output, and categorical errors. Decky constructs
+it only for preparation, where the service can call daemon-reload and fixed-unit
+verification but never the restart operation. Public RPCs are limited to
+`get_snapshot`, the preview/token-approved support-bundle flow, and the
+preview/approval/token-consuming supervised preparation flow. No RPC accepts a
+command, system path, device identity, or process target.
 
 The first 0.2 safety mechanism is a backend-owned, parent-death-guarded
 `systemd-inhibit` process. Exact G1 presence acquires its login1 lease, verified

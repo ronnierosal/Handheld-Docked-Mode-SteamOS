@@ -72,10 +72,13 @@ def main() -> int:
             "get_snapshot",
             "preview_support_bundle",
             "save_support_bundle",
+            "preview_presentation_preparation",
+            "approve_presentation_preparation",
+            "prepare_presentation_integration",
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky backend RPCs must be limited to snapshot and approved support-bundle export"
+                "Decky RPCs must remain limited to diagnostics, approved support export, and supervised preparation"
             )
 
     delivery_sources = "\n".join(
@@ -93,7 +96,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics, approved support export, and sleep-guard lease only."
+        "Plugin package check passed: diagnostics, support export, sleep guard, and supervised presentation preparation only."
     )
     return 0
 

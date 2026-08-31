@@ -19,6 +19,7 @@ from ..ports.presentation_activation import GamescopeUserContext
 from ..domain.inference import infer_placement
 from ..domain.control_plane import PlacementState
 from ..domain.models import Confidence, GameState
+from ..domain.models import GpuRole
 from ..ports.transition import TransitionObservationPort
 
 
@@ -133,12 +134,14 @@ class PresentationActivationService:
             return PresentationActivationPreview(
                 "", observed.generation, status.ready, blockers
             )
-        token = self._approvals.issue(
-            generation=observed.generation,
-            user=user,
-            fingerprint=fingerprint,
-            user_confirmed=user_confirmed,
-        )
+        token = ""
+        if user_confirmed:
+            token = self._approvals.issue(
+                generation=observed.generation,
+                user=user,
+                fingerprint=fingerprint,
+                user_confirmed=True,
+            )
         return PresentationActivationPreview(
             token, observed.generation, status.ready
         )
@@ -209,6 +212,8 @@ class PresentationActivationService:
         blockers: list[str] = []
         if infer_placement(snapshot) is not PlacementState.PORTABLE:
             blockers.append("placement.portable_required")
+        if any(gpu.role is GpuRole.EXTERNAL and gpu.present for gpu in snapshot.gpus):
+            blockers.append("egpu.disconnected_required")
         if snapshot.game_state is not GameState.IDLE:
             blockers.append(
                 "game.state_unknown"

@@ -42,9 +42,10 @@ session, blocker, or safety-evidence change.
 ## Presentation shim boundary
 
 The plugin package contains an inactive `bin/gamescope` shim and a fixed-path
-boot-scoped config store. Packaging is not activation. No installer, systemd
-override, Gamescope restart, public RPC, or automatic attach path currently
-enables it.
+boot-scoped config store. Packaging is not activation. Only the separately
+confirmed preparation RPC may install the reversible systemd override; no
+public RPC can restart Gamescope, write a presentation target, or initiate an
+automatic attach transition.
 
 For a docked selection, the shim requires the config's exact external connector
 and GPU vendor/device pair to remain uniquely present in the current boot. It
@@ -58,15 +59,16 @@ user-service `PATH` override, and must remain a distinct supervised operation.
 The orchestrator must still re-observe and verify the resulting placement; a
 successful Gamescope exec is not transition success.
 
-The fixed user-service command boundary is implemented but unwired. It derives
+The fixed user-service command boundary derives
 the target user only from the one verified Gamescope process owner and requires
 the matching passwd home plus a live user bus. There is no `deck`, UID 1000, or
 environment fallback. It can verify the fixed service, reload that user's unit
 configuration, or queue a non-blocking restart of the fixed Gamescope target;
 it cannot accept an executable, unit, path, command, or environment value from
-an RPC.
+an RPC. Decky preparation uses only daemon-reload and fixed-unit verification;
+the restart operation remains behind the unwired transition mechanism.
 
-The reversible drop-in store is also implemented and unwired. It owns exactly
+The reversible drop-in store owns exactly
 `90-handheld-dock-mode.conf`, creates only fixed descendants of the verified
 user home, and never edits Valve's session script. Activation rejects modified
 HDM content, unsafe ownership/symlinks, unknown environment files, and any
@@ -92,8 +94,9 @@ the fixed reversible drop-in, daemon-reload the exact user manager, and verify
 the fixed service, but it never restarts Gamescope. Any evidence change consumes
 the token without mutation. A failure after a new install removes the HDM file
 and reloads the user manager; failure to complete that rollback is Action
-Required. This service is packaged for further validation work but remains
-unconstructed and has no public RPC.
+Required. Decky exposes this preparation through a controller-first
+preview/confirm flow under troubleshooting details. Actual transition controls
+and automatic attach remain absent.
 
 ## Certification boundary
 

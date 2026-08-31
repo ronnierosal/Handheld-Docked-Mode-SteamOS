@@ -39,8 +39,10 @@ lease, hide inactive-protection failures, or alter blockers.
 
 ## Boundaries
 
-- Public RPCs remain limited to `get_snapshot` and the separately documented
-  preview/token-approved support-bundle flow.
+- Public RPCs remain limited to `get_snapshot`, the separately documented
+  preview/token-approved support-bundle flow, and supervised presentation
+  preparation. Preparation cannot restart Gamescope or switch display/GPU
+  placement.
 - No sleep request is initiated by HDM.
 - No power-menu interception is treated as the safety boundary.
 - No display/GPU transition, process signal, or physical removal is added.

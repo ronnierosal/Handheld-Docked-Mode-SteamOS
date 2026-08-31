@@ -25,7 +25,7 @@ class DeckyContractTests(unittest.TestCase):
         self.assertEqual(manifest["api_version"], 1)
         self.assertIn("sleep safety", manifest["publish"]["description"].lower())
 
-    def test_backend_exposes_only_snapshot_and_support_bundle_rpcs(self):
+    def test_backend_exposes_only_diagnostics_support_and_preparation_rpcs(self):
         path = ROOT / "main.py"
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         plugin = next(
@@ -39,16 +39,28 @@ class DeckyContractTests(unittest.TestCase):
         }
         self.assertEqual(
             public_methods,
-            {"get_snapshot", "preview_support_bundle", "save_support_bundle"},
+            {
+                "get_snapshot",
+                "preview_support_bundle",
+                "save_support_bundle",
+                "preview_presentation_preparation",
+                "approve_presentation_preparation",
+                "prepare_presentation_integration",
+            },
         )
         source = path.read_text(encoding="utf-8")
         self.assertNotIn("PosixProcessSignalAdapter", source)
         self.assertNotIn("ProcessReleaseApprovalStore", source)
+        self.assertNotIn("PresentationTransitionMechanism", source)
+        self.assertNotIn("TransitionOrchestrator", source)
 
-    def test_frontend_calls_only_snapshot_and_support_bundle_rpcs(self):
+    def test_frontend_has_preparation_but_no_transition_rpc(self):
         source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
         self.assertIn('"preview_support_bundle"', source)
+        self.assertIn('"preview_presentation_preparation"', source)
+        self.assertIn('"approve_presentation_preparation"', source)
+        self.assertIn('"prepare_presentation_integration"', source)
         self.assertIn('"save_support_bundle"', source)
         for forbidden in (
             "apply_transition",
@@ -79,7 +91,7 @@ class DeckyContractTests(unittest.TestCase):
         self.assertNotIn("    window,\n    { strTitle", source)
         self.assertEqual(
             source.count('    undefined,\n    { strTitle: "Handheld Dock Mode"'),
-            2,
+            3,
         )
 
     def test_decky_archive_has_one_top_level_plugin_directory(self):

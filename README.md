@@ -79,10 +79,13 @@ python scripts/remote_capture.py --host <ally-ip> --identity-file <ssh-key>
 
 The Decky package uses a root delivery adapter because SteamOS protects the
 Gamescope process environment. Public plugin RPCs are limited to `get_snapshot`
-and the preview/token-approved support-bundle flow. Root access is limited to
-observation, fixed-boundary support export, and the exact login1 sleep-inhibitor
-lease; the command runner still accepts only the Steam game-scope inventory
-query.
+the preview/token-approved support-bundle flow, and the explicitly confirmed
+supervised presentation-preparation flow. Preparation requires verified
+Portable/idle state with the eGPU disconnected; it may install the reversible
+HDM user-service drop-in and daemon-reload/verify that fixed service, but it
+cannot restart Gamescope or switch a display/GPU. Other root access remains
+limited to observation, fixed-boundary support export, and the exact login1
+sleep-inhibitor lease.
 
 ## License
 

@@ -42,6 +42,15 @@ def portable():
     return snapshot_from_dict(value)
 
 
+def attached():
+    value = json.loads(
+        (ROOT / "tests" / "fixtures" / "connected-internal.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    return snapshot_from_dict(value)
+
+
 class Observations:
     def __init__(self, *values):
         self.values = list(values)
@@ -128,12 +137,13 @@ class PresentationActivationServiceTests(unittest.TestCase):
     def test_preview_requires_consent_and_reports_conflicts_without_token(self):
         events = []
         integration = FakeIntegration(events)
-        with self.assertRaisesRegex(ValueError, "explicit consent"):
-            service(
-                Observations(VersionedObservation("generation-1", portable())),
-                integration,
-                ScriptedCommands(events),
-            ).preview(user_confirmed=False)
+        inspection = service(
+            Observations(VersionedObservation("generation-1", portable())),
+            integration,
+            ScriptedCommands(events),
+        ).preview(user_confirmed=False)
+        self.assertFalse(inspection.approved)
+        self.assertFalse(inspection.blockers)
 
         events = []
         integration = FakeIntegration(events, error="path_override_conflict")
@@ -144,6 +154,16 @@ class PresentationActivationServiceTests(unittest.TestCase):
         ).preview(user_confirmed=True)
         self.assertFalse(preview.approved)
         self.assertIn("integration.path_override_conflict", preview.blockers)
+
+    def test_preparation_requires_the_egpu_to_be_disconnected(self):
+        events = []
+        preview = service(
+            Observations(VersionedObservation("generation-1", attached())),
+            FakeIntegration(events),
+            ScriptedCommands(events),
+        ).preview(user_confirmed=True)
+        self.assertIn("egpu.disconnected_required", preview.blockers)
+        self.assertFalse(preview.token)
 
     def test_exact_preview_token_prepares_without_restarting_gamescope(self):
         events = []
