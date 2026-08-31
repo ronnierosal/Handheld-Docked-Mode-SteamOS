@@ -20,6 +20,14 @@ class ProcessReleaseTarget:
     name: str
     resources: tuple[EgpuResourceKind, ...]
 
+    def __post_init__(self) -> None:
+        if not self.instance_id or self.pid <= 1:
+            raise ValueError("process release target identity is invalid")
+        if not self.name or len(self.name) > 64:
+            raise ValueError("process release target name is invalid")
+        if not self.resources or len(self.resources) != len(set(self.resources)):
+            raise ValueError("process release target resources are invalid")
+
 
 @dataclass(frozen=True, slots=True)
 class ProcessClientFact:

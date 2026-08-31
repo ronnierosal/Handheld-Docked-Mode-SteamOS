@@ -40,6 +40,7 @@ No broader label may be inferred from a narrower one.
 | Remote read-only capture harness | Implemented and hardware tested | It cannot observe the Decky-owned sleep lease and must not be used to claim lease state. |
 | Guarded process-release approvals | Implemented and unit tested, internal only | Production adapter, RPC, and hardware proof remain. |
 | Process-release signal/re-scan simulator, audit, and journal | Implemented and simulated | Production mechanism remains; hardware removal authority is always false. |
+| Narrow POSIX process-signal adapter | Implemented and unit tested, dormant | Decky wiring/RPC and supervised disposable-process proof remain prohibited. |
 
 ## Required architecture corrections
 

@@ -67,6 +67,9 @@ Implemented simulator evidence:
   software blockers and hardware removal authority.
 - Shared transaction-journal integration from request through terminal result,
   without tokens, process identity, or raw hardware identity.
+- Dormant POSIX signal adapter with injected tests for the exact graceful/force
+  mapping, absent process, permission/OS failure, and non-POSIX fail-closed
+  behavior. Delivery/package tests prove it is not wired to Decky.
 
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1

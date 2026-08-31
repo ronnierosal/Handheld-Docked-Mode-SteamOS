@@ -35,13 +35,23 @@ class DeckyContractTests(unittest.TestCase):
             public_methods,
             {"get_snapshot", "preview_support_bundle", "save_support_bundle"},
         )
+        source = path.read_text(encoding="utf-8")
+        self.assertNotIn("PosixProcessSignalAdapter", source)
+        self.assertNotIn("ProcessReleaseApprovalStore", source)
 
     def test_frontend_calls_only_snapshot_and_support_bundle_rpcs(self):
         source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
         self.assertIn('"preview_support_bundle"', source)
         self.assertIn('"save_support_bundle"', source)
-        for forbidden in ("apply_transition", "restart_gamescope", "switch_display"):
+        for forbidden in (
+            "apply_transition",
+            "restart_gamescope",
+            "switch_display",
+            "process_release",
+            "signal_process",
+            "force_close",
+        ):
             self.assertNotIn(forbidden, source.lower())
 
     def test_support_bundle_save_requires_a_preview_token_and_no_path(self):

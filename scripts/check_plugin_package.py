@@ -25,6 +25,9 @@ FORBIDDEN_RPC_TERMS = (
     "restart_gamescope",
     "set_gpu",
     "switch_display",
+    "process_release",
+    "signal_process",
+    "force_close",
 )
 
 

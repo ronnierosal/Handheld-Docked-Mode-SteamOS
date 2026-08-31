@@ -68,9 +68,16 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- design and test a narrow production signal adapter
 - add a Decky preview/consent flow only after the adapter review
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 
-There is currently no production signal adapter and no process-release RPC.
+A narrow POSIX adapter is implemented and unit tested with an injected signal
+function. It accepts only typed graceful (`SIGTERM`) and force (`SIGKILL`)
+actions, fails closed off POSIX, and emits categorical results. It performs no
+wait, retry, target discovery, or escalation. The Decky runtime does not
+construct it, and package contract tests forbid process-release imports or RPCs
+in both backend and frontend delivery layers.
+
+There is currently no enabled process-release mechanism and no process-release
+RPC.

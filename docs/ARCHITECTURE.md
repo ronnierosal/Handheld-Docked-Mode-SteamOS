@@ -57,6 +57,11 @@ request, fresh observation, approval validation, plan, per-target fake steps,
 re-scans, and terminal result in the shared transition journal. Tokens and
 process/hardware identity never enter the exported journal.
 
+The SteamOS signal adapter is a dormant leaf mechanism: it maps only typed
+graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess,
+and returns categorical results. It is not constructed by `main.py`; delivery
+contract tests forbid process-release wiring and RPC terms.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a
