@@ -3,9 +3,24 @@
 from __future__ import annotations
 
 from ..adapters.steamos.host import HostRecord
+from ..domain.control_plane import (
+    CapabilitySupport,
+    EgpuTransport,
+    HostCapabilities,
+)
 
 
 PROFILE_ID = "asus-rog-ally-x"
+CAPABILITIES = HostCapabilities(
+    profile_id=PROFILE_ID,
+    egpu_support=CapabilitySupport.VERIFIED,
+    egpu_transport=EgpuTransport.USB4,
+    display_handoff=CapabilitySupport.EXPERIMENTAL,
+    audio_handoff=CapabilitySupport.EXPERIMENTAL,
+    internal_controller_suppression=CapabilitySupport.UNKNOWN,
+    external_controller_promotion=CapabilitySupport.UNKNOWN,
+    power_button_interception=CapabilitySupport.EXPERIMENTAL,
+)
 
 
 def matches_ally_x(host: HostRecord) -> bool:

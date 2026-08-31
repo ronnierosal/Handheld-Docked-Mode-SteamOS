@@ -6,6 +6,12 @@ from dataclasses import dataclass, field
 
 from ..adapters.steamos.drm import DrmCardRecord
 from ..adapters.steamos.pci import PciDeviceRecord, Usb4DeviceRecord
+from ..domain.control_plane import (
+    CapabilitySupport,
+    EgpuCapabilities,
+    RemovalBehavior,
+    SleepBehavior,
+)
 
 
 PROFILE_ID = "gpd-g1-rx7600mxt-titan-ridge"
@@ -13,6 +19,13 @@ GPU_ID = ("0x1002", "0x7480")
 ROOT_ID = ("0x8086", "0x15ef")
 AUDIO_ID = ("0x1002", "0xab30")
 XHCI_ID = ("0x8086", "0x15f0")
+CAPABILITIES = EgpuCapabilities(
+    profile_id=PROFILE_ID,
+    display_output=CapabilitySupport.VERIFIED,
+    audio_output=CapabilitySupport.VERIFIED,
+    sleep_behavior=SleepBehavior.DISCONNECT_BEFORE_SLEEP_VERIFIED,
+    removal_behavior=RemovalBehavior.SHUTDOWN_BEFORE_DISCONNECT,
+)
 
 
 @dataclass(frozen=True, slots=True)

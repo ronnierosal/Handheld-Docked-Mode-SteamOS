@@ -34,6 +34,12 @@ progress. The current code implements only the original placement inference and
 transition vocabulary. The typed split, journal, and replay engine are the next
 read-only control-plane milestone; see [Authoritative roadmap](ROADMAP.md).
 
+The first control-plane slice now defines typed placement and workflow states,
+request/plan/deadline/failure/recovery values, conservative host/eGPU capability
+composition, and a strict bounded transaction-journal schema. The journal is an
+immutable value with a persistence port only: no storage adapter or production
+transition endpoint is enabled yet.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

@@ -10,6 +10,42 @@ from .models import (
     ObservedSnapshot,
     OperatingMode,
 )
+from .control_plane import PlacementState
+
+
+def infer_placement(snapshot: ObservedSnapshot) -> PlacementState:
+    """Derive target placement while retaining the legacy public mode schema."""
+    if snapshot.gamescope.running is not True:
+        return PlacementState.DEGRADED
+    if snapshot.gamescope.confidence is not Confidence.VERIFIED:
+        return PlacementState.UNKNOWN
+
+    renderers = [gpu for gpu in snapshot.gpus if gpu.selected_for_render is True]
+    active_displays = [display for display in snapshot.displays if display.active is True]
+    if len(renderers) != 1 or len(active_displays) != 1:
+        return PlacementState.UNKNOWN
+
+    renderer = renderers[0]
+    display = active_displays[0]
+    if (
+        not renderer.present
+        or renderer.confidence is not Confidence.VERIFIED
+        or snapshot.gamescope.render_gpu_stable_id != renderer.stable_id
+        or display.connected is not True
+        or display.confidence is not Confidence.VERIFIED
+        or display.connector not in snapshot.gamescope.output_order
+    ):
+        return PlacementState.UNKNOWN
+
+    if renderer.role is GpuRole.INTERNAL and display.kind is DisplayKind.INTERNAL:
+        return PlacementState.PORTABLE
+    if renderer.role is GpuRole.EXTERNAL and display.kind is DisplayKind.INTERNAL:
+        return PlacementState.BOOSTED_HANDHELD
+    if renderer.role is GpuRole.INTERNAL and display.kind is DisplayKind.EXTERNAL:
+        return PlacementState.DOCKED_IGPU
+    if renderer.role is GpuRole.EXTERNAL and display.kind is DisplayKind.EXTERNAL:
+        return PlacementState.DOCKED_EGPU
+    return PlacementState.UNKNOWN
 
 
 def infer_operating_mode(snapshot: ObservedSnapshot) -> ModeInference:

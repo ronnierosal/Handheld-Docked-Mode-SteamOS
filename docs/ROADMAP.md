@@ -35,6 +35,7 @@ No broader label may be inferred from a narrower one.
 | Display/GPU transitions | Designed only | Transaction engine, rollback, simulation, then supervised hardware proof. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
+| Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Replay engine, fake clock/mechanisms, and durable storage adapter remain. |
 
 ## Required architecture corrections
 
@@ -89,6 +90,9 @@ Exit: warning and support UI are hardware tested without suspend, display
 mutation, process signaling, or eGPU removal.
 
 ### R1 — Read-only control-plane foundation
+
+**Status:** IN PROGRESS — typed contracts and bounded journal schema implemented;
+replay and remote capture remain.
 
 - Add typed placement state, workflow state, request intent, capability records,
   transition plans, deadlines, structured failures, and recovery outcomes.
@@ -191,4 +195,3 @@ After R0's supervised UI checks, implement **R1 only**. It creates the typed
 control-plane, transaction contract, replay simulator, and read-only remote
 capture needed by every later mutation without yet signaling a process,
 switching a display/GPU, requesting sleep, or removing hardware.
-
