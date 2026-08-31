@@ -7,14 +7,24 @@ detects current hardware and gaming state, explains the safest available action,
 and eventually performs verified, recoverable transitions without requiring the
 player to understand Linux display or GPU internals.
 
-## User-facing modes
+## Target user-facing placement
 
 - **Portable:** internal GPU renders to the internal panel.
 - **Boosted Handheld:** a verified eGPU renders to the internal panel.
-- **TV Docked:** a verified eGPU renders to a directly attached external display.
+- **Docked-iGPU:** the current game remains on the internal GPU while its
+  presentation is verified on the external display.
+- **Docked-eGPU:** a verified eGPU renders to its directly attached external
+  display.
 
 These labels are derived only from independently observed render-GPU and display
 state. Incomplete or conflicting evidence is reported as Unknown or Degraded.
+The current executable `TV Docked` label corresponds only to the target
+Docked-eGPU placement. Docked-iGPU is research, not an implemented claim.
+
+Connecting, Preparing to disconnect, Safe to disconnect, Returning to portable,
+Sleep pending disconnect, Action required, and Failure are workflow phases, not
+placement modes. HDM keeps both dimensions visible internally so a pending or
+failed operation cannot overwrite observed hardware truth.
 
 ## Product behavior
 
@@ -61,6 +71,11 @@ Read-only responsiveness instrumentation, adaptive Decky refresh, progressive
 connection states, and the [privacy-safe support bundle](SUPPORT_BUNDLE.md) are
 also implemented in 0.2. They do not authorize display/GPU mutation, process
 signals, or live hardware removal.
+
+The reconciled product ordering and evidence status are maintained in the
+[authoritative roadmap](ROADMAP.md). Its staged
+[deployment and validation strategy](DEPLOYMENT_VALIDATION.md) is a release
+gate for hardware-facing work.
 
 ## Non-goals for the initial release
 

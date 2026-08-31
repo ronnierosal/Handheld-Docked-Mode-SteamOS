@@ -26,6 +26,14 @@ Physical connection, display target, render GPU, Gamescope, workload, support,
 and health are separate axes. `OperatingMode` is derived only from an exact
 combination of verified axes.
 
+The target model also keeps **placement** separate from **workflow phase**.
+Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
+Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,
+SleepPendingDisconnect, ActionRequired, and Failure describe a request's
+progress. The current code implements only the original placement inference and
+transition vocabulary. The typed split, journal, and replay engine are the next
+read-only control-plane milestone; see [Authoritative roadmap](ROADMAP.md).
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a
@@ -51,6 +59,11 @@ policy; procfs and sysfs enumeration remain read-only SteamOS adapters.
 
 Hardware profiles classify observations and quirks. They do not select devices
 by enumeration order.
+
+Profiles will expose conservative capabilities for eGPU transport, presentation,
+audio, controller handoff, sleep behavior, and removal. A capability must be
+supported by mechanism and evidence; unknown hardware receives no mutation
+capability. Host and eGPU capabilities compose instead of forking the core.
 
 ## Privilege boundary
 

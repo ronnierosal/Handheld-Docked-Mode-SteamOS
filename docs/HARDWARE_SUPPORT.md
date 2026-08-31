@@ -26,7 +26,7 @@ downstream `8086:15ef` bridge functions. The USB4 host-router record has no
 external-device identity and is not counted as a connected peripheral; any
 other unidentified authorized USB4 node remains a certification blocker.
 
-## Validated reference behavior
+## eGPUBridge reference evidence
 
 - Internal and G1-connected TV discovery
 - Portable ↔ TV output transitions in approximately 4–6 seconds
@@ -35,11 +35,19 @@ other unidentified authorized USB4 node remains a certification blocker.
 - Running-game transition blocking without restarting Gamescope
 - Idempotent internal restore
 
+These observations informed HDM design but are not proof that native HDM has
+implemented or certified the corresponding mutations. Current native HDM
+hardware evidence is listed in the dated validation record and the
+[authoritative roadmap](ROADMAP.md).
+
 ## Unproven or unsupported
 
 - G1 rendering to the Ally internal panel remains unproven.
 - Mid-game iGPU presentation on the TV remains a research case.
 - Physical live eGPU removal is unsupported.
+- The G1 currently requires a shutdown-before-disconnect policy. It must not be
+  assigned a live-removal capability without a separate approved teardown
+  experiment and clean recovery evidence.
 - Other hosts, eGPUs, and SteamOS versions are not certified by inference.
 
 All addresses and connector names observed during validation are ephemeral and

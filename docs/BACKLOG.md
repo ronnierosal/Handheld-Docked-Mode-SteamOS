@@ -1,5 +1,10 @@
 # Backlog
 
+This file retains detailed work-item history and acceptance notes. The ordered
+cross-feature status and dependency plan is maintained in the
+[authoritative roadmap](ROADMAP.md); deployment gates are maintained in
+[Deployment and validation strategy](DEPLOYMENT_VALIDATION.md).
+
 ## Add guarded eGPU process closure
 
 **Status:** DESIGN SPECIFIED — process signals remain gated
@@ -151,6 +156,6 @@ Implemented software evidence:
 - Deterministic adversarial privacy, size, token expiry/replay, rotation, version
   allowlist, exact-byte save, collision, and path-boundary tests.
 
-Deployment and controller-visible preview/save acceptance remain pending while
-the user is away. No support bundle file was created on the Ally without player
-review.
+Controller-visible preview/save acceptance remains pending. The installed
+visible-parent correction is documented, but no support bundle file was created
+on the Ally without player review.

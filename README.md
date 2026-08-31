@@ -11,8 +11,9 @@ HDM 0.2 is in development as a Decky Loader-native safety plugin. The current co
 Gamescope, Steam game scopes, PCI/USB4 topology, and the certified Ally X/GPD G1
 profile; aggregates a typed snapshot; derives a confidence-aware mode; and holds
 a crash-safe login1 sleep inhibitor plus Steam's native preflight blocker while
-the G1 is attached. The preflight lifecycle has passed its non-sleep hardware
-proof; the supervised request proof remains pending. HDM does not switch
+the G1 is attached. The preflight lifecycle and blocking/display-safety behavior
+have passed supervised hardware checks; the corrected persistent warning still
+needs one visible proof. HDM does not switch
 displays, restart Gamescope, select GPUs, close processes, or support live eGPU
 removal.
 
@@ -40,6 +41,8 @@ Start with:
 - [Hardware support](docs/HARDWARE_SUPPORT.md)
 - [Read-only diagnostics](docs/DIAGNOSTICS.md)
 - [Privacy-safe support bundle](docs/SUPPORT_BUNDLE.md)
+- [Authoritative roadmap](docs/ROADMAP.md)
+- [Deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 

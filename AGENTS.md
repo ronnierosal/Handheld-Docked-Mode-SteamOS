@@ -12,6 +12,8 @@ project; eGPUBridge is reference evidence, not the architecture to reproduce.
 - Component and state design: `docs/ARCHITECTURE.md`
 - Certified hardware claims: `docs/HARDWARE_SUPPORT.md`
 - Diagnostics contract: `docs/DIAGNOSTICS.md`
+- Ordered status and dependencies: `docs/ROADMAP.md`
+- Hardware deployment gates: `docs/DEPLOYMENT_VALIDATION.md`
 - Current executable behavior: code plus tests; docs and memory never override it
 
 ## Required rules
