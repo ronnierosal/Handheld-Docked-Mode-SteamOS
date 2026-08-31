@@ -14,7 +14,9 @@ from hdm.domain.control_plane import (  # noqa: E402
     PlacementState,
     PlannedStep,
     RemovalBehavior,
+    TransitionBinding,
     TransitionPlan,
+    TransitionStepCode,
     UNKNOWN_EGPU_CAPABILITIES,
     UNKNOWN_HOST_CAPABILITIES,
     WorkflowState,
@@ -99,14 +101,21 @@ class TransitionContractTests(unittest.TestCase):
                 target_placement=PlacementState.DOCKED_EGPU,
                 workflow_state=WorkflowState.CONNECTING,
                 steps=(
-                    PlannedStep("observe", 1000),
-                    PlannedStep("observe", 2000),
+                    PlannedStep(
+                        TransitionStepCode.PRESENTATION_RESTORE_PORTABLE, 1000
+                    ),
+                    PlannedStep(
+                        TransitionStepCode.PRESENTATION_RESTORE_PORTABLE, 2000
+                    ),
+                ),
+                binding=TransitionBinding(
+                    "host", "egpu", "egpu-1", "igpu", "egpu-gpu", "panel", "tv"
                 ),
             )
 
     def test_step_deadline_must_be_positive(self):
         with self.assertRaisesRegex(ValueError, "positive"):
-            PlannedStep("observe", 0)
+            PlannedStep(TransitionStepCode.PRESENTATION_RESTORE_PORTABLE, 0)
 
     def test_recovery_deadline_must_be_positive(self):
         with self.assertRaisesRegex(ValueError, "recovery deadline"):

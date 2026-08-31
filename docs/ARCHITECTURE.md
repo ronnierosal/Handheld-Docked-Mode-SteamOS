@@ -78,12 +78,15 @@ continue sleep. Even when the observed workflow is SleepPendingDisconnect, only
 the canonical reducer may continue the exact unexpired request after separate
 removal and Portable verification. Unknown placement fails closed.
 
-The dormant manual planner supports only the bounded Portable↔Docked-eGPU path
-and verified no-ops. A mutating plan requires exact host/eGPU identity,
-Verified display-handoff capability, idle game state, target display/render
-readiness, and a verified source-placement rollback path. Docked-iGPU, Boosted Handheld,
-unknown, and degraded sources are not silently coerced into that path. The real
-Ally X/G1 profile remains blocked because display handoff is Experimental.
+The manual planner supports only the bounded Portable↔Docked-eGPU path and
+verified no-ops. A mutating plan requires exact runtime host/eGPU profile
+resolution, an ephemeral binding to every participating GPU/display, idle game
+state, target readiness, and a verified source-placement rollback path.
+Verified capability is accepted normally. One explicitly confirmed,
+two-minute, single-use backend permit can authorize an exact Experimental plan
+without promoting that capability. Docked-iGPU, Boosted Handheld, unknown, and
+degraded sources are not silently coerced into this path. See
+[Guarded experimental transitions](EXPERIMENTAL_TRANSITIONS.md).
 
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is
@@ -120,7 +123,8 @@ missing, conflicting, or ambiguous. Process classification is pure domain
 policy; procfs and sysfs enumeration remain read-only SteamOS adapters.
 
 Hardware profiles classify observations and quirks. They do not select devices
-by enumeration order.
+by enumeration order. The runtime registry selects a known profile only from
+the exact current snapshot; ambiguity receives unknown capabilities.
 
 Profiles will expose conservative capabilities for eGPU transport, presentation,
 audio, controller handoff, sleep behavior, and removal. A capability must be

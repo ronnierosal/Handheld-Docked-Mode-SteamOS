@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from hdm.domain.control_plane import (  # noqa: E402
     CapabilitySupport,
     EgpuCapabilities,
+    ExperimentalTransitionPermit,
     HostCapabilities,
     PlacementState,
     compose_capabilities,
@@ -42,8 +43,13 @@ def verified_capabilities():
 def evidence(**changes):
     value = ManualTransitionEvidence(
         observed_generation="generation-1",
-        exact_host_identity_verified=True,
-        exact_egpu_identity_verified=True,
+        host_profile_id="test-host",
+        egpu_profile_id="test-egpu",
+        egpu_stable_id="egpu-1",
+        internal_gpu_stable_id="internal-gpu",
+        external_gpu_stable_id="egpu-1",
+        internal_display_stable_id="internal-panel",
+        external_display_stable_id="external-display",
         external_display_ready_verified=True,
         egpu_render_ready_verified=True,
         internal_display_ready_verified=True,
@@ -59,6 +65,7 @@ def decide(
     target=PlacementState.DOCKED_EGPU,
     capabilities=None,
     facts=None,
+    experimental_permit=None,
 ):
     return plan_manual_transition(
         plan_id="operation-1",
@@ -67,6 +74,7 @@ def decide(
         target=target,
         capabilities=capabilities or verified_capabilities(),
         evidence=facts or evidence(),
+        experimental_permit=experimental_permit,
     )
 
 
@@ -85,7 +93,15 @@ class ManualTransitionPlanningTests(unittest.TestCase):
         )
 
     def test_real_ally_g1_capability_remains_blocked_as_experimental(self):
-        decision = decide(capabilities=compose_capabilities(ALLY_X, GPD_G1))
+        capabilities = compose_capabilities(ALLY_X, GPD_G1)
+        decision = decide(
+            capabilities=capabilities,
+            facts=dataclasses.replace(
+                evidence(),
+                host_profile_id=capabilities.host_profile_id,
+                egpu_profile_id=capabilities.egpu_profile_id,
+            ),
+        )
         self.assertIsNone(decision.plan)
         self.assertIn(
             "capability.display_handoff_unverified",
@@ -102,8 +118,9 @@ class ManualTransitionPlanningTests(unittest.TestCase):
     def test_dock_requires_identity_display_render_and_recovery_evidence(self):
         decision = decide(
             facts=evidence(
-                exact_host_identity_verified=False,
-                exact_egpu_identity_verified=False,
+                host_profile_id="",
+                egpu_profile_id="",
+                egpu_stable_id="",
                 external_display_ready_verified=False,
                 egpu_render_ready_verified=False,
                 source_recovery_ready_verified=False,
@@ -116,7 +133,8 @@ class ManualTransitionPlanningTests(unittest.TestCase):
 
         subordinate = decide(
             facts=evidence(
-                exact_egpu_identity_verified=False,
+                egpu_profile_id="",
+                egpu_stable_id="",
                 external_display_ready_verified=False,
                 egpu_render_ready_verified=False,
                 source_recovery_ready_verified=False,
@@ -129,6 +147,7 @@ class ManualTransitionPlanningTests(unittest.TestCase):
                 "identity.egpu_unverified",
                 "display.external_unready",
                 "render.egpu_unready",
+                "identity.transition_binding_incomplete",
             ),
         )
 
@@ -164,7 +183,9 @@ class ManualTransitionPlanningTests(unittest.TestCase):
             target=PlacementState.PORTABLE,
             capabilities=compose_capabilities(ALLY_X, GPD_G1),
             facts=evidence(
-                exact_egpu_identity_verified=False,
+                host_profile_id=ALLY_X.profile_id,
+                egpu_profile_id="",
+                egpu_stable_id="",
                 external_display_ready_verified=False,
                 egpu_render_ready_verified=False,
                 internal_display_ready_verified=False,
@@ -174,6 +195,30 @@ class ManualTransitionPlanningTests(unittest.TestCase):
         )
         self.assertIsNotNone(decision.plan)
         self.assertEqual(decision.plan.steps, ())
+
+    def test_exact_permit_can_plan_experimental_ally_g1_path(self):
+        capabilities = compose_capabilities(ALLY_X, GPD_G1)
+        facts = dataclasses.replace(
+            evidence(),
+            host_profile_id=capabilities.host_profile_id,
+            egpu_profile_id=capabilities.egpu_profile_id,
+        )
+        permit = ExperimentalTransitionPermit(
+            permit_id="permit-1",
+            plan_id="operation-1",
+            observed_generation=facts.observed_generation,
+            target_placement=PlacementState.DOCKED_EGPU,
+            host_profile_id=capabilities.host_profile_id,
+            egpu_profile_id=capabilities.egpu_profile_id,
+            egpu_stable_id=facts.egpu_stable_id,
+        )
+        decision = decide(
+            capabilities=capabilities,
+            facts=facts,
+            experimental_permit=permit,
+        )
+        self.assertIsNotNone(decision.plan)
+        self.assertTrue(decision.plan.experimental)
 
 
 if __name__ == "__main__":

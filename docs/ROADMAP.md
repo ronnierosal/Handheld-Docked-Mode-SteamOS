@@ -32,7 +32,7 @@ No broader label may be inferred from a narrower one.
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
-| Display/GPU transitions | Designed only | Transaction engine, rollback, simulation, then supervised hardware proof. |
+| Display/GPU transitions | Runtime profile/binding and guarded Experimental planning implemented | Durable orchestrator and presentation mechanism remain before supervised hardware proof. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Live transition orchestration remains gated. |
@@ -140,11 +140,12 @@ disposable-process validation. This does not enable physical removal.
 
 ### R3 — Manual verified transition engine and recovery
 
-**Status:** PURE PLANNER + GENERIC REPLAY IMPLEMENTED — a one-step manual
-Portable↔Docked-eGPU plan is produced only from verified identity, capability,
-game, display/render, and source-rollback evidence. The current Ally/G1
-profile remains blocked as Experimental. No presentation mechanism, live
-orchestrator, store wiring, or RPC exists.
+**Status:** RUNTIME-BOUND PLANNER + GENERIC REPLAY IMPLEMENTED — a one-step
+manual Portable↔Docked-eGPU plan is produced only from exact runtime profile,
+device/display binding, game, display/render, and source-rollback evidence. A
+two-minute single-use backend permit can authorize one explicitly confirmed
+Experimental Ally/G1 plan without promoting the capability. No presentation
+mechanism, live orchestrator, store wiring, or RPC exists.
 
 - Implement one idempotent Portable/Docked transition path with journal,
   precondition re-observation, verification, rollback, and crash recovery.

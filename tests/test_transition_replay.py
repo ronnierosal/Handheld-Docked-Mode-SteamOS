@@ -13,8 +13,10 @@ from hdm.application.transition_replay import TransitionReplaySimulator  # noqa:
 from hdm.domain.control_plane import (  # noqa: E402
     PlacementState,
     PlannedStep,
+    TransitionBinding,
     TransitionOutcomeKind,
     TransitionPlan,
+    TransitionStepCode,
     WorkflowState,
 )
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
@@ -87,6 +89,9 @@ def dock_plan(*steps: PlannedStep) -> TransitionPlan:
         target_placement=PlacementState.DOCKED_EGPU,
         workflow_state=WorkflowState.CONNECTING,
         steps=steps,
+        binding=TransitionBinding(
+            "host", "egpu", "egpu-1", "internal-gpu", "egpu-1", "panel", "tv"
+        ),
     )
 
 
@@ -110,7 +115,9 @@ class TransitionReplayTests(unittest.TestCase):
             mechanism,
             dock_plan(
                 PlannedStep(
-                    "display_handoff", 100, expected_placement=PlacementState.DOCKED_EGPU
+                    TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                    100,
+                    expected_placement=PlacementState.DOCKED_EGPU,
                 )
             ),
         )
@@ -128,7 +135,9 @@ class TransitionReplayTests(unittest.TestCase):
         result = self.run_replay(
             observations,
             mechanism,
-            dock_plan(PlannedStep("display_handoff", 100)),
+            dock_plan(
+                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+            ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.BLOCKED)
         self.assertEqual(mechanism.applied, [])
@@ -148,7 +157,9 @@ class TransitionReplayTests(unittest.TestCase):
             mechanism,
             dock_plan(
                 PlannedStep(
-                    "display_handoff", 100, expected_placement=PlacementState.DOCKED_EGPU
+                    TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                    100,
+                    expected_placement=PlacementState.DOCKED_EGPU,
                 )
             ),
         )
@@ -170,7 +181,9 @@ class TransitionReplayTests(unittest.TestCase):
         result = self.run_replay(
             observations,
             mechanism,
-            dock_plan(PlannedStep("display_handoff", 100)),
+            dock_plan(
+                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+            ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.RECOVERED)
         self.assertNotIn(
@@ -192,7 +205,9 @@ class TransitionReplayTests(unittest.TestCase):
         result = self.run_replay(
             observations,
             mechanism,
-            dock_plan(PlannedStep("display_handoff", 100)),
+            dock_plan(
+                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+            ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.FAILED)
         self.assertEqual(result.outcome.workflow_state, WorkflowState.ACTION_REQUIRED)
@@ -210,7 +225,9 @@ class TransitionReplayTests(unittest.TestCase):
         result = self.run_replay(
             observations,
             mechanism,
-            dock_plan(PlannedStep("display_handoff", 100)),
+            dock_plan(
+                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+            ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.FAILED)
         self.assertEqual(result.outcome.workflow_state, WorkflowState.ACTION_REQUIRED)
@@ -226,7 +243,9 @@ class TransitionReplayTests(unittest.TestCase):
             [(101, MechanismResult(True, "display.applied"))],
             (51, MechanismResult(True, "recovery.internal_restored")),
         )
-        plan = dock_plan(PlannedStep("display_handoff", 100))
+        plan = dock_plan(
+            PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+        )
         plan = TransitionPlan(
             plan_id=plan.plan_id,
             request_id=plan.request_id,
@@ -236,6 +255,7 @@ class TransitionReplayTests(unittest.TestCase):
             workflow_state=plan.workflow_state,
             steps=plan.steps,
             recovery_deadline_ms=50,
+            binding=plan.binding,
         )
         result = self.run_replay(observations, mechanism, plan)
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.FAILED)

@@ -85,6 +85,62 @@ class TransitionOutcomeKind(StrEnum):
     FAILED = "failed"
 
 
+class TransitionStepCode(StrEnum):
+    PRESENTATION_APPLY_DOCKED_EGPU = "presentation.apply_docked_egpu"
+    PRESENTATION_RESTORE_PORTABLE = "presentation.restore_portable"
+
+
+@dataclass(frozen=True, slots=True)
+class TransitionBinding:
+    """Ephemeral exact identities used by a mechanism, never by the journal."""
+
+    host_profile_id: str
+    egpu_profile_id: str
+    egpu_stable_id: str
+    internal_gpu_stable_id: str
+    external_gpu_stable_id: str
+    internal_display_stable_id: str
+    external_display_stable_id: str
+
+    def __post_init__(self) -> None:
+        if not all(
+            (
+                self.host_profile_id,
+                self.egpu_profile_id,
+                self.egpu_stable_id,
+                self.internal_gpu_stable_id,
+                self.external_gpu_stable_id,
+                self.internal_display_stable_id,
+                self.external_display_stable_id,
+            )
+        ):
+            raise ValueError("transition binding requires every exact identity")
+
+
+@dataclass(frozen=True, slots=True)
+class ExperimentalTransitionPermit:
+    permit_id: str
+    plan_id: str
+    observed_generation: str
+    target_placement: PlacementState
+    host_profile_id: str
+    egpu_profile_id: str
+    egpu_stable_id: str
+
+    def __post_init__(self) -> None:
+        if not all(
+            (
+                self.permit_id,
+                self.plan_id,
+                self.observed_generation,
+                self.host_profile_id,
+                self.egpu_profile_id,
+                self.egpu_stable_id,
+            )
+        ):
+            raise ValueError("experimental transition permit is incomplete")
+
+
 @dataclass(frozen=True, slots=True)
 class HostCapabilities:
     profile_id: str
@@ -144,14 +200,14 @@ class TransitionRequest:
 
 @dataclass(frozen=True, slots=True)
 class PlannedStep:
-    code: str
+    code: TransitionStepCode
     deadline_ms: int
     requires_consent: bool = False
     expected_placement: PlacementState | None = None
 
     def __post_init__(self) -> None:
-        if not self.code:
-            raise ValueError("planned step code is required")
+        if not isinstance(self.code, TransitionStepCode):
+            raise ValueError("planned step code must be a supported typed mechanism")
         if self.deadline_ms <= 0:
             raise ValueError("planned step deadline must be positive")
 
@@ -166,6 +222,8 @@ class TransitionPlan:
     workflow_state: WorkflowState
     steps: tuple[PlannedStep, ...] = field(default_factory=tuple)
     recovery_deadline_ms: int = 10_000
+    binding: TransitionBinding | None = None
+    experimental: bool = False
 
     def __post_init__(self) -> None:
         if not self.plan_id or not self.request_id or not self.observed_generation:
@@ -175,6 +233,8 @@ class TransitionPlan:
         codes = tuple(step.code for step in self.steps)
         if len(codes) != len(set(codes)):
             raise ValueError("planned step codes must be unique")
+        if self.steps and self.binding is None:
+            raise ValueError("a mutating transition plan requires an exact binding")
 
 
 @dataclass(frozen=True, slots=True)
