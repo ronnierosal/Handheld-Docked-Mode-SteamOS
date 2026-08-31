@@ -2,7 +2,7 @@
 
 Support submission is not enabled. HDM currently previews, copies, and saves a
 bundle locally. This document defines the later security boundary without
-embedding a server address, credential, upload token, or network adapter.
+embedding a server address, credential, or upload token.
 
 ## Separate approval
 
@@ -46,10 +46,25 @@ The client parser accepts only the exact success response and a bounded
 `HDM-[A-Z0-9]` report ID. Redirect URLs, object URLs, extra fields, and
 client-chosen IDs are rejected.
 
+## Dormant client adapter
+
+A fixed-configuration HTTPS adapter now implements the client side of this
+boundary. It accepts only a public DNS HTTPS URL on port 443 with a bounded
+path and no credentials, query, fragment, or IP-literal host. It sends the
+exact approved bytes once with their size and SHA-256, uses the platform TLS
+verifier, follows no redirects, limits the response to 1 KiB, requires exact
+`application/json`, and reduces transport failures to categorical codes that
+do not expose response bodies or endpoint details.
+
+The endpoint is construction-time backend configuration, never part of the
+approval or a frontend parameter. The production plugin does not construct
+this adapter.
+
 ## Current boundary
 
-The approval store, checksum/size revalidation, strict response parser, and an
-unimplemented fixed-configuration port are unit tested. There is no HTTP client,
-Worker project, R2 bucket, endpoint, DNS, credential, public RPC, or UI action.
+The approval store, checksum/size revalidation, strict response parser, fixed
+HTTPS adapter, and unimplemented fixed-configuration port are unit tested.
+There is no configured endpoint, Worker project, R2 bucket, DNS, credential,
+public RPC, or UI action.
 Creating cloud resources and choosing production abuse/rate-limit settings
 require a separate deployment decision and account authorization.
