@@ -14,6 +14,12 @@ from ..domain.models import ObservedSnapshot
 class VersionedObservation:
     generation: str
     snapshot: ObservedSnapshot
+    observation_id: str = ""
+
+    @property
+    def sample_id(self) -> str:
+        """Identify one collection; legacy fixtures fall back to generation."""
+        return self.observation_id or self.generation
 
 
 @dataclass(frozen=True, slots=True)

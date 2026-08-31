@@ -75,6 +75,10 @@ Runtime observation generations hash the complete semantic snapshot but exclude
 the collection timestamp. Two unchanged polls can therefore satisfy a
 preview/approval boundary, while any game, GPU, display, Gamescope, readiness,
 sleep-guard, client, or blocker change invalidates the generation.
+Each observation also carries a separate per-scan sample ID that includes the
+collection timestamp. Operations such as process signaling use that sample ID
+to prove a new scan occurred even when its semantic facts are unchanged. A
+semantic generation is never treated as proof of a fresh scan.
 
 The dormant presentation mechanism now composes fresh binding/profile
 revalidation, exact Gamescope-user revalidation, reversible integration status,

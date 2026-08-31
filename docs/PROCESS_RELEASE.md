@@ -33,6 +33,12 @@ approved facts. After every signal it must re-scan immediately. PID reuse, a new
 client, changed resources, storage use, incomplete scans, stale generation, or
 changed eGPU identity stops the operation.
 
+HDM keeps semantic generation and scan freshness separate. Approval and target
+facts remain bound to the semantic client fingerprint, while the process runner
+requires a different per-scan sample ID before the first signal and after every
+signal. An unchanged semantic snapshot can therefore be freshly observed
+without weakening the exact-client checks.
+
 Force approval is a second flow. It requires a recorded prior graceful attempt,
 a post-graceful observation, and a target set limited to remaining previously
 attempted instances. It cannot add a process.

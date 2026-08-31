@@ -168,7 +168,7 @@ class ProcessReleaseReplaySimulator:
             revalidate_process_release(
                 approval,
                 current.snapshot,
-                observed_generation=current.generation,
+                observed_generation=current.sample_id,
             )
         except ValueError:
             record("approval.revalidation_failed", outcome="blocked")
@@ -192,7 +192,7 @@ class ProcessReleaseReplaySimulator:
                 live_target = revalidate_process_release_target(
                     approval,
                     current.snapshot,
-                    observed_generation=current.generation,
+                    observed_generation=current.sample_id,
                     previous_generation=previous_generation,
                     target=target,
                 )
@@ -242,7 +242,7 @@ class ProcessReleaseReplaySimulator:
             started = self._clock.now_ms()
             signal_result = self._signals.signal(live_target, action)
             elapsed = self._clock.now_ms() - started
-            signal_generation = current.generation
+            signal_generation = current.sample_id
             rescanned = self._observations.observe()
             if rescanned is None:
                 record(
@@ -270,7 +270,7 @@ class ProcessReleaseReplaySimulator:
                 revalidate_process_release_rescan(
                     approval,
                     current.snapshot,
-                    observed_generation=current.generation,
+                    observed_generation=current.sample_id,
                     previous_generation=signal_generation,
                 )
             except ValueError:

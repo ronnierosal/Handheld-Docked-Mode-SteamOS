@@ -38,6 +38,8 @@ attach path can currently issue or consume the permit.
 The observation generation intentionally excludes only `observed_at`. Consent
 therefore survives a timestamp-only refresh but not a semantic hardware, game,
 session, blocker, or safety-evidence change.
+The companion per-scan sample ID includes `observed_at` and is reserved for
+workflows that must prove a new collection, such as process release.
 
 ## Presentation shim boundary
 

@@ -40,6 +40,7 @@ class TransitionRuntimeAdapterTests(unittest.TestCase):
             Discovery(snapshot_from_dict(value))
         ).observe()
         self.assertEqual(one.generation, timestamp_only.generation)
+        self.assertNotEqual(one.sample_id, timestamp_only.sample_id)
         value["game_state"] = "running"
         changed = SnapshotTransitionObservationAdapter(
             Discovery(snapshot_from_dict(value))
