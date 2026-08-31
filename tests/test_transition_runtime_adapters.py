@@ -26,7 +26,7 @@ class Discovery:
 
 
 class TransitionRuntimeAdapterTests(unittest.TestCase):
-    def test_generation_binds_the_complete_snapshot(self):
+    def test_generation_ignores_timestamp_but_binds_semantic_evidence(self):
         value = json.loads(
             (ROOT / "tests" / "fixtures" / "portable.json").read_text()
         )
@@ -36,6 +36,11 @@ class TransitionRuntimeAdapterTests(unittest.TestCase):
         two = adapter.observe()
         self.assertEqual(one.generation, two.generation)
         value["observed_at"] = "2026-08-31T12:00:01Z"
+        timestamp_only = SnapshotTransitionObservationAdapter(
+            Discovery(snapshot_from_dict(value))
+        ).observe()
+        self.assertEqual(one.generation, timestamp_only.generation)
+        value["game_state"] = "running"
         changed = SnapshotTransitionObservationAdapter(
             Discovery(snapshot_from_dict(value))
         ).observe()

@@ -17,8 +17,10 @@ class SnapshotTransitionObservationAdapter:
 
     def observe(self) -> VersionedObservation:
         snapshot = self._discovery.collect_snapshot()
+        semantic = snapshot_to_dict(snapshot)
+        semantic.pop("observed_at", None)
         encoded = json.dumps(
-            snapshot_to_dict(snapshot),
+            semantic,
             sort_keys=True,
             separators=(",", ":"),
             ensure_ascii=True,

@@ -35,6 +35,10 @@ The planner rejects a missing, stale, or differently bound permit. This is not
 a general `allow_experimental` frontend boolean. No public RPC or automatic
 attach path can currently issue or consume the permit.
 
+The observation generation intentionally excludes only `observed_at`. Consent
+therefore survives a timestamp-only refresh but not a semantic hardware, game,
+session, blocker, or safety-evidence change.
+
 ## Presentation shim boundary
 
 The plugin package contains an inactive `bin/gamescope` shim and a fixed-path

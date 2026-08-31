@@ -71,6 +71,11 @@ commit-persistence failure. Startup recovery distinguishes pre-mutation
 interruption from a persisted attempted step and never resumes the original
 request automatically. The mechanism port is still unwired.
 
+Runtime observation generations hash the complete semantic snapshot but exclude
+the collection timestamp. Two unchanged polls can therefore satisfy a
+preview/approval boundary, while any game, GPU, display, Gamescope, readiness,
+sleep-guard, client, or blocker change invalidates the generation.
+
 The dormant presentation mechanism now composes fresh binding/profile
 revalidation, exact Gamescope-user revalidation, reversible integration status,
 daemon-reload, fixed-unit verification, atomic target configuration, and a
