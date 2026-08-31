@@ -121,6 +121,45 @@ class GamescopeDiscoveryTests(unittest.TestCase):
 
 
 class GameScopeDiscoveryTests(unittest.TestCase):
+    def test_reads_game_scope_from_the_gamescope_users_cgroup(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            app_slice = (
+                root
+                / "user.slice"
+                / "user-1000.slice"
+                / "user@1000.service"
+                / "app.slice"
+            )
+            (app_slice / "app-steam-app2909400-43899.scope").mkdir(parents=True)
+
+            class UnusedRunner:
+                def run(self, argv):
+                    raise AssertionError("cgroup discovery must not invoke systemctl")
+
+            result = SystemdGameScopeDiscovery(
+                UnusedRunner(),
+                cgroup_root=root,
+            ).scan(user_uid=1000)
+
+            self.assertEqual(result.state, GameState.RUNNING)
+            self.assertEqual(result.scopes, ("app-steam-app2909400-43899.scope",))
+
+    def test_empty_readable_user_cgroup_means_idle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (
+                root
+                / "user.slice"
+                / "user-1000.slice"
+                / "user@1000.service"
+                / "app.slice"
+            ).mkdir(parents=True)
+
+            result = SystemdGameScopeDiscovery(cgroup_root=root).scan(user_uid=1000)
+
+            self.assertEqual(result.state, GameState.IDLE)
+
     def test_recognizes_legacy_current_and_unknown_current_scopes(self):
         output = """
 app-steam-123.scope loaded active running legacy

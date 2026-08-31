@@ -40,3 +40,5 @@ jobs:
         run: pnpm build
       - name: Check Decky package contract
         run: python scripts/check_plugin_package.py .
+      - name: Build Decky archive
+        run: python scripts/build_plugin.py

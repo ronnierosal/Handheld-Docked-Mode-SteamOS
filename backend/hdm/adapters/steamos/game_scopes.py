@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable, Protocol, Sequence
 
 from ...domain.models import GameState
@@ -66,10 +67,12 @@ class SystemdGameScopeDiscovery:
         runner: Runner | None = None,
         effective_uid: Callable[[], int] | None = None,
         username_for_uid: Callable[[int], str] | None = None,
+        cgroup_root: Path = Path("/sys/fs/cgroup"),
     ) -> None:
         self._runner = runner or ReadOnlyCommandRunner()
         self._effective_uid = effective_uid or getattr(os, "geteuid", lambda: -1)
         self._username_for_uid = username_for_uid or self._resolve_username
+        self._cgroup_root = cgroup_root
 
     @staticmethod
     def _resolve_username(uid: int) -> str:
@@ -92,6 +95,10 @@ class SystemdGameScopeDiscovery:
         )
 
     def scan(self, user_uid: int | None = None) -> GameScopeScan:
+        if user_uid is not None:
+            cgroup_scan = self._scan_cgroups(user_uid)
+            if cgroup_scan is not None:
+                return cgroup_scan
         command = self.COMMAND
         if self._effective_uid() == 0 and user_uid is not None:
             try:
@@ -114,3 +121,30 @@ class SystemdGameScopeDiscovery:
                 error=f"Could not verify Steam game scopes: {detail}",
             )
         return parse_game_scopes(result.stdout)
+
+    def _scan_cgroups(self, user_uid: int) -> GameScopeScan | None:
+        """Read current user-unit cgroups without crossing a privilege boundary."""
+        user_service = (
+            self._cgroup_root
+            / "user.slice"
+            / f"user-{user_uid}.slice"
+            / f"user@{user_uid}.service"
+        )
+        if not user_service.is_dir():
+            return None
+        errors: list[OSError] = []
+        scope_names: list[str] = []
+
+        def record_error(error: OSError) -> None:
+            errors.append(error)
+
+        for _, directories, _ in os.walk(
+            user_service, topdown=True, onerror=record_error, followlinks=False
+        ):
+            scope_names.extend(name for name in directories if name.endswith(".scope"))
+        if errors:
+            return GameScopeScan(
+                GameState.UNKNOWN,
+                error="Could not completely inspect Steam game cgroups.",
+            )
+        return parse_game_scopes("\n".join(scope_names))

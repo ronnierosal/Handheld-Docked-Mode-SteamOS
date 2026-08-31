@@ -55,8 +55,8 @@ by enumeration order.
 Read-only discovery uses the least privilege that can verify each source. The
 CLI runs unprivileged and reports protected Gamescope environment state as
 unknown. The Decky adapter runs as root so it can read that environment, then
-queries the Gamescope owner's user systemd bus through a strict command
-allowlist. Its only public RPC is `get_snapshot`.
+reads the Gamescope owner's user cgroups directly. A strict user-systemd command
+allowlist remains only as a fallback. Its only public RPC is `get_snapshot`.
 
 Future mutation is exposed through a small, typed API with no arbitrary command
 or path inputs. The Decky entrypoint remains an adapter; it is not the domain or

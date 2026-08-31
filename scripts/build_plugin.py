@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "out" / "HandheldDockMode-0.1.0.zip"
+PLUGIN_DIRECTORY = "HandheldDockMode"
 TOP_LEVEL_FILES = (
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -30,6 +31,11 @@ def included_files() -> tuple[Path, ...]:
     return tuple(paths)
 
 
+def archive_name(path: Path) -> str:
+    """Place every file below Decky's single required plugin directory."""
+    return f"{PLUGIN_DIRECTORY}/{path.relative_to(ROOT).as_posix()}"
+
+
 def main() -> int:
     manifest = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
     if manifest.get("flags") != ["root"]:
@@ -41,10 +47,17 @@ def main() -> int:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(OUTPUT, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in files:
-            info = zipfile.ZipInfo(path.relative_to(ROOT).as_posix())
+            info = zipfile.ZipInfo(archive_name(path))
             info.date_time = (2026, 1, 1, 0, 0, 0)
             info.external_attr = 0o100644 << 16
             archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED)
+    with zipfile.ZipFile(OUTPUT) as archive:
+        names = archive.namelist()
+        top_levels = {name.split("/", 1)[0] for name in names}
+        if top_levels != {PLUGIN_DIRECTORY}:
+            raise SystemExit("Decky archive must contain one top-level plugin directory")
+        if f"{PLUGIN_DIRECTORY}/plugin.json" not in names:
+            raise SystemExit("Decky archive is missing its nested plugin.json")
     print(OUTPUT)
     return 0
 

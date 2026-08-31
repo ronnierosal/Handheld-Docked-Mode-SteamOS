@@ -41,14 +41,18 @@ hardware support tier, and blockers. Refresh is its only action.
 - `/sys/bus/thunderbolt/devices`: authorization and hashed USB4 identity
 - `/proc/<pid>/cmdline`: unique Steam Gamescope session and output arguments
 - `/proc/<pid>/environ`: Mesa Vulkan selector cross-check
-- `systemctl --user list-units`: running Steam game scopes, queried in the
-  Gamescope owner's user bus when the adapter itself runs as root
+- `/sys/fs/cgroup/user.slice`: running Steam game scopes for the observed
+  Gamescope owner
+- `systemctl --user list-units`: fallback scope inventory when the user cgroup
+  hierarchy is unavailable
 
-The only subprocess command currently allowed is the exact read-only systemd
-scope inventory. It runs without a shell. The root delivery form uses a fixed
-`runuser`/`env` prefix whose username and UID are derived from the Gamescope
-process owner. All alternate commands and mutation-shaped arguments are rejected
-by the command boundary.
+The primary game detector reads the Gamescope owner's current cgroup hierarchy,
+which avoids crossing from Decky's root service into a user D-Bus session. The
+only subprocess fallback allowed is the exact read-only systemd scope inventory.
+It runs without a shell. The root fallback uses a fixed `runuser`/`env` prefix
+whose username and UID are derived from the Gamescope process owner. All
+alternate commands and mutation-shaped arguments are rejected by the command
+boundary.
 
 ## Interpretation
 

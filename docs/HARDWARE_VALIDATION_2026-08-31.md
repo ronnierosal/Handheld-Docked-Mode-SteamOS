@@ -37,15 +37,34 @@ This is the intended fail-closed result.
 
 ## Delivery follow-up
 
-The Decky delivery adapter has now been implemented locally around the unchanged
+The Decky delivery adapter was implemented around the unchanged
 snapshot service. Its manifest requests Decky's root execution flag, and its
 only public RPC is the read-only `get_snapshot` operation. When root observes the
-Gamescope owner, the game-scope adapter queries that owner's user systemd bus
-through one strictly validated command shape.
+Gamescope owner, the game-scope adapter reads that owner's current cgroups and
+retains one strictly validated user-systemd query as a fallback. The root
+Portable validation is recorded below; TV Docked remains pending.
 
-Live root validation remains pending. The next hardware check must install the
-package beside eGPUBridge, verify Portable through the Decky process, and later
-repeat the same read-only check in a naturally established TV Docked state. Mode
-inference must not fall back to assuming that absence of `--prefer-vk-device`
-means the iGPU is selected. No transition implementation is required for either
-check.
+## Decky root validation
+
+The corrected 0.1 development package was installed through Decky Loader 3.2.6
+under the separate `HandheldDockMode` directory. Decky ran `main.py` as root and
+left the installed eGPUBridge directories unchanged.
+
+The first root snapshot verified the protected Gamescope environment and
+Portable mode, but the root-to-user systemd fallback returned a nonzero status
+for the Steam game-scope query. HDM was changed to read the observed Gamescope
+owner's cgroup hierarchy first, retaining the strict systemd query only as a
+fallback. After reinstall, the live Decky RPC reported:
+
+- mode: `portable`
+- game state: `idle`
+- support tier: `certified`
+- render GPU: `internal-gpu`
+- output order: `*,eDP-1`
+- blockers: none
+
+The Quick Access Decky page listed **Handheld Dock Mode** beside eGPUBridge, CSS
+Loader, and SteamGridDB. This validates the native plugin lifecycle, root
+snapshot boundary, frontend registration, and Portable read-only path. TV
+Docked validation remains pending until the G1 and TV are naturally connected;
+HDM performed no transition or hardware mutation during this check.

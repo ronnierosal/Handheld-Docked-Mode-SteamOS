@@ -3,10 +3,13 @@ from __future__ import annotations
 import ast
 import json
 import unittest
+import zipfile
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+from scripts.build_plugin import OUTPUT, PLUGIN_DIRECTORY, archive_name  # noqa: E402
 
 
 class DeckyContractTests(unittest.TestCase):
@@ -35,6 +38,17 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
         for forbidden in ("apply_transition", "restart_gamescope", "switch_display"):
             self.assertNotIn(forbidden, source.lower())
+
+    def test_decky_archive_has_one_top_level_plugin_directory(self):
+        self.assertEqual(
+            archive_name(ROOT / "plugin.json"),
+            f"{PLUGIN_DIRECTORY}/plugin.json",
+        )
+        if OUTPUT.is_file():
+            with zipfile.ZipFile(OUTPUT) as archive:
+                top_levels = {name.split("/", 1)[0] for name in archive.namelist()}
+                self.assertEqual(top_levels, {PLUGIN_DIRECTORY})
+                self.assertIn(f"{PLUGIN_DIRECTORY}/plugin.json", archive.namelist())
 
 
 if __name__ == "__main__":
