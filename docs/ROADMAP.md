@@ -38,7 +38,7 @@ No broader label may be inferred from a narrower one.
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Live transition orchestration remains gated. |
 | Atomic fixed-path transition journal store | Implemented and unit tested, dormant | Decky wiring and startup recovery require the first approved live transition. |
 | Transition snapshot replay and failure injection | Implemented and simulated | No production mechanism adapter or mutation endpoint exists. |
-| Remote read-only capture harness | Implemented and hardware tested | It cannot observe the Decky-owned sleep lease and must not be used to claim lease state. |
+| Remote read-only capture harness | Implemented and hardware tested unprivileged | Its fixed root read-only mode is locally verified but unavailable on the current Ally because non-interactive sudo is refused. Neither mode can observe the Decky-owned sleep lease. |
 | Guarded process-release approvals | Implemented and unit tested, internal only | Production adapter, RPC, and hardware proof remain. |
 | Process-release signal/re-scan simulator, audit, and journal | Implemented and simulated | Production mechanism remains; hardware removal authority is always false. |
 | Narrow POSIX process-signal adapter | Implemented and unit tested, dormant | Decky wiring/RPC and supervised disposable-process proof remain prohibited. |

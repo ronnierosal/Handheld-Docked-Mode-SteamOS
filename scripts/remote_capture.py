@@ -54,6 +54,7 @@ def build_ssh_argv(
     port: int,
     timeout_seconds: int,
     identity_file: Path | None = None,
+    root_read_only: bool = False,
 ) -> list[str]:
     destination = validate_destination(host, user, port)
     if timeout_seconds < 1 or timeout_seconds > 60:
@@ -71,7 +72,11 @@ def build_ssh_argv(
         if not identity_file.is_file():
             raise ValueError("SSH identity file does not exist")
         argv.extend(("-i", str(identity_file.resolve())))
-    argv.extend((destination, "python3", "-"))
+    argv.append(destination)
+    if root_read_only:
+        argv.extend(("sudo", "-n", "/usr/bin/python3", "-"))
+    else:
+        argv.extend(("python3", "-"))
     return argv
 
 
@@ -92,7 +97,12 @@ def _validate_safe_shape(value: Any) -> None:
             _validate_safe_shape(item)
 
 
-def parse_capture(stdout: str, payload_sha256: str) -> dict[str, Any]:
+def parse_capture(
+    stdout: str,
+    payload_sha256: str,
+    *,
+    expected_privilege: str | None = None,
+) -> dict[str, Any]:
     if len(stdout.encode("utf-8")) > MAX_CAPTURE_BYTES:
         raise ValueError("remote capture exceeds its size bound")
     try:
@@ -104,6 +114,17 @@ def parse_capture(stdout: str, payload_sha256: str) -> dict[str, Any]:
     collector = value.get("collector")
     if not isinstance(collector, dict):
         raise ValueError("remote capture collector metadata is missing")
+    if collector.get("read_only") is not True:
+        raise ValueError("remote capture did not declare read-only execution")
+    if collector.get("remote_files_written") is not False:
+        raise ValueError("remote capture did not declare no remote file writes")
+    if collector.get("transport") != "ssh_stdin":
+        raise ValueError("remote capture transport is unsupported")
+    privilege = collector.get("execution_privilege")
+    if privilege not in {"unprivileged", "root_read_only"}:
+        raise ValueError("remote capture privilege is unsupported")
+    if expected_privilege is not None and privilege != expected_privilege:
+        raise ValueError("remote capture did not run with the requested privilege")
     collector["payload_sha256"] = payload_sha256
     _validate_safe_shape(value)
     return value
@@ -116,6 +137,7 @@ def collect_remote(
     port: int = 22,
     timeout_seconds: int = 10,
     identity_file: Path | None = None,
+    root_read_only: bool = False,
 ) -> dict[str, Any]:
     payload = PAYLOAD.read_text(encoding="utf-8")
     payload_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -126,6 +148,7 @@ def collect_remote(
             port=port,
             timeout_seconds=timeout_seconds,
             identity_file=identity_file,
+            root_read_only=root_read_only,
         ),
         input=payload,
         text=True,
@@ -134,8 +157,17 @@ def collect_remote(
         check=False,
     )
     if result.returncode != 0:
+        if root_read_only:
+            raise RuntimeError(
+                "non-interactive root read-only capture unavailable "
+                f"(SSH status {result.returncode})"
+            )
         raise RuntimeError(f"read-only SSH capture failed with status {result.returncode}")
-    return parse_capture(result.stdout, payload_hash)
+    return parse_capture(
+        result.stdout,
+        payload_hash,
+        expected_privilege=("root_read_only" if root_read_only else "unprivileged"),
+    )
 
 
 def save_capture(value: dict[str, Any], output: Path | None = None) -> Path:
@@ -160,6 +192,11 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=10)
     parser.add_argument("--identity-file", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--root-read-only",
+        action="store_true",
+        help="run the fixed collector through non-interactive sudo",
+    )
     args = parser.parse_args()
     try:
         value = collect_remote(
@@ -168,6 +205,7 @@ def main() -> int:
             port=args.port,
             timeout_seconds=args.timeout,
             identity_file=args.identity_file,
+            root_read_only=args.root_read_only,
         )
         output = save_capture(value, args.output)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:

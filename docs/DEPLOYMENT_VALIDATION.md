@@ -144,6 +144,11 @@ The read-only `capture` family is implemented in
 collector over SSH stdin, writes no remote file, and saves one bounded redacted
 JSON result locally. The future harness may provide two command families:
 
+An explicit root read-only variant uses only the fixed
+`sudo -n /usr/bin/python3 -` prefix, verifies that the payload actually ran at
+the requested privilege, and stops if non-interactive sudo is unavailable. It
+does not make the standalone collector an observer of Decky's inhibitor lease.
+
 - `capture`: read-only snapshot, bounded health checks, package provenance, and
   redacted log/result retrieval.
 - `run-replay`: local-on-device deterministic fixtures that do not touch live

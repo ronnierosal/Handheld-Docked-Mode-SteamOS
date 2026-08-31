@@ -25,7 +25,12 @@ class RemoteCaptureTests(unittest.TestCase):
     def test_ssh_command_and_payload_are_fixed_and_shell_free(self):
         safe_capture = {
             "schema_version": 1,
-            "collector": {"read_only": True},
+            "collector": {
+                "read_only": True,
+                "remote_files_written": False,
+                "transport": "ssh_stdin",
+                "execution_privilege": "unprivileged",
+            },
             "diagnostics": {"snapshot": {"support_tier": "certified"}},
             "errors": [],
         }
@@ -45,10 +50,78 @@ class RemoteCaptureTests(unittest.TestCase):
         )
         self.assertEqual(len(value["collector"]["payload_sha256"]), 64)
 
+    def test_root_read_only_command_is_fixed_and_privilege_is_verified(self):
+        safe_capture = {
+            "schema_version": 1,
+            "collector": {
+                "read_only": True,
+                "remote_files_written": False,
+                "transport": "ssh_stdin",
+                "execution_privilege": "root_read_only",
+            },
+            "diagnostics": None,
+            "errors": [],
+        }
+
+        class Result:
+            returncode = 0
+            stdout = json.dumps(safe_capture)
+
+        with patch("remote_capture.subprocess.run", return_value=Result()) as run:
+            remote_capture.collect_remote(
+                host="192.168.1.172",
+                root_read_only=True,
+            )
+        self.assertEqual(
+            run.call_args.args[0][-5:],
+            ["deck@192.168.1.172", "sudo", "-n", "/usr/bin/python3", "-"],
+        )
+        self.assertNotIn("shell", run.call_args.kwargs)
+
+    def test_root_read_only_rejects_unprivileged_result(self):
+        value = {
+            "schema_version": 1,
+            "collector": {
+                "read_only": True,
+                "remote_files_written": False,
+                "transport": "ssh_stdin",
+                "execution_privilege": "unprivileged",
+            },
+        }
+        with self.assertRaisesRegex(ValueError, "requested privilege"):
+            remote_capture.parse_capture(
+                json.dumps(value),
+                "a" * 64,
+                expected_privilege="root_read_only",
+            )
+
+    def test_root_read_only_failure_does_not_retry_or_expose_remote_stderr(self):
+        class Result:
+            returncode = 1
+            stdout = ""
+            stderr = "private remote diagnostic"
+
+        with patch("remote_capture.subprocess.run", return_value=Result()) as run:
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"non-interactive root read-only capture unavailable \(SSH status 1\)",
+            ) as raised:
+                remote_capture.collect_remote(
+                    host="192.168.1.172",
+                    root_read_only=True,
+                )
+        self.assertEqual(run.call_count, 1)
+        self.assertNotIn("private remote diagnostic", str(raised.exception))
+
     def test_parser_rejects_private_process_fields(self):
         value = {
             "schema_version": 1,
-            "collector": {"read_only": True},
+            "collector": {
+                "read_only": True,
+                "remote_files_written": False,
+                "transport": "ssh_stdin",
+                "execution_privilege": "unprivileged",
+            },
             "process": {"pid": 123},
         }
         with self.assertRaisesRegex(ValueError, "forbidden field"):
@@ -57,7 +130,13 @@ class RemoteCaptureTests(unittest.TestCase):
     def test_save_is_exclusive_and_bounded(self):
         value = {
             "schema_version": 1,
-            "collector": {"read_only": True, "payload_sha256": "a" * 64},
+            "collector": {
+                "read_only": True,
+                "remote_files_written": False,
+                "transport": "ssh_stdin",
+                "execution_privilege": "unprivileged",
+                "payload_sha256": "a" * 64,
+            },
         }
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "capture.json"
@@ -108,6 +187,13 @@ class RemoteCaptureTests(unittest.TestCase):
         )
         self.assertIn("plugin_lifecycle_sleep_guard_not_observed", source)
         self.assertIn('row["result"] = "not_observed"', source)
+
+    def test_payload_reports_privilege_without_identity(self):
+        source = (ROOT / "scripts" / "remote_capture_payload.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"root_read_only" if is_root else "unprivileged"', source)
+        self.assertNotIn("getlogin", source)
 
 
 if __name__ == "__main__":

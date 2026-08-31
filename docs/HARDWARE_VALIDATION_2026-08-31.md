@@ -261,3 +261,12 @@ The corrected capture therefore reports that check as `not_observed` and does
 not classify the lease as active or inactive. No sleep request, process signal,
 service restart, display/GPU change, hardware removal, or remote file write was
 performed.
+
+The harness was later extended with an explicit fixed root read-only mode that
+can only request `sudo -n /usr/bin/python3 -` and verifies the reported
+execution privilege. The full local validation matrix passed. The current Ally
+returned SSH status 1 for that non-interactive sudo request, so the wrapper
+stopped without prompting, retrying, saving a capture, or running a fallback.
+The privileged success path therefore remains UNVERIFIED on hardware; this
+failed attempt supplies no additional Gamescope, client, or sleep-lease
+evidence and performed no HDM or hardware mutation.

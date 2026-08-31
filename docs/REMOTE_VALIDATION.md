@@ -11,11 +11,27 @@ From the repository on the development computer:
 python scripts/remote_capture.py --host <ally-ip> --identity-file <ssh-key>
 ```
 
+When the unprivileged report is incomplete, a second fixed read-only mode may
+be used if the Ally already permits non-interactive sudo for the SSH account:
+
+```text
+python scripts/remote_capture.py --host <ally-ip> --identity-file <ssh-key> --root-read-only
+```
+
 The wrapper validates the destination, invokes OpenSSH without a shell, and
 streams the fixed `remote_capture_payload.py` source to the Ally's `python3 -`
 stdin. The payload imports HDM's installed read-only diagnostics, builds the same
 bounded redacted support representation, and returns one JSON object on stdout.
 It creates, edits, or removes no remote file.
+
+The root read-only mode changes only the fixed remote interpreter command to
+`sudo -n /usr/bin/python3 -`. It does not accept a remote executable, command,
+path, PID, or shell fragment. The payload reports the categorical execution
+privilege and the wrapper rejects a root request if the payload did not actually
+run as root. Failure of passwordless non-interactive sudo stops the capture; the
+wrapper does not prompt or retry with another mechanism. The operating system
+may retain its normal sudo/audit record even though the collector itself writes
+no remote files.
 
 The local result is created exclusively under `out/remote-captures/` by default.
 Existing files are never overwritten. The report includes:
@@ -40,6 +56,9 @@ remote capture to claim the sleep guard is active or inactive.
 
 An unprivileged SSH session may also be unable to read Gamescope's protected
 environment. That is reported as incomplete evidence and remains fail closed.
+Root read-only mode can complete more procfs evidence, but it still cannot
+observe the separate Decky plugin process's live sleep-inhibitor lease and does
+not authorize a transition or hardware action.
 
 ## Allowed use
 
@@ -56,4 +75,3 @@ display/GPU/controller/audio mutation, USB4 reset, or eGPU removal. Do not exten
 it with arbitrary remote commands, paths, PIDs, or shell fragments. Any action
 that may remove SSH, networking, or visible control belongs to the supervised
 D6 stage in [Deployment and validation strategy](DEPLOYMENT_VALIDATION.md).
-

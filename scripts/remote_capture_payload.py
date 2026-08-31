@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
 import sys
 from datetime import datetime, timezone
@@ -132,6 +133,7 @@ def _safe_value(code: str, operation: Callable[[], Any], errors: list[str]) -> A
 
 def collect() -> dict[str, Any]:
     errors: list[str] = []
+    is_root = getattr(os, "geteuid", lambda: -1)() == 0
     boot_id = _read_text(Path("/proc/sys/kernel/random/boot_id"), 128)
     uptime_text = _read_text(Path("/proc/uptime"), 128).split()
     try:
@@ -147,10 +149,15 @@ def collect() -> dict[str, Any]:
             "read_only": True,
             "remote_files_written": False,
             "transport": "ssh_stdin",
-            "limitations": [
-                "plugin_lifecycle_sleep_guard_not_observed",
-                "unprivileged_gamescope_evidence_may_be_incomplete",
-            ],
+            "execution_privilege": (
+                "root_read_only" if is_root else "unprivileged"
+            ),
+            "limitations": ["plugin_lifecycle_sleep_guard_not_observed"]
+            + (
+                []
+                if is_root
+                else ["unprivileged_gamescope_evidence_may_be_incomplete"]
+            ),
         },
         "system": {
             "boot_id_sha256": (
