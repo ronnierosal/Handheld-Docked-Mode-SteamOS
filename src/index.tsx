@@ -72,6 +72,8 @@ function showSupportBundlePreview(
     modal.Close();
     onClose();
   };
+  // Let Decky resolve Steam's visible SP window. This plugin executes in the
+  // invisible SharedJSContext, so using its global window hides the dialog.
   modal = showModal(
     <ConfirmModal
       strTitle="Redacted support bundle preview"
@@ -93,7 +95,7 @@ function showSupportBundlePreview(
         </div>
       </div>
     </ConfirmModal>,
-    window,
+    undefined,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;
@@ -505,6 +507,8 @@ function showBlockedAttempt(
     modal.Close();
     onClose();
   };
+  // Let Decky resolve Steam's visible SP window after the Power menu closes.
+  // SharedJSContext's global window is not a player-visible modal parent.
   modal = showModal(
     <ConfirmModal
       strTitle={warning.title}
@@ -516,7 +520,7 @@ function showBlockedAttempt(
       bHideCloseIcon={true}
       onOK={close}
     />,
-    window,
+    undefined,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;

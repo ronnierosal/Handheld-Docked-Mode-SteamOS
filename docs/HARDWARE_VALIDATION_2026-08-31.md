@@ -217,3 +217,26 @@ matches the local build. Decky reports one HDM native blocker, the frontend
 reload lock is clear, and the root login1 inhibitor is active. A further Sleep
 request is intentionally pending until the player is present to confirm that
 the delayed modal stays visible; no unsupervised sleep test is authorized.
+
+## Installed backlog build and visible-parent correction
+
+Commit `0c96633` was installed through Decky's native reinstall flow. The Ally
+and local SHA-256 values matched for `main.py`, the frontend bundle, support
+bundle policy, and fixed export adapter. The live RPC reported Portable, idle,
+certified hardware, a verified active sleep guard, a complete blocked
+disconnect scan, a 30.462 ms total snapshot, and a bounded redacted support
+preview. Preview-only verification wrote no file.
+
+Two supervised attempts then exercised Steam's menu Sleep action and the
+physical power button. Steam logged **Suspend request ignored due to suspend
+blockers** for both; the device remained awake and visible and the root
+inhibitor remained active. Neither attempt displayed the acknowledgement
+dialog, so enforcement passed while warning UX failed.
+
+Inspection found both HDM dialogs explicitly passed the plugin's global
+`window` to Decky's modal helper. HDM executes in the invisible
+SharedJSContext, while Decky's omitted-parent behavior resolves the visible SP
+window. The warning and support-preview call sites now omit that invalid parent
+and retain the non-popout option. The correction requires a fresh build and one
+later supervised visible-dialog proof; the two accepted blocker results do not
+count as warning acceptance.

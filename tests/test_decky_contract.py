@@ -60,6 +60,11 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("window.setTimeout", source)
         self.assertIn("window.clearTimeout", source)
         self.assertIn("bNeverPopOut: true", source)
+        self.assertNotIn("    window,\n    { strTitle", source)
+        self.assertEqual(
+            source.count('    undefined,\n    { strTitle: "Handheld Dock Mode"'),
+            2,
+        )
 
     def test_decky_archive_has_one_top_level_plugin_directory(self):
         self.assertEqual(

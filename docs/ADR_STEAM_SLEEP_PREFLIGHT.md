@@ -83,9 +83,11 @@ When a blocked request occurs:
 
 Steam closes its transient Power menu after dispatching the suspend request.
 HDM therefore schedules the acknowledgement modal after that menu closes and
-uses Decky's non-popout modal host. Rendering the modal synchronously from the
-pre-request hook is not accepted because Steam may discard it with the Power
-menu.
+uses Decky's non-popout modal host with its default visible-SP window resolver.
+The plugin runs in an invisible SharedJSContext, so that context's global
+`window` must never be supplied as the modal parent. Rendering the modal
+synchronously from the pre-request hook is not accepted because Steam may
+discard it with the Power menu.
 
 **Never show this explanation again** may continue to hide the passive panel
 explanation. It does not hide feedback for an attempted blocked action, disable
