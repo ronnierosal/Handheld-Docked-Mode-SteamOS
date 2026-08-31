@@ -51,6 +51,7 @@ class DeckyContractTests(unittest.TestCase):
         source = path.read_text(encoding="utf-8")
         self.assertNotIn("PosixProcessSignalAdapter", source)
         self.assertNotIn("ProcessReleaseApprovalStore", source)
+        self.assertNotIn("GuardedProcessReleaseService", source)
         self.assertNotIn("PresentationTransitionMechanism", source)
         self.assertNotIn("TransitionOrchestrator", source)
 
@@ -69,6 +70,7 @@ class DeckyContractTests(unittest.TestCase):
             "process_release",
             "signal_process",
             "force_close",
+            "graceful_evidence",
         ):
             self.assertNotIn(forbidden, source.lower())
 

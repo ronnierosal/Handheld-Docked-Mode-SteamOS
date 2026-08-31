@@ -75,6 +75,16 @@ incomplete process-release journal as Action Required using a fresh placement
 observation when available, then requires exact operation acknowledgement
 before another release can begin.
 
+A delivery-independent guarded facade now joins observation, inspection,
+approval, execution, persistence, and recovery. Read-only inspection returns
+the same redacted target rows but never creates a token. Explicit confirmation
+creates a short-lived single-use approval, execution collects a fresh sample,
+and one in-process lock prevents overlapping requests. A graceful result may
+return private backend evidence for a separately inspected and approved force
+phase; that evidence never belongs in a public payload because it contains
+process-instance identities. The force candidate remains limited to instances
+actually signaled during the graceful phase.
+
 Even when every observed software blocker is cleared, the result exposes
 `software_blockers_cleared=true` and always keeps
 `hardware_removal_authorized=false`. The certified G1 profile still requires
@@ -82,7 +92,8 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- add a Decky preview/consent flow and production composition
+- design a Decky preview/consent payload that never serializes private graceful
+  evidence, then add production composition
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 
@@ -94,5 +105,5 @@ construct it, and package contract tests forbid process-release imports or RPCs
 in both backend and frontend delivery layers.
 
 There is currently no enabled process-release mechanism and no process-release
-RPC. Durable execution and restart-terminalization are implemented and tested
-but remain unconstructed by Decky.
+RPC. Guarded orchestration, durable execution, and restart-terminalization are
+implemented and tested but remain unconstructed by Decky.

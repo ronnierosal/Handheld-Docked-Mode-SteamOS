@@ -44,7 +44,8 @@ The guarded-process backlog has an internal approval service that issues
 single-use tokens for backend-discovered eligible instances and requires a fresh
 exact revalidation before returning internal signal targets. Graceful and force
 approvals are distinct, and force requires prior graceful-attempt evidence. The
-service is not exposed through Decky and no process-signal adapter exists.
+service is not exposed through Decky and the narrow process-signal adapter is
+not constructed there.
 
 A deterministic process-release runner exercises either a fake or narrow real
 signal port. It re-scans after every action, revalidates the remaining approved
@@ -55,8 +56,8 @@ signal; it terminalizes the operation as Action Required. Clearing software
 clients never sets hardware-removal authority. See
 [Guarded eGPU process-release contract](PROCESS_RELEASE.md).
 
-Each simulated release operation owns a generated operation ID and records its
-request, fresh observation, approval validation, plan, per-target fake steps,
+Each release operation owns a generated operation ID and records its request,
+fresh observation, approval validation, plan, per-target typed signal steps,
 re-scans, and terminal result in the shared transition journal. Tokens and
 process/hardware identity never enter the exported journal.
 
@@ -119,6 +120,12 @@ The SteamOS signal adapter is a dormant leaf mechanism: it maps only typed
 graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess,
 and returns categorical results. It is not constructed by `main.py`; delivery
 contract tests forbid process-release wiring and RPC terms.
+
+The unwired `GuardedProcessReleaseService` composes redacted inspection,
+explicit token issuance, fresh-sample execution, single-operation locking,
+durable journaling, and no-repeat recovery. Graceful-attempt evidence remains a
+private application value so a future Decky facade cannot accidentally expose
+PID-plus-start-time-derived identities. Force is always a second approval.
 
 The canonical sleep reducer is pure policy over exact eGPU presence/identity,
 profile capabilities, game/save state, disconnect evidence, placement, and a

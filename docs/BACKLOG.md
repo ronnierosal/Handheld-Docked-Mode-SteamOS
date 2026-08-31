@@ -54,12 +54,12 @@ Implemented unattended-safe approval foundation:
   changed client set, storage use, or changed eGPU identity.
 - Force approval requires evidence of a prior graceful attempt, a new
   observation, and a remaining target subset; it cannot add processes.
-- No Decky RPC, signal port/adapter, or live process action is present.
+- No Decky RPC, runtime construction, or live process action is present.
 
-Implemented simulator evidence:
+Implemented guarded-runner evidence:
 
-- Typed fake graceful/force signal boundary with no production implementation.
-- Mandatory fresh complete re-scan after every fake action and subset
+- Typed fake graceful/force signal boundary plus a dormant narrow POSIX adapter.
+- Mandatory fresh complete re-scan after every typed action and subset
   revalidation before every subsequent action.
 - Deadline, missing/stale/incomplete scan, changed-client, remaining-client,
   signal-rejection, and already-exited-target paths.
@@ -70,6 +70,9 @@ Implemented simulator evidence:
 - Dormant POSIX signal adapter with injected tests for the exact graceful/force
   mapping, absent process, permission/OS failure, and non-POSIX fail-closed
   behavior. Delivery/package tests prove it is not wired to Decky.
+- Delivery-independent facade with authority-free inspection, explicit
+  single-use approval, fresh-sample execution, one-operation locking, durable
+  recovery, and private graceful evidence for a separate force approval.
 
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1

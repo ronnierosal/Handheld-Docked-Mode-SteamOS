@@ -123,6 +123,28 @@ class ProcessReleaseApprovalStore:
         self._values: dict[str, tuple[float, ProcessReleaseApproval]] = {}
         self._lock = threading.Lock()
 
+    def inspect(
+        self,
+        snapshot: ObservedSnapshot,
+        *,
+        observed_generation: str,
+        phase: ReleasePhase,
+        graceful_evidence: GracefulReleaseEvidence | None = None,
+    ) -> ProcessReleasePreview:
+        """Build a redacted preview without creating executable authority."""
+        targets, _ = self._validate_candidate(
+            snapshot,
+            observed_generation=observed_generation,
+            phase=phase,
+            graceful_evidence=graceful_evidence,
+        )
+        return self._preview(
+            snapshot,
+            token="",
+            phase=phase,
+            targets=targets,
+        )
+
     def issue(
         self,
         snapshot: ObservedSnapshot,
@@ -131,30 +153,13 @@ class ProcessReleaseApprovalStore:
         phase: ReleasePhase,
         graceful_evidence: GracefulReleaseEvidence | None = None,
     ) -> ProcessReleasePreview:
+        targets, prior_graceful_operation_id = self._validate_candidate(
+            snapshot,
+            observed_generation=observed_generation,
+            phase=phase,
+            graceful_evidence=graceful_evidence,
+        )
         readiness = snapshot.disconnect_readiness
-        if not observed_generation:
-            raise ValueError("process approval observation generation is required")
-        if not readiness.applicable or not readiness.egpu_stable_id:
-            raise ValueError("an exact eGPU identity is required")
-        if not readiness.scan_complete:
-            raise ValueError("eGPU client scan must be complete")
-        if readiness.storage_in_use:
-            raise ValueError("eGPU storage use is non-overridable")
-        targets = _eligible_targets(readiness.clients)
-        if not targets:
-            raise ValueError("no close-eligible eGPU user process was observed")
-        prior_graceful_operation_id = ""
-        if phase is ReleasePhase.FORCE:
-            if graceful_evidence is None:
-                raise ValueError("force approval requires a prior graceful attempt")
-            if observed_generation == graceful_evidence.observed_generation:
-                raise ValueError("force approval requires a post-graceful observation")
-            previously_attempted = frozenset(graceful_evidence.attempted_instance_ids)
-            if any(target.instance_id not in previously_attempted for target in targets):
-                raise ValueError("force approval cannot add a new process target")
-            prior_graceful_operation_id = graceful_evidence.operation_id
-        elif graceful_evidence is not None:
-            raise ValueError("graceful evidence is valid only for force approval")
         with self._lock:
             self._expire_locked()
             while len(self._values) >= self._max_tokens:
@@ -179,15 +184,11 @@ class ProcessReleaseApprovalStore:
                 prior_graceful_operation_id=prior_graceful_operation_id,
             )
             self._values[token] = (self._monotonic(), approval)
-        return ProcessReleasePreview(
+        return self._preview(
+            snapshot,
             token=token,
             phase=phase,
-            expires_in_seconds=max(1, int(self._ttl_seconds)),
-            targets=tuple(
-                ProcessReleasePreviewRow(target.name, target.resources)
-                for target in targets
-            ),
-            protected_client_count=len(readiness.clients) - len(targets),
+            targets=targets,
         )
 
     def consume(self, token: str) -> ProcessReleaseApproval:
@@ -206,6 +207,60 @@ class ProcessReleaseApprovalStore:
             token for token, (created, _) in self._values.items() if created < cutoff
         ]:
             self._values.pop(token, None)
+
+    @staticmethod
+    def _validate_candidate(
+        snapshot: ObservedSnapshot,
+        *,
+        observed_generation: str,
+        phase: ReleasePhase,
+        graceful_evidence: GracefulReleaseEvidence | None,
+    ) -> tuple[tuple[ProcessReleaseTarget, ...], str]:
+        readiness = snapshot.disconnect_readiness
+        if not observed_generation:
+            raise ValueError("process approval observation generation is required")
+        if not readiness.applicable or not readiness.egpu_stable_id:
+            raise ValueError("an exact eGPU identity is required")
+        if not readiness.scan_complete:
+            raise ValueError("eGPU client scan must be complete")
+        if readiness.storage_in_use:
+            raise ValueError("eGPU storage use is non-overridable")
+        targets = _eligible_targets(readiness.clients)
+        if not targets:
+            raise ValueError("no close-eligible eGPU user process was observed")
+        prior_graceful_operation_id = ""
+        if phase is ReleasePhase.FORCE:
+            if graceful_evidence is None:
+                raise ValueError("force approval requires a prior graceful attempt")
+            if observed_generation == graceful_evidence.observed_generation:
+                raise ValueError("force approval requires a post-graceful observation")
+            previously_attempted = frozenset(graceful_evidence.attempted_instance_ids)
+            if any(target.instance_id not in previously_attempted for target in targets):
+                raise ValueError("force approval cannot add a new process target")
+            prior_graceful_operation_id = graceful_evidence.operation_id
+        elif graceful_evidence is not None:
+            raise ValueError("graceful evidence is valid only for force approval")
+        return targets, prior_graceful_operation_id
+
+    def _preview(
+        self,
+        snapshot: ObservedSnapshot,
+        *,
+        token: str,
+        phase: ReleasePhase,
+        targets: tuple[ProcessReleaseTarget, ...],
+    ) -> ProcessReleasePreview:
+        readiness = snapshot.disconnect_readiness
+        return ProcessReleasePreview(
+            token=token,
+            phase=phase,
+            expires_in_seconds=max(1, int(self._ttl_seconds)) if token else 0,
+            targets=tuple(
+                ProcessReleasePreviewRow(target.name, target.resources)
+                for target in targets
+            ),
+            protected_client_count=len(readiness.clients) - len(targets),
+        )
 
 
 def revalidate_process_release(

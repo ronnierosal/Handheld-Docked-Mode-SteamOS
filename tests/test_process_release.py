@@ -110,6 +110,17 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
         self.assertFalse(hasattr(preview.targets[0], "pid"))
         self.assertFalse(hasattr(preview.targets[0], "instance_id"))
 
+    def test_inspection_never_mints_executable_authority(self):
+        snapshot = with_clients(base_snapshot(), client())
+        preview = self.store().inspect(
+            snapshot,
+            observed_generation="generation-1",
+            phase=ReleasePhase.GRACEFUL,
+        )
+        self.assertEqual(preview.token, "")
+        self.assertEqual(preview.expires_in_seconds, 0)
+        self.assertEqual(len(preview.targets), 1)
+
     def test_token_is_single_use_expires_and_binds_phase(self):
         clock = FakeTime()
         store = self.store(clock)
