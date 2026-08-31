@@ -62,6 +62,7 @@ def client():
         resources=(EgpuResourceKind.DRM_RENDER,),
         close_eligible=True,
         reason="test fixture",
+        process_start_time="12345",
     )
 
 
@@ -93,8 +94,12 @@ class Clock:
 
 
 class Signals:
-    def __init__(self):
+    def __init__(self, capability=""):
         self.actions = []
+        self.capability = capability
+
+    def capability_code(self):
+        return self.capability
 
     def signal(self, target, action):
         self.actions.append((target.instance_id, action))
@@ -130,9 +135,9 @@ def approvals():
     )
 
 
-def service(observations):
+def service(observations, *, signal_capability=""):
     store = JournalStore()
-    signals = Signals()
+    signals = Signals(signal_capability)
     recovery = ProcessReleaseJournalRecovery(
         store, occurred_at=lambda: "2026-08-31T12:00:00Z"
     )
@@ -164,6 +169,14 @@ def service(observations):
 
 
 class GuardedProcessReleaseTests(unittest.TestCase):
+    def test_unavailable_exact_signal_capability_blocks_before_observation(self):
+        value, signals, _ = service(
+            Observations(), signal_capability="signal.pidfd_unsupported"
+        )
+        preview = value.preview(ReleasePhase.GRACEFUL, user_confirmed=False)
+        self.assertEqual(preview.blockers, ("signal.pidfd_unsupported",))
+        self.assertEqual(signals.actions, [])
+
     def test_read_only_preview_has_no_token(self):
         initial = with_clients(base_snapshot(), client())
         value, signals, _ = service(

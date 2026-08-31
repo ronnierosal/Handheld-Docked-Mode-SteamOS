@@ -7,7 +7,7 @@ cross-feature status and dependency plan is maintained in the
 
 ## Add guarded eGPU process closure
 
-**Status:** APPROVAL FOUNDATION IMPLEMENTED — process signals remain gated
+**Status:** DECKY FLOW IMPLEMENTED AND SIMULATED — supervised proof pending
 **Target:** Milestone 0.2 after transition-journal and approval-token gates
 
 Let a player resolve an otherwise idle disconnect blocker by closing only
@@ -54,11 +54,12 @@ Implemented unattended-safe approval foundation:
   changed client set, storage use, or changed eGPU identity.
 - Force approval requires evidence of a prior graceful attempt, a new
   observation, and a remaining target subset; it cannot add processes.
-- No Decky RPC, runtime construction, or live process action is present.
+- Decky exposes only exact enum/token operations; no PID, signal, command, path,
+  or raw process-instance identity crosses the frontend boundary.
 
 Implemented guarded-runner evidence:
 
-- Typed fake graceful/force signal boundary plus a dormant narrow POSIX adapter.
+- Typed graceful/force signal boundary plus a Decky-wired narrow Linux adapter.
 - Mandatory fresh complete re-scan after every typed action and subset
   revalidation before every subsequent action.
 - Deadline, missing/stale/incomplete scan, changed-client, remaining-client,
@@ -67,9 +68,12 @@ Implemented guarded-runner evidence:
   software blockers and hardware removal authority.
 - Shared transaction-journal integration from request through terminal result,
   without tokens, process identity, or raw hardware identity.
-- Dormant POSIX signal adapter with injected tests for the exact graceful/force
-  mapping, absent process, permission/OS failure, and non-POSIX fail-closed
-  behavior. Delivery/package tests prove it is not wired to Decky.
+- Guarded pidfd signal adapter with injected tests for the exact
+  graceful/force mapping, process-start-time verification, absent process,
+  permission/OS failure, missing pidfd support, and non-POSIX fail-closed
+  behavior. There is no numeric-PID fallback. Decky can reach it only after
+  redacted inspection, destructive confirmation, token issuance, and fresh
+  exact revalidation.
 - Delivery-independent facade with authority-free inspection, explicit
   single-use approval, fresh-sample execution, one-operation locking, durable
   recovery, and an opaque expiring receipt over private graceful evidence for a
@@ -77,8 +81,9 @@ Implemented guarded-runner evidence:
 
 Acceptance requires pure policy/token/replay/PID-reuse tests, adapter tests with
 an injectable signal boundary, failure injection, and supervised Ally X/GPD G1
-validation with disposable user-process fixtures. No process signal or public
-close RPC is included in the current unattended-safe work.
+validation with disposable user-process fixtures. The public close RPC is now
+implemented but remains unverified on hardware and has not been deployed during
+unattended work.
 
 ## Improve eGPU and TV connection responsiveness
 

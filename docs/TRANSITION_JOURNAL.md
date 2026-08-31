@@ -75,10 +75,11 @@ to this privacy-safe journal.
 
 ## Current boundary
 
-The store, runtime orchestrator, observation generation, bounded verification
-waiter, and startup recovery are implemented and tested, but the Decky plugin
-does not construct them. No transition endpoint or presentation mechanism is
-enabled. Wiring belongs to the guarded supervised transition milestone.
+The store is now constructed by Decky for guarded process release under the
+root-owned state directory. Process execution durably records `step_started`
+before signaling, and startup recovery terminalizes an incomplete release
+without repeating a signal. The presentation runtime orchestrator and mechanism
+remain unconstructed; no display/GPU transition endpoint is enabled.
 
 The pure canonical sleep journal projection uses the same contract. An
 interrupted journal never resumes an original sleep request after restart;

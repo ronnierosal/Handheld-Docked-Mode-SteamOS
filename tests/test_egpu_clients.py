@@ -183,6 +183,7 @@ class EgpuClientDiscoveryTests(unittest.TestCase):
 
             self.assertTrue(result.complete)
             self.assertEqual([client.pid for client in result.clients], [101, 202, 303])
+            self.assertTrue(all(client.process_start_time for client in result.clients))
             by_pid = {client.pid: client for client in result.clients}
             self.assertEqual(by_pid[101].kind, EgpuClientKind.GAME)
             self.assertEqual(by_pid[202].kind, EgpuClientKind.PROTECTED)

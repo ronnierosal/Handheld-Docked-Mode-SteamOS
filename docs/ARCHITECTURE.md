@@ -36,16 +36,17 @@ uninstalled. See [Authoritative roadmap](ROADMAP.md).
 
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
-composition, and a strict bounded transaction-journal schema. Its fixed-path
-store and runtime orchestrator remain unconstructed by Decky, so no production
-transition endpoint is enabled yet.
+composition, and a strict bounded transaction-journal schema. Decky now uses the
+fixed-path store for guarded process release; the presentation runtime
+orchestrator remains unconstructed, so no production display/GPU transition
+endpoint is enabled.
 
 The guarded-process backlog has an internal approval service that issues
 single-use tokens for backend-discovered eligible instances and requires a fresh
 exact revalidation before returning internal signal targets. Graceful and force
-approvals are distinct, and force requires prior graceful-attempt evidence. The
-service is not exposed through Decky and the narrow process-signal adapter is
-not constructed there.
+approvals are distinct, and force requires prior graceful-attempt evidence.
+Decky exposes the service only through redacted inspect/confirm/token/acknowledge
+operations; the frontend never supplies a process target or signal.
 
 A deterministic process-release runner exercises either a fake or narrow real
 signal port. It re-scans after every action, revalidates the remaining approved
@@ -61,12 +62,12 @@ fresh observation, approval validation, plan, per-target typed signal steps,
 re-scans, and terminal result in the shared transition journal. Tokens and
 process/hardware identity never enter the exported journal.
 
-The journal's dormant fixed-path file adapter enforces atomic append-only
+The journal's fixed-path file adapter enforces atomic append-only
 progress for one operation, no-follow/exclusive temporary creation, byte bounds,
-file and directory synchronization, and matching-terminal-only cleanup. It is
-not constructed by Decky. A separate hardened boundary can create or validate
-the fixed root-owned mode-0700 `/var/lib/handheld-dock-mode` state directory;
-the user-owned Gamescope config root is not control-state authority. See
+file and directory synchronization, and matching-terminal-only cleanup. Decky
+constructs it for process release under the separately hardened fixed root-owned
+mode-0700 `/var/lib/handheld-dock-mode` state directory; the user-owned Gamescope
+config root is not control-state authority. See
 [Durable transition journal](TRANSITION_JOURNAL.md).
 
 The guarded runtime orchestrator uses that journal contract for real mechanism
@@ -119,17 +120,19 @@ config store writes atomically from an exact transition binding. Neither the
 shim nor its config store installs a systemd override, restarts Gamescope, or is
 constructed by Decky.
 
-The SteamOS signal adapter is a dormant leaf mechanism: it maps only typed
-graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess,
-and returns categorical results. It is not constructed by `main.py`; delivery
-contract tests forbid process-release wiring and RPC terms.
+The SteamOS signal adapter is a narrow Linux leaf mechanism: it maps only typed
+graceful/force actions to `SIGTERM`/`SIGKILL`, opens a pidfd, verifies the
+approved process start time, uses no shell or subprocess, has no numeric-PID
+fallback, and returns categorical results. `main.py` constructs it only behind
+the guarded service, root-owned journal, exact backend approvals, and mandatory
+rescans. Missing pidfd capability blocks the preview before consent.
 
-The unwired `GuardedProcessReleaseService` composes redacted inspection,
+The Decky-wired `GuardedProcessReleaseService` composes redacted inspection,
 explicit token issuance, fresh-sample execution, single-operation locking,
 durable journaling, and no-repeat recovery. Graceful-attempt evidence remains a
-private application value behind a bounded, expiring opaque receipt, so a future
+private application value behind a bounded, expiring opaque receipt, so the
 Decky facade cannot expose PID-plus-start-time-derived identities. Issuing a
-force approval consumes that receipt; force is always a second approval.
+force approval consumes that receipt; force is always a second confirmation.
 
 The canonical sleep reducer is pure policy over exact eGPU presence/identity,
 profile capabilities, game/save state, disconnect evidence, placement, and a
@@ -219,9 +222,10 @@ fixed `gamescope-session.target`; it uses absolute executables, a sanitized
 environment, no shell, bounded output, and categorical errors. Decky constructs
 it only for preparation, where the service can call daemon-reload and fixed-unit
 verification but never the restart operation. Public RPCs are limited to
-`get_snapshot`, the preview/token-approved support-bundle flow, and the
-preview/approval/token-consuming supervised preparation flow. No RPC accepts a
-command, system path, device identity, or process target.
+`get_snapshot`, the preview/token-approved support-bundle flow, the
+preview/approval/token-consuming supervised preparation flow, and guarded
+process inspect/approve/execute/acknowledge. No RPC accepts a command, system
+path, device identity, PID, signal, or process target.
 
 The first 0.2 safety mechanism is a backend-owned, parent-death-guarded
 `systemd-inhibit` process. Exact G1 presence acquires its login1 lease, verified

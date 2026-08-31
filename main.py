@@ -6,6 +6,7 @@ import asyncio
 import os
 import socket
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import decky
@@ -24,14 +25,27 @@ from hdm.adapters.steamos.sleep_inhibitor import (  # noqa: E402
     G1SleepGuardHardwareDiscovery,
     SleepGuardController,
 )
+from hdm.adapters.steamos.process_signal import PosixProcessSignalAdapter  # noqa: E402
 from hdm.adapters.steamos.version_info import SteamOsVersionDiscovery  # noqa: E402
 from hdm.api import DiagnosticsApi  # noqa: E402
 from hdm.adapters.transition_runtime import (  # noqa: E402
     SnapshotTransitionObservationAdapter,
+    SystemMonotonicClock,
 )
 from hdm.application.presentation_activation import (  # noqa: E402
     PresentationActivationApprovalStore,
     PresentationActivationService,
+)
+from hdm.application.guarded_process_release import (  # noqa: E402
+    GuardedProcessReleaseService,
+)
+from hdm.application.process_release import (  # noqa: E402
+    GracefulReleaseReceiptStore,
+    ProcessReleaseApprovalStore,
+)
+from hdm.application.process_release_replay import (  # noqa: E402
+    ProcessReleaseJournalRecovery,
+    ProcessReleaseRunner,
 )
 from hdm.application.support_bundle import (  # noqa: E402
     BoundedEventLog,
@@ -41,6 +55,14 @@ from hdm.application.support_bundle import (  # noqa: E402
 )
 from hdm.delivery.support_export import SupportBundleFileWriter  # noqa: E402
 from hdm.delivery.gamescope_integration import GamescopeIntegrationStore  # noqa: E402
+from hdm.delivery.process_release import (  # noqa: E402
+    execution_to_payload,
+    preview_to_payload,
+    status_to_payload,
+)
+from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
+from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
+from hdm.domain.process_release import ReleasePhase  # noqa: E402
 
 
 class Plugin:
@@ -58,6 +80,9 @@ class Plugin:
         self._support_previews = SupportBundlePreviewStore()
         self._support_writer = SupportBundleFileWriter()
         self._presentation_approvals = PresentationActivationApprovalStore()
+        self._process_approvals = ProcessReleaseApprovalStore()
+        self._process_receipts = GracefulReleaseReceiptStore()
+        self._process_release: GuardedProcessReleaseService | None = None
         self._version_info = SteamOsVersionDiscovery().scan()
 
     async def get_snapshot(self) -> dict[str, object]:
@@ -184,6 +209,106 @@ class Plugin:
             "rollback_succeeded": outcome.rollback_succeeded,
         }
 
+    async def get_process_release_status(self) -> dict[str, object]:
+        """Return only categorical durable release state and acknowledgement ID."""
+        try:
+            status = await asyncio.to_thread(self._process_service().status)
+            return status_to_payload(status)
+        except Exception:
+            return {
+                "schema_version": 1,
+                "code": "process_release.service_unavailable",
+                "acknowledgement_required": False,
+                "action_required": True,
+                "acknowledgement_id": "",
+                "durable": False,
+            }
+
+    async def preview_process_release(
+        self,
+        phase: str,
+        force_receipt_token: str = "",
+    ) -> dict[str, object]:
+        """Inspect exact eligible clients without creating signal authority."""
+        try:
+            release_phase = ReleasePhase(phase)
+            preview = await asyncio.to_thread(
+                self._process_service().preview,
+                release_phase,
+                user_confirmed=False,
+                graceful_receipt_token=force_receipt_token,
+            )
+            return preview_to_payload(preview)
+        except Exception:
+            return self._process_preview_failure(phase)
+
+    async def approve_process_release(
+        self,
+        phase: str,
+        force_receipt_token: str = "",
+    ) -> dict[str, object]:
+        """Issue one exact signal approval after controller confirmation."""
+        try:
+            release_phase = ReleasePhase(phase)
+            preview = await asyncio.to_thread(
+                self._process_service().preview,
+                release_phase,
+                user_confirmed=True,
+                graceful_receipt_token=force_receipt_token,
+            )
+            return preview_to_payload(preview)
+        except Exception:
+            return self._process_preview_failure(phase)
+
+    async def execute_process_release(
+        self, approval_token: str
+    ) -> dict[str, object]:
+        """Execute only a consumed approval through the guarded release runner."""
+        try:
+            outcome = await asyncio.to_thread(
+                self._process_service().execute,
+                approval_token,
+            )
+            payload = execution_to_payload(outcome)
+            self._events.append(
+                severity="warning" if outcome.action_required else "info",
+                code=outcome.code,
+                component="process_release",
+                stage="execution",
+                details={
+                    "accepted": outcome.accepted,
+                    "action_required": outcome.action_required,
+                    "remaining_client_count": payload["remaining_client_count"],
+                },
+            )
+            return payload
+        except Exception:
+            return {
+                "schema_version": 1,
+                "accepted": False,
+                "code": "process_release.service_unavailable",
+                "acknowledgement_id": "",
+                "status": "",
+                "software_blockers_cleared": False,
+                "hardware_removal_authorized": False,
+                "remaining_client_count": None,
+                "force_receipt_token": "",
+                "action_required": True,
+            }
+
+    async def acknowledge_process_release(
+        self, acknowledgement_id: str
+    ) -> dict[str, object]:
+        """Clear only an exact terminal process-release operation."""
+        try:
+            acknowledged = await asyncio.to_thread(
+                self._process_service().acknowledge,
+                acknowledgement_id,
+            )
+        except Exception:
+            acknowledged = False
+        return {"schema_version": 1, "acknowledged": acknowledged}
+
     async def _main(self) -> None:
         self._events.append(
             severity="info",
@@ -191,6 +316,25 @@ class Plugin:
             component="lifecycle",
             stage="startup",
         )
+        try:
+            recovery = await asyncio.to_thread(
+                self._process_service().recover_interrupted
+            )
+            if recovery.action_required:
+                self._events.append(
+                    severity="warning",
+                    code=recovery.code,
+                    component="process_release",
+                    stage="startup_recovery",
+                    details={"durable": recovery.durable},
+                )
+        except Exception:
+            self._events.append(
+                severity="error",
+                code="process_release.startup_recovery_unavailable",
+                component="process_release",
+                stage="startup_recovery",
+            )
         try:
             await self._reconcile_sleep_guard()
             payload = await self.get_snapshot()
@@ -323,3 +467,45 @@ class Plugin:
             resolve_user=lambda: resolve_gamescope_user(GamescopeDiscovery().scan()),
             approvals=self._presentation_approvals,
         )
+
+    def _process_service(self) -> GuardedProcessReleaseService:
+        if self._process_release is not None:
+            return self._process_release
+        state_root = RootOwnedRuntimeState().ensure()
+        journal = FileTransitionJournalStore(state_root)
+        observations = SnapshotTransitionObservationAdapter(self._discovery)
+        occurred_at = lambda: datetime.now(timezone.utc).isoformat()
+        recovery = ProcessReleaseJournalRecovery(
+            journal,
+            occurred_at=occurred_at,
+        )
+        runner = ProcessReleaseRunner(
+            observations,
+            PosixProcessSignalAdapter(),
+            SystemMonotonicClock(),
+            journal_store=journal,
+            occurred_at=occurred_at,
+        )
+        self._process_release = GuardedProcessReleaseService(
+            observations=observations,
+            approvals=self._process_approvals,
+            receipts=self._process_receipts,
+            runner=runner,
+            journal_store=journal,
+            recovery=recovery,
+        )
+        return self._process_release
+
+    @staticmethod
+    def _process_preview_failure(phase: str) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "phase": phase if phase in {item.value for item in ReleasePhase} else "",
+            "ready": False,
+            "approval_token": "",
+            "expires_in_seconds": 0,
+            "targets": [],
+            "protected_client_count": 0,
+            "blockers": ["process_release.service_unavailable"],
+            "confirmation_required": False,
+        }

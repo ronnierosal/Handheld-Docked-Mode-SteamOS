@@ -225,6 +225,7 @@ class EgpuClientDiscovery:
                     resources=tuple(sorted(resources, key=lambda item: item.value)),
                     close_eligible=classification.close_eligible,
                     reason=classification.reason,
+                    process_start_time=start_time,
                 )
             )
         clients.sort(key=lambda item: (item.kind.value, item.name.casefold(), item.pid))

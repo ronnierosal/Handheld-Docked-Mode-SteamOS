@@ -147,3 +147,69 @@ export const preparePresentationIntegration = callable<
   [string],
   PresentationPreparationOutcomePayload
 >("prepare_presentation_integration");
+
+export type ProcessReleasePhase = "graceful" | "force";
+
+export interface ProcessReleaseTargetPayload {
+  name: string;
+  resources: string[];
+}
+
+export interface ProcessReleasePreviewPayload {
+  schema_version: number;
+  phase: ProcessReleasePhase | "";
+  ready: boolean;
+  approval_token: string;
+  expires_in_seconds: number;
+  targets: ProcessReleaseTargetPayload[];
+  protected_client_count: number;
+  blockers: string[];
+  confirmation_required: boolean;
+}
+
+export interface ProcessReleaseExecutionPayload {
+  schema_version: number;
+  accepted: boolean;
+  code: string;
+  acknowledgement_id: string;
+  status: string;
+  software_blockers_cleared: boolean;
+  hardware_removal_authorized: false;
+  remaining_client_count: number | null;
+  force_receipt_token: string;
+  action_required: boolean;
+}
+
+export interface ProcessReleaseStatusPayload {
+  schema_version: number;
+  code: string;
+  acknowledgement_required: boolean;
+  action_required: boolean;
+  acknowledgement_id: string;
+  durable: boolean;
+}
+
+export interface ProcessReleaseAcknowledgementPayload {
+  schema_version: number;
+  acknowledged: boolean;
+}
+
+export const getProcessReleaseStatus = callable<[], ProcessReleaseStatusPayload>(
+  "get_process_release_status",
+);
+export const previewProcessRelease = callable<
+  [ProcessReleasePhase, string],
+  ProcessReleasePreviewPayload
+>("preview_process_release");
+export const approveProcessRelease = callable<
+  [ProcessReleasePhase, string],
+  ProcessReleasePreviewPayload
+>("approve_process_release");
+export const executeProcessRelease = callable<
+  [string],
+  ProcessReleaseExecutionPayload
+>("execute_process_release");
+export const acknowledgeProcessRelease = callable<
+  [string],
+  ProcessReleaseAcknowledgementPayload
+>("acknowledge_process_release");

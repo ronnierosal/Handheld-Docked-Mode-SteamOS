@@ -146,6 +146,7 @@ class EgpuClientObservation:
     resources: tuple[EgpuResourceKind, ...]
     close_eligible: bool
     reason: str
+    process_start_time: str = ""
 
 
 @dataclass(frozen=True, slots=True)

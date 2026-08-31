@@ -1,7 +1,8 @@
 """Atomic fixed-path persistence for one validated transition journal.
 
-This adapter is not constructed by the Decky runtime yet.  It accepts no path
-from the frontend and refuses cross-operation overwrite or history regression.
+The Decky runtime constructs this adapter only under HDM's fixed root-owned
+state directory. It accepts no path from the frontend and refuses
+cross-operation overwrite or history regression.
 """
 
 from __future__ import annotations

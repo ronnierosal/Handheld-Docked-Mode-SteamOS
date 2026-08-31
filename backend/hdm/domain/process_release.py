@@ -19,6 +19,7 @@ class ProcessReleaseTarget:
     pid: int
     name: str
     resources: tuple[EgpuResourceKind, ...]
+    process_start_time: str
 
     def __post_init__(self) -> None:
         if not self.instance_id or self.pid <= 1:
@@ -27,6 +28,8 @@ class ProcessReleaseTarget:
             raise ValueError("process release target name is invalid")
         if not self.resources or len(self.resources) != len(set(self.resources)):
             raise ValueError("process release target resources are invalid")
+        if not self.process_start_time.isdigit() or int(self.process_start_time) <= 0:
+            raise ValueError("process release target start-time identity is invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +40,7 @@ class ProcessClientFact:
     kind: EgpuClientKind
     resources: tuple[EgpuResourceKind, ...]
     close_eligible: bool
+    process_start_time: str
 
 
 @dataclass(frozen=True, slots=True)

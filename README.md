@@ -17,8 +17,9 @@ Move between handheld and TV gaming with player-friendly modes while HDM verifie
 > [!IMPORTANT]
 > HDM is in active development and is not a general-availability release.
 > Version 0.2.0 exposes diagnostics, G1 sleep protection, reviewed support
-> bundles, and supervised integration preparation. It does **not** expose a
-> display/GPU transition or process-termination RPC.
+> bundles, supervised integration preparation, and explicitly approved guarded
+> release of eligible non-game eGPU clients. It does **not** expose a display/GPU
+> transition or authorize physical live eGPU removal.
 
 > [!CAUTION]
 > Physical live removal of the GPD G1 is unsupported. Restore internal
@@ -50,6 +51,8 @@ as unknown or degraded and blocks the action.
   compatibility, and failure-injection simulations
 - 🔧 Explicitly approved preparation of the reversible Gamescope integration
   used for supervised display validation
+- 🧹 Redacted inspect/confirm flow for graceful release of exact eligible
+  non-game eGPU clients, with separately confirmed force escalation
 
 Preparation only installs, reloads, and verifies the fixed integration boundary.
 It cannot restart Gamescope, switch a display, or select a GPU.
@@ -68,7 +71,7 @@ between production-safe features and dormant or simulated transition work.
 | Redacted support preview and approved save | Implemented and simulated | Available; controller-visible save acceptance is pending |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
 | Portable ↔ TV Docked transition engine | Implemented and simulated | Not wired to Decky; no transition RPC exists |
-| Guarded process release | Implemented and simulated | Internal only; no signal RPC exists |
+| Guarded process release | Implemented and simulated | Decky-native experimental flow; supervised disposable-process proof pending |
 | Physical G1 live removal | Known unsafe/unsupported | Not available |
 | Automatic docking | Planned | Not available |
 

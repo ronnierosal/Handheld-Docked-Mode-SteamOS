@@ -26,22 +26,22 @@ No broader label may be inferred from a narrower one.
 |---|---|---|
 | Decky-native plugin lifecycle and typed RPC | Implemented and hardware tested | Release packaging/publishing is separate. |
 | Read-only host, DRM, Gamescope, game-scope, PCI, USB4, and G1 discovery | Implemented and hardware tested on Ally X/G1 | Revalidate after material SteamOS/kernel changes. |
-| Exact G1 DRM/audio clients and storage blockers | Implemented and hardware tested read-only | No process signaling is authorized. |
+| Exact G1 DRM/audio clients and storage blockers | Implemented and hardware tested read-only | Guarded signaling remains simulated and requires supervised proof. |
 | Portable inference | Implemented and hardware tested | Other presentation modes remain unverified in native HDM. |
 | Backend login1 sleep inhibitor | Implemented and hardware tested | It prevents suspend but cannot alone preserve Steam presentation. |
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
 | Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, and unwired supervised transition facade implemented and simulated | Decky transition controls, startup recovery wiring, and hardware proof remain; preparation cannot restart Gamescope. |
-| Process release/termination | Approval/classification, redacted inspection/payload, guarded facade, POSIX adapter, mandatory re-scan runner, durable pre-signal journal, and no-repeat restart recovery implemented and simulated | Controller-native Decky composition plus supervised disposable-process proof remain. |
+| Process release/termination | Approval/classification, redacted Decky inspect/confirm flow, guarded facade, Linux pidfd adapter, mandatory re-scan runner, root-owned durable pre-signal journal, and no-repeat startup recovery implemented and simulated | Supervised disposable-process proof remains. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
-| Atomic fixed-path transition journal store | Implemented and unit tested, dormant | Startup recovery policy is implemented; Decky construction and supervised persistence proof remain. |
-| Transition snapshot replay and failure injection | Implemented and simulated | No production mechanism adapter or mutation endpoint exists. |
+| Atomic fixed-path transition journal store | Implemented and unit tested; constructed for process release | Presentation/sleep orchestration wiring and supervised persistence proof remain. |
+| Transition snapshot replay and failure injection | Implemented and simulated | No production display/GPU mechanism endpoint exists. |
 | Remote read-only capture harness | Implemented and hardware tested unprivileged | Its fixed root read-only mode is locally verified but unavailable on the current Ally because non-interactive sudo is refused. Neither mode can observe the Decky-owned sleep lease. |
-| Guarded process-release approvals | Implemented and unit tested, internal only | Production adapter, RPC, and hardware proof remain. |
-| Process-release signal/re-scan simulator, audit, and journal | Implemented and simulated | Production mechanism remains; hardware removal authority is always false. |
-| Narrow POSIX process-signal adapter | Implemented and unit tested, dormant | Decky wiring/RPC and supervised disposable-process proof remain prohibited. |
+| Guarded process-release approvals | Implemented and simulated in Decky-native flow | Supervised disposable-process proof remains. |
+| Process-release signal/re-scan runner, audit, and journal | Implemented and simulated | Supervised mechanism proof remains; hardware removal authority is always false. |
+| Exact-instance Linux pidfd signal adapter | Implemented, unit tested, and guarded by Decky orchestration | Supervised disposable-process proof remains. |
 | Canonical sleep/disconnect reducer + durable journal projection | Implemented and unit tested, dormant policy only | Game/save/process/display/sleep mechanisms and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
@@ -120,16 +120,17 @@ read-only hardware proof; no transition mechanism is enabled.
 - Add remote-safe capture tooling that performs observation only.
 
 Exit: pure policy and simulator prove state/phase separation and fail-closed
-behavior. No new production mutation endpoint exists.
+behavior. R1 introduced no production mutation endpoint; R2 owns the later
+guarded process-release boundary.
 
 ### R2 — Guarded non-game eGPU client release
 
 **Status:** IMPLEMENTED AND SIMULATED — backend-owned preview/token/revalidation,
-typed signal/re-scan flow, deadlines, privacy-safe audit, durable pre-signal
-journaling, no-repeat restart terminalization, and a guarded application facade
-are covered. A narrow POSIX adapter exists, but Decky constructs neither it nor
-a public process RPC. Private graceful evidence is held behind an opaque,
-expiring, single-use force receipt for the future controller-first flow.
+typed signal/re-scan flow, deadlines, privacy-safe audit, root-owned durable
+pre-signal journaling, no-repeat startup recovery, and the guarded application
+facade are composed into Decky-native inspect/confirm/execute/acknowledge RPCs.
+Private graceful evidence remains behind an opaque, expiring, single-use force
+receipt. No PID, signal, command, or path comes from the frontend.
 
 - Generate backend-owned previews for exact eligible process instances.
 - Bind short-lived single-use approval tokens to candidate set, device identity,
@@ -178,7 +179,7 @@ connected naturally and no live unplug.
 branching, process-release routing, removal capability, independent removal
 readiness, Portable recovery, and original-request continuation are covered.
 Append-only journal projection and fail-closed restart recovery are also covered.
-No live mechanism or RPC is enabled.
+No live sleep mechanism or sleep-continuation RPC is enabled.
 
 - Normalize Steam menu and physical-button attempts into one request intent
   where the platform exposes a verified interception mechanism.
@@ -257,13 +258,14 @@ Exit: privacy/security tests pass; no client credentials or silent upload.
 
 ## Smallest safe next milestone
 
-Unattended-safe R1 policy/replay, guarded process-release simulation, canonical
-sleep policy/journaling, compatibility policy, temporary logging policy, and
-the optional overlay are complete. The next release-facing milestone is still
-R0's supervised controller-visible warning and support-preview acceptance.
+Unattended-safe R1 policy/replay, guarded process-release implementation,
+canonical sleep policy/journaling, compatibility policy, temporary logging
+policy, and the optional overlay are complete. The next release-facing gates are
+R0's supervised controller-visible warning/support-preview acceptance and R2's
+separate supervised disposable-process validation.
 
-Without physical supervision, continue only bounded simulator/schema work. Do
-not wire process signals, display/GPU/audio/controller mutation, original-sleep
-continuation, reboot, suspend, or physical-removal actions. The first future
-live transition remains R3 and requires an explicit milestone decision plus its
-documented supervised rollback tests.
+Without physical supervision, continue implementation, simulator, schema, UI,
+and recovery work but do not deploy or invoke process signals,
+display/GPU/audio/controller mutation, original-sleep continuation, reboot,
+suspend, or physical-removal actions. The first future live presentation
+transition remains R3 and requires its documented supervised rollback tests.

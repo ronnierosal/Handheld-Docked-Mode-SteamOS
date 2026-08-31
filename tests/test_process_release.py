@@ -59,6 +59,7 @@ def client(
         resources=resources,
         close_eligible=close_eligible,
         reason="test fixture",
+        process_start_time="12345",
     )
 
 
@@ -89,6 +90,17 @@ class ProcessReleaseApprovalTests(unittest.TestCase):
             token_factory=lambda: next(token_values),
             operation_id_factory=lambda: "process-release-operation-1",
         )
+
+    def test_close_eligible_target_requires_exact_start_time_identity(self):
+        snapshot = with_clients(
+            base_snapshot(), dataclasses.replace(client(), process_start_time="")
+        )
+        with self.assertRaisesRegex(ValueError, "start-time identity"):
+            self.store().inspect(
+                snapshot,
+                observed_generation="sample-1",
+                phase=ReleasePhase.GRACEFUL,
+            )
 
     def test_preview_targets_only_close_eligible_user_processes(self):
         snapshot = with_clients(

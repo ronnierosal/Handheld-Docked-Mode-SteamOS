@@ -12,17 +12,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getSnapshot,
+  acknowledgeProcessRelease,
+  approveProcessRelease,
   approvePresentationPreparation,
+  executeProcessRelease,
+  getProcessReleaseStatus,
   preparePresentationIntegration,
   previewPresentationPreparation,
+  previewProcessRelease,
   previewSupportBundle,
   saveSupportBundle,
   type SnapshotPayload,
+  type ProcessReleasePhase,
+  type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
 } from "./backend";
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
+import { canOfferForce, processReleaseOutcomeMessage } from "./process-release-ui";
 import {
   SleepPreflightCoordinator,
   observationFromSnapshotEvidence,
@@ -144,6 +152,57 @@ function showPresentationPreparationConfirmation(
   return modal;
 }
 
+function showProcessReleaseConfirmation(
+  preview: ProcessReleasePreviewPayload,
+  onConfirm: () => void,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const force = preview.phase === "force";
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle={force ? "Force close eGPU processes?" : "Close eGPU processes?"}
+      strOKButtonText={force ? "Force close" : "Close gracefully"}
+      strCancelButtonText="Cancel"
+      bDestructiveWarning={true}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={() => {
+        close();
+        onConfirm();
+      }}
+      onCancel={close}
+    >
+      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
+        <p>
+          {force
+            ? "Force close may lose unsaved work. Only the exact processes that survived the approved graceful attempt are eligible."
+            : "HDM will request a graceful close only for the exact ordinary user processes listed below."}
+        </p>
+        {preview.targets.map((target, index) => (
+          <p key={`${target.name}-${index}`}>
+            {target.name} — {target.resources.map(label).join(", ")}
+          </p>
+        ))}
+        {preview.protected_client_count > 0 && (
+          <p>{preview.protected_client_count} protected client(s) will not be closed.</p>
+        )}
+        <p>
+          Clearing software clients does not authorize physical G1 removal. Shut down before
+          disconnecting the G1.
+        </p>
+      </div>
+    </ConfirmModal>,
+    undefined,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
 function MonitorIcon() {
   return (
     <svg
@@ -188,18 +247,49 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [presentationBusy, setPresentationBusy] = useState(false);
   const [presentationMessage, setPresentationMessage] = useState("");
+  const [processBusy, setProcessBusy] = useState(false);
+  const [processMessage, setProcessMessage] = useState("");
+  const [processAcknowledgementId, setProcessAcknowledgementId] = useState("");
+  const [forceReceiptToken, setForceReceiptToken] = useState("");
   const lastSnapshotAt = useRef<number | null>(null);
   const refreshInFlight = useRef(false);
   const warningToastShown = useRef(false);
   const inactiveToastShown = useRef(false);
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
+  const processModal = useRef<ReturnType<typeof showModal> | null>(null);
 
   useEffect(() => () => {
     supportModal.current?.Close();
     supportModal.current = null;
     presentationModal.current?.Close();
     presentationModal.current = null;
+    processModal.current?.Close();
+    processModal.current = null;
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    void getProcessReleaseStatus().then((status) => {
+      if (disposed || status.code === "process_release.idle") {
+        return;
+      }
+      if (status.acknowledgement_required && status.acknowledgement_id) {
+        setProcessAcknowledgementId(status.acknowledgement_id);
+      }
+      setProcessMessage(
+        status.action_required
+          ? "A prior process-release attempt needs acknowledgement. Do not disconnect the G1."
+          : `Previous process-release result: ${label(status.code)}.`,
+      );
+    }).catch(() => {
+      if (!disposed) {
+        setProcessMessage("Process-release safety state is unavailable. Do not disconnect the G1.");
+      }
+    });
+    return () => {
+      disposed = true;
+    };
   }, []);
 
   const refresh = useCallback(async (quiet = false): Promise<SnapshotPayload | null> => {
@@ -267,6 +357,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     (timing) => timing.stage === "snapshot_total",
   );
   const gameUsesEgpu = disconnect?.clients.some((client) => client.kind === "game") ?? false;
+  const closeEligibleClientCount = disconnect?.clients.filter(
+    (client) => client.kind === "user" && client.close_eligible,
+  ).length ?? 0;
   const disconnectStatus = loading
     ? "Reading…"
     : !disconnect?.applicable
@@ -444,6 +537,114 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
   }, [preparePresentation]);
 
+  const runProcessRelease = useCallback(async (
+    phase: ProcessReleasePhase,
+    receiptToken: string,
+  ) => {
+    setProcessBusy(true);
+    setProcessMessage("");
+    try {
+      const approval = await approveProcessRelease(phase, receiptToken);
+      if (!approval.approval_token || approval.blockers.length > 0) {
+        setProcessMessage(
+          approval.blockers.length > 0
+            ? `Process release blocked: ${approval.blockers.map(label).join(", ")}.`
+            : "Process-release approval was not issued. Inspect again.",
+        );
+        if (phase === "force") {
+          setForceReceiptToken("");
+        }
+        return;
+      }
+      const outcome = await executeProcessRelease(approval.approval_token);
+      setProcessMessage(processReleaseOutcomeMessage(outcome));
+      setProcessAcknowledgementId(outcome.acknowledgement_id);
+      setForceReceiptToken(canOfferForce(outcome) ? outcome.force_receipt_token : "");
+      await refresh(true);
+    } catch {
+      setProcessMessage("Process release failed closed. Do not disconnect the G1.");
+      if (phase === "force") {
+        setForceReceiptToken("");
+      }
+    } finally {
+      setProcessBusy(false);
+    }
+  }, [refresh]);
+
+  const inspectProcessRelease = useCallback(async (
+    phase: ProcessReleasePhase,
+    receiptToken = "",
+  ) => {
+    setProcessBusy(true);
+    setProcessMessage("");
+    try {
+      const preview = await previewProcessRelease(phase, receiptToken);
+      if (!preview.ready || preview.blockers.length > 0 || preview.targets.length === 0) {
+        setProcessMessage(
+          preview.blockers.length > 0
+            ? `Process release blocked: ${preview.blockers.map(label).join(", ")}.`
+            : "No eligible ordinary user process is holding the G1.",
+        );
+        return;
+      }
+      processModal.current?.Close();
+      processModal.current = showProcessReleaseConfirmation(
+        preview,
+        () => void runProcessRelease(phase, receiptToken),
+        () => {
+          processModal.current = null;
+        },
+      );
+    } catch {
+      setProcessMessage("Process-release inspection is unavailable. No process was signaled.");
+    } finally {
+      setProcessBusy(false);
+    }
+  }, [runProcessRelease]);
+
+  const acknowledgeProcessResult = useCallback(async () => {
+    if (!processAcknowledgementId) {
+      return;
+    }
+    setProcessBusy(true);
+    try {
+      const result = await acknowledgeProcessRelease(processAcknowledgementId);
+      if (!result.acknowledged) {
+        setProcessMessage("The exact process-release result could not be acknowledged.");
+        return;
+      }
+      setProcessAcknowledgementId("");
+      setForceReceiptToken("");
+      setProcessMessage("Process-release result acknowledged. Inspect again if blockers remain.");
+    } catch {
+      setProcessMessage("Process-release acknowledgement failed.");
+    } finally {
+      setProcessBusy(false);
+    }
+  }, [processAcknowledgementId]);
+
+  const reviewForceClose = useCallback(async () => {
+    if (!forceReceiptToken) {
+      return;
+    }
+    setProcessBusy(true);
+    try {
+      if (processAcknowledgementId) {
+        const result = await acknowledgeProcessRelease(processAcknowledgementId);
+        if (!result.acknowledged) {
+          setProcessMessage("Acknowledge the graceful result before force-close review.");
+          return;
+        }
+        setProcessAcknowledgementId("");
+      }
+      await inspectProcessRelease("force", forceReceiptToken);
+    } catch {
+      setProcessMessage("Force-close review is unavailable. No process was signaled.");
+    } finally {
+      setProcessBusy(false);
+    }
+  }, [forceReceiptToken, inspectProcessRelease, processAcknowledgementId]);
+
   return (
     <>
       <PanelSection title="Observed state">
@@ -524,8 +725,43 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           />
         )}
         {disconnect?.error && <PanelSectionRow>{disconnect.error}</PanelSectionRow>}
+        {closeEligibleClientCount > 0 && !processAcknowledgementId && (
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void inspectProcessRelease("graceful")}
+              disabled={processBusy}
+            >
+              {processBusy ? "Checking…" : "Close eligible eGPU processes"}
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
+        {forceReceiptToken && (
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void reviewForceClose()}
+              disabled={processBusy}
+            >
+              Review force close
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
+        {processAcknowledgementId && !forceReceiptToken && (
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void acknowledgeProcessResult()}
+              disabled={processBusy}
+            >
+              Acknowledge process-release result
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
+        {processMessage && <PanelSectionRow>{processMessage}</PanelSectionRow>}
         <PanelSectionRow>
-          Read-only evidence. HDM did not close processes or disconnect hardware.
+          Process closure always requires confirmation. Software readiness never authorizes
+          physical G1 removal.
         </PanelSectionRow>
       </PanelSection>
 
@@ -578,7 +814,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
 
       <PanelSection title="Diagnostics only">
         <PanelSectionRow>
-          HDM 0.2 observes the current state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, Gamescope, or close processes.
+          HDM 0.2 observes state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, or Gamescope. It can close only exact eligible eGPU processes after explicit approval.
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => void refresh()} disabled={loading}>

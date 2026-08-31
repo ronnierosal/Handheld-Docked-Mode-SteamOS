@@ -57,20 +57,24 @@ The first certified profile is:
 
 Milestone 0.1 implements reliable read-only discovery and diagnostics. The first
 approved 0.2 mechanism is a reversible login1 sleep-inhibitor lease for the G1;
-display/GPU transitions and process signals remain unimplemented.
+display/GPU transitions remain unavailable. Guarded non-game process release is
+implemented as an experimental Decky-native 0.2 flow with redacted inspection,
+explicit approval, durable journaling, mandatory rescans, and separate force
+confirmation; supervised disposable-process validation remains pending.
 
 The proposed eGPUBridge-derived feature selection, including sleep blocking and
 guarded process closure, is documented in
 [eGPUBridge feature review for HDM](EGPUBRIDGE_FEATURE_REVIEW.md). These are 0.2
-candidates. The sleep guard is now explicitly in 0.2 scope; the other mutation
-boundaries remain closed until their own design and validation gates pass.
+candidates. The sleep guard and guarded process release are now explicitly in
+0.2 scope; other mutation boundaries remain closed until their own design and
+validation gates pass.
 The complementary [Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md) is now
 implemented and has passed its non-sleep lease-lifecycle proof. Sleep protection
 is not considered complete until its supervised request proof also passes.
 Read-only responsiveness instrumentation, adaptive Decky refresh, progressive
 connection states, and the [privacy-safe support bundle](SUPPORT_BUNDLE.md) are
-also implemented in 0.2. They do not authorize display/GPU mutation, process
-signals, or live hardware removal.
+also implemented in 0.2. They do not authorize display/GPU mutation or live
+hardware removal.
 
 The reconciled product ordering and evidence status are maintained in the
 [authoritative roadmap](ROADMAP.md). Its staged

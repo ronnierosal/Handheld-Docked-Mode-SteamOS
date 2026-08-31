@@ -1,7 +1,7 @@
 """Guarded application facade for approved eGPU client release.
 
-This service is deliberately delivery-agnostic.  Decky does not construct it
-yet, so adding this orchestration does not expose a process-signal endpoint.
+This service is deliberately delivery-agnostic. Decky constructs it behind
+opaque approval, exact-identity, durable-journal, and acknowledgement gates.
 """
 
 from __future__ import annotations
@@ -32,6 +32,8 @@ from .process_release_replay import (
 
 
 class ProcessReleaseRunnerPort(Protocol):
+    def preflight(self) -> str: ...
+
     def run(
         self,
         approval: ProcessReleaseApproval,
@@ -97,6 +99,9 @@ class GuardedProcessReleaseService:
         user_confirmed: bool,
         graceful_receipt_token: str = "",
     ) -> GuardedProcessReleasePreview:
+        runtime_blocker = self._runner.preflight()
+        if runtime_blocker:
+            return GuardedProcessReleasePreview(phase, blockers=(runtime_blocker,))
         journal_blocker = self._journal_blocker()
         if journal_blocker:
             return GuardedProcessReleasePreview(phase, blockers=(journal_blocker,))

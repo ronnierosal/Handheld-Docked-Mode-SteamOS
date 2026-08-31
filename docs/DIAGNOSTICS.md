@@ -129,8 +129,9 @@ hostnames, home paths, IP addresses, systemd stderr, PIDs, and process-instance
 IDs. eGPU clients expose only a bounded `comm` name and categorical kind,
 resource types, eligibility, and reason. Exact identities remain backend-only
 for revalidation and never cross the Decky RPC boundary. Raw process start
-times, cgroup paths, file-descriptor targets, and device paths are not
-serialized.
+times may exist only in the private backend snapshot used to defeat PID reuse;
+they are stripped from Decky delivery and support export together with
+cgroup paths, file-descriptor targets, and device paths.
 
 Raw hardware evidence belongs in supervised, redacted test captures and is not
 part of this default payload.

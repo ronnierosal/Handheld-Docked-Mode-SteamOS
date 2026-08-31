@@ -1,4 +1,4 @@
-"""Future process-signal boundary used only by deterministic simulation today."""
+"""Typed process-signal boundary for guarded release and deterministic replay."""
 
 from __future__ import annotations
 
@@ -26,7 +26,10 @@ class ProcessSignalResult:
 
 
 class ProcessSignalPort(Protocol):
+    def capability_code(self) -> str:
+        """Return an empty string when exact-instance signaling is available."""
+
     def signal(
         self, target: ProcessReleaseTarget, action: ProcessSignalAction
     ) -> ProcessSignalResult:
-        """Request one typed signal. No production implementation exists."""
+        """Request one typed signal for one already-approved exact target."""

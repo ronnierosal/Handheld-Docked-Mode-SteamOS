@@ -78,5 +78,6 @@ def report_to_public_dict(report: SnapshotReport) -> dict[str, object]:
     for client in readiness["clients"]:
         client.pop("instance_id", None)
         client.pop("pid", None)
+        client.pop("process_start_time", None)
     payload["delivery_schema_version"] = 1
     return payload

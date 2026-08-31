@@ -53,6 +53,9 @@ These invariants are release gates, not preferences.
     bound, unexpired original request.
 
 The first milestone is read-only. The approved 0.2 sleep guard is an ephemeral,
-crash-released lease governed by its documented lifecycle state machine. Durable
-transaction design, rollback tests, and hardware gates remain mandatory before
-display/GPU mutation or process signals.
+crash-released lease governed by its documented lifecycle state machine.
+Guarded 0.2 process release requires its root-owned durable journal, exact
+approval, fresh revalidation, mandatory re-scan, protected-client exclusions,
+and separate force confirmation. Supervised disposable-process proof remains a
+certification gate. Display/GPU mutation still requires its independent durable
+transaction, rollback, and hardware gates.

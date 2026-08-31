@@ -92,6 +92,7 @@ def adversarial_report() -> dict[str, object]:
                         "resources": ["drm_render"],
                         "close_eligible": True,
                         "reason": private,
+                        "process_start_time": "987654321",
                     }
                 ],
                 "storage_devices": 0,
@@ -187,6 +188,10 @@ class SupportBundleTests(unittest.TestCase):
             self.assertNotIn(forbidden, bundle.json_text)
         self.assertNotIn("stable_id", bundle.payload["snapshot"]["gpus"][0])
         self.assertNotIn("pid", bundle.payload["snapshot"]["gamescope"])
+        self.assertNotIn(
+            "process_start_time",
+            bundle.payload["snapshot"]["disconnect_readiness"]["clients"][0],
+        )
         self.assertNotIn("9876", bundle.json_text)
         self.assertNotIn("/usr/bin/private", bundle.json_text)
         self.assertNotIn("private-stable-id", bundle.json_text)

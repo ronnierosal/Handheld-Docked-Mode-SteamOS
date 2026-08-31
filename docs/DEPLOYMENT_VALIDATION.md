@@ -126,6 +126,27 @@ to idle transitions. Capture redacted before/live/after evidence.
 No automated suspend, reboot, live disconnect, USB4 reset, or destructive
 display/session action is permitted at this stage.
 
+For guarded process release, D5 starts only with a disposable same-session user
+fixture intentionally holding one non-critical G1 resource. Do not use Steam,
+Gamescope, Decky, a game, storage, or a real user application as the first
+target:
+
+1. Capture the exact candidate package hash and redacted baseline.
+2. Verify the controller preview shows only the fixture name/resource category
+   and reports all protected clients separately.
+3. Cancel once and prove no signal occurred.
+4. Approve graceful release once; verify durable `step_started` preceded the
+   signal and a fresh scan observed the fixture exit or continued hold.
+5. If testing force, use a fixture designed to ignore `SIGTERM`, acknowledge the
+   graceful result, review the second destructive warning, and approve once.
+6. Verify PID reuse/new client/storage/incomplete-scan injections all fail
+   closed and that physical-removal authority remains false.
+7. Confirm Steam, Gamescope, Decky, display, controls, network, and sleep guard
+   remained healthy. Keep the G1 attached.
+
+Any unexpected target, missing journal event, missing rescan, lost UI, or
+uncertain result stops process testing and preserves the G1 connection.
+
 For the presentation path, D5 begins with **preparation only** while the G1 is
 disconnected, the system is verified Portable/idle, and the player is watching:
 
@@ -212,5 +233,7 @@ cause in source, rebuild one complete artifact, and repeat from D0.
    preparation.
 5. Review the Decky-native preparation preview/confirm flow on the built
    candidate; keep transition controls and attach automation disabled.
-6. Run D5 preparation, then schedule the first D6 Portable-only shim restart
+6. Run the disposable-process D5 validation as a separate supervised session;
+   do not combine it with sleep, display, or physical-removal testing.
+7. Run D5 preparation, then schedule the first D6 Portable-only shim restart
    with the player watching. Do not combine it with a G1/TV transition.

@@ -21,6 +21,11 @@ REQUIRED_FILES = (
     "backend/hdm/adapters/presentation_transition.py",
     "backend/hdm/application/presentation_activation.py",
     "backend/hdm/application/supervised_transition.py",
+    "backend/hdm/application/guarded_process_release.py",
+    "backend/hdm/adapters/steamos/process_signal.py",
+    "backend/hdm/delivery/process_release.py",
+    "backend/hdm/delivery/runtime_state.py",
+    "backend/hdm/delivery/transition_journal_store.py",
     "backend/hdm/ports/presentation_activation.py",
     "bin/gamescope",
     "dist/index.js",
@@ -34,7 +39,6 @@ FORBIDDEN_RPC_TERMS = (
     "restart_gamescope",
     "set_gpu",
     "switch_display",
-    "process_release",
     "signal_process",
     "force_close",
 )
@@ -76,10 +80,15 @@ def main() -> int:
             "preview_presentation_preparation",
             "approve_presentation_preparation",
             "prepare_presentation_integration",
+            "get_process_release_status",
+            "preview_process_release",
+            "approve_process_release",
+            "execute_process_release",
+            "acknowledge_process_release",
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky RPCs must remain limited to diagnostics, approved support export, and supervised preparation"
+                "Decky RPCs must remain limited to diagnostics, approved support export, supervised preparation, and guarded process release"
             )
 
     delivery_sources = "\n".join(
@@ -97,7 +106,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics, support export, sleep guard, and supervised presentation preparation only."
+        "Plugin package check passed: diagnostics, support export, sleep guard, supervised preparation, and guarded process release only."
     )
     return 0
 

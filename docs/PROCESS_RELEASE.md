@@ -43,14 +43,14 @@ Force approval is a second flow. It requires a recorded prior graceful attempt,
 a post-graceful observation, and a target set limited to remaining previously
 attempted instances. It cannot add a process.
 
-## Simulation status
+## Implementation status
 
-The deterministic simulator implements:
+The deterministic runner implements:
 
 ```text
 approval
   -> fresh exact revalidation
-  -> one fake typed signal
+  -> one typed signal request
   -> mandatory fresh re-scan
   -> revalidate remaining subset
   -> repeat or stop
@@ -101,18 +101,22 @@ shutdown before disconnect.
 
 ## Remaining gates
 
-- add controller-native Decky consent and production composition using the
-  implemented privacy-safe payload
 - validate with disposable processes under direct supervision
 - preserve the independent G1 teardown/removal prohibition
 
-A narrow POSIX adapter is implemented and unit tested with an injected signal
-function. It accepts only typed graceful (`SIGTERM`) and force (`SIGKILL`)
-actions, fails closed off POSIX, and emits categorical results. It performs no
-wait, retry, target discovery, or escalation. The Decky runtime does not
-construct it, and package contract tests forbid process-release imports or RPCs
-in both backend and frontend delivery layers.
+A narrow Linux adapter is implemented and unit tested with injected pidfd and
+identity boundaries. It opens a pidfd, verifies the process start time captured
+by the approval, and only then sends a typed graceful (`SIGTERM`) or force
+(`SIGKILL`) action through that pidfd. It has no numeric-PID fallback: missing
+pidfd support, changed/unavailable start-time identity, non-POSIX execution,
+permission failure, or OS failure stops categorically. It performs no wait,
+retry, target discovery, or escalation. Decky constructs it only behind the
+guarded service, root-owned journal, exact enum/token RPCs, and
+controller-native destructive confirmation flow. Runtime capability preflight
+blocks inspection before consent if that exact-instance mechanism is absent.
 
-There is currently no enabled process-release mechanism and no process-release
-RPC. Guarded orchestration, durable execution, and restart-terminalization are
-implemented and tested but remain unconstructed by Decky.
+The Decky flow is implemented and simulated but not hardware validated. It
+supports inspection without authority, explicit graceful approval, a separate
+force confirmation through the opaque receipt, terminal acknowledgement, and
+startup no-repeat recovery. It remains experimental until supervised
+disposable-process validation passes.

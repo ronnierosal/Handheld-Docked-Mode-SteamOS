@@ -67,6 +67,7 @@ def client(instance_id: str, pid: int) -> EgpuClientObservation:
         resources=(EgpuResourceKind.DRM_RENDER,),
         close_eligible=True,
         reason="test fixture",
+        process_start_time=str(pid * 100),
     )
 
 
@@ -104,6 +105,9 @@ class Signals:
         self.clock = clock
         self.results = list(results)
         self.calls = []
+
+    def capability_code(self):
+        return ""
 
     def signal(self, target, action):
         self.calls.append((target, action))
@@ -230,6 +234,33 @@ class ProcessReleaseReplayTests(unittest.TestCase):
         self.assertEqual(result.journal.entries[-1].kind, JournalEventKind.FAILED)
         self.assertTrue(recovery.acknowledge("process-release-operation-1"))
         self.assertIsNone(store.current)
+
+    def test_restart_reports_committed_journal_without_false_action_required(self):
+        target = client("instance-1", 100)
+        initial = with_clients(base_snapshot(), target)
+        cleared = with_clients(initial)
+        store = MemoryJournalStore()
+        clock = FakeClock()
+        ProcessReleaseReplaySimulator(
+            Observations(VersionedObservation("generation-3", cleared)),
+            Signals(clock, (10, ProcessSignalResult(True, "signal.accepted"))),
+            clock,
+            journal_store=store,
+            occurred_at=lambda: "2026-08-31T12:00:00Z",
+        ).run(approval(initial), VersionedObservation("generation-2", initial))
+        recovery = ProcessReleaseJournalRecovery(
+            store, occurred_at=lambda: "2026-08-31T12:01:00Z"
+        )
+        result = recovery.recover(None)
+        self.assertFalse(result.action_required)
+        self.assertEqual(result.code, "process_release.committed")
+        self.assertTrue(result.durable)
+
+    def test_acknowledgement_rejects_malformed_operation_id(self):
+        recovery = ProcessReleaseJournalRecovery(
+            MemoryJournalStore(), occurred_at=lambda: "2026-08-31T12:01:00Z"
+        )
+        self.assertFalse(recovery.acknowledge("../active-transition.json"))
 
     def test_rescans_after_every_fake_signal_and_clears_software_blockers(self):
         first = client("instance-1", 100)

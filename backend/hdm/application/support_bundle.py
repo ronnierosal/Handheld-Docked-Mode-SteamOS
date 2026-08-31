@@ -41,6 +41,7 @@ _FORBIDDEN_FIELD_NAMES = {
     "path",
     "pci",
     "pid",
+    "process_start_time",
     "stable_id",
     "username",
 }

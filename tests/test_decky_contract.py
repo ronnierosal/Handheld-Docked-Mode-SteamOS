@@ -46,12 +46,19 @@ class DeckyContractTests(unittest.TestCase):
                 "preview_presentation_preparation",
                 "approve_presentation_preparation",
                 "prepare_presentation_integration",
+                "get_process_release_status",
+                "preview_process_release",
+                "approve_process_release",
+                "execute_process_release",
+                "acknowledge_process_release",
             },
         )
         source = path.read_text(encoding="utf-8")
-        self.assertNotIn("PosixProcessSignalAdapter", source)
-        self.assertNotIn("ProcessReleaseApprovalStore", source)
-        self.assertNotIn("GuardedProcessReleaseService", source)
+        self.assertIn("PosixProcessSignalAdapter", source)
+        self.assertIn("ProcessReleaseApprovalStore", source)
+        self.assertIn("GuardedProcessReleaseService", source)
+        self.assertIn("ProcessReleaseRunner", source)
+        self.assertIn("RootOwnedRuntimeState", source)
         self.assertNotIn("PresentationTransitionMechanism", source)
         self.assertNotIn("TransitionOrchestrator", source)
 
@@ -62,12 +69,16 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"preview_presentation_preparation"', source)
         self.assertIn('"approve_presentation_preparation"', source)
         self.assertIn('"prepare_presentation_integration"', source)
+        self.assertIn('"get_process_release_status"', source)
+        self.assertIn('"preview_process_release"', source)
+        self.assertIn('"approve_process_release"', source)
+        self.assertIn('"execute_process_release"', source)
+        self.assertIn('"acknowledge_process_release"', source)
         self.assertIn('"save_support_bundle"', source)
         for forbidden in (
             "apply_transition",
             "restart_gamescope",
             "switch_display",
-            "process_release",
             "signal_process",
             "force_close",
             "graceful_evidence",
@@ -93,8 +104,10 @@ class DeckyContractTests(unittest.TestCase):
         self.assertNotIn("    window,\n    { strTitle", source)
         self.assertEqual(
             source.count('    undefined,\n    { strTitle: "Handheld Dock Mode"'),
-            3,
+            4,
         )
+        self.assertIn('strOKButtonText={force ? "Force close" : "Close gracefully"}', source)
+        self.assertIn("Clearing software clients does not authorize physical G1 removal", source)
 
     def test_decky_archive_has_one_top_level_plugin_directory(self):
         self.assertEqual(

@@ -115,6 +115,7 @@ def _client_fingerprint(clients: tuple[EgpuClientObservation, ...]) -> str:
             client.instance_id,
             str(client.pid),
             client.name,
+            client.process_start_time,
             client.kind.value,
             "1" if client.close_eligible else "0",
             ",".join(sorted(resource.value for resource in client.resources)),
@@ -136,6 +137,7 @@ def _client_facts(
             kind=client.kind,
             resources=client.resources,
             close_eligible=client.close_eligible,
+            process_start_time=client.process_start_time,
         )
         for client in clients
     )
@@ -144,15 +146,22 @@ def _client_facts(
 def _eligible_targets(
     clients: tuple[EgpuClientObservation, ...],
 ) -> tuple[ProcessReleaseTarget, ...]:
+    eligible_clients = tuple(
+        client
+        for client in clients
+        if client.kind is EgpuClientKind.USER and client.close_eligible
+    )
+    if any(not client.process_start_time for client in eligible_clients):
+        raise ValueError("exact process start-time identity is required")
     eligible = tuple(
         ProcessReleaseTarget(
             instance_id=client.instance_id,
             pid=client.pid,
             name=client.name,
             resources=client.resources,
+            process_start_time=client.process_start_time,
         )
-        for client in clients
-        if client.kind is EgpuClientKind.USER and client.close_eligible
+        for client in eligible_clients
     )
     if len(eligible) > MAX_RELEASE_TARGETS:
         raise ValueError("eligible process target count exceeds the approval bound")

@@ -8,6 +8,7 @@ from enum import StrEnum
 import re
 
 from .process_release import (
+    TOKEN_RE,
     revalidate_process_release,
     revalidate_process_release_rescan,
     revalidate_process_release_target,
@@ -101,7 +102,7 @@ def process_audit_to_dict(
     ]
 
 
-class ProcessReleaseReplaySimulator:
+class ProcessReleaseRunner:
     def __init__(
         self,
         observations: TransitionObservationPort,
@@ -120,6 +121,9 @@ class ProcessReleaseReplaySimulator:
         self._deadline_ms = per_signal_deadline_ms
         self._journal_store = journal_store
         self._occurred_at = occurred_at
+
+    def preflight(self) -> str:
+        return self._signals.capability_code()
 
     def run(
         self,
@@ -392,6 +396,10 @@ class ProcessReleaseReplaySimulator:
         )
 
 
+# Compatibility name retained for existing replay tests and external imports.
+ProcessReleaseReplaySimulator = ProcessReleaseRunner
+
+
 @dataclass(frozen=True, slots=True)
 class ProcessReleaseRecoveryResult:
     journal: TransitionJournal | None
@@ -426,8 +434,12 @@ class ProcessReleaseJournalRecovery:
                 None, False, "process_release.no_recovery", True
             )
         if journal.terminal:
+            terminal = journal.entries[-1]
             return ProcessReleaseRecoveryResult(
-                journal, True, "process_release.acknowledgement_required", True
+                journal,
+                terminal.kind in (JournalEventKind.BLOCKED, JournalEventKind.FAILED),
+                terminal.code,
+                True,
             )
         if not journal.entries and observation is None:
             return ProcessReleaseRecoveryResult(
@@ -457,6 +469,8 @@ class ProcessReleaseJournalRecovery:
         )
 
     def acknowledge(self, operation_id: str) -> bool:
+        if not TOKEN_RE.fullmatch(operation_id):
+            return False
         try:
             journal = self._journal_store.load_current()
             if (

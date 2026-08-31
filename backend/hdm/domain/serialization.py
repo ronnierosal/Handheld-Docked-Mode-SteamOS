@@ -90,6 +90,7 @@ def snapshot_to_dict(snapshot: ObservedSnapshot) -> dict[str, Any]:
                     "resources": [resource.value for resource in client.resources],
                     "close_eligible": client.close_eligible,
                     "reason": client.reason,
+                    "process_start_time": client.process_start_time,
                 }
                 for client in snapshot.disconnect_readiness.clients
             ],
@@ -197,6 +198,7 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
                 client["close_eligible"], "disconnect client.close_eligible"
             ),
             reason=str(client.get("reason", "")),
+            process_start_time=str(client.get("process_start_time", "")),
         )
         for client in readiness_value.get("clients", [])
     )

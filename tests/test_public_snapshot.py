@@ -44,6 +44,7 @@ class PublicSnapshotTests(unittest.TestCase):
                     "resources": ["drm_render"],
                     "close_eligible": True,
                     "reason": "User process outside a Steam game scope",
+                    "process_start_time": "987654321",
                 }
             ],
             "storage_devices": 0,
@@ -61,6 +62,7 @@ class PublicSnapshotTests(unittest.TestCase):
             "HDMI-A-private",
             "12345",
             "9876",
+            "987654321",
         ):
             self.assertNotIn(forbidden, encoded)
         client = payload["snapshot"]["disconnect_readiness"]["clients"][0]

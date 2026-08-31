@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["system", "hardware", "diagnostics"],
-    "description": "SteamOS dock diagnostics and G1 sleep safety for supported handheld hardware.",
+    "description": "SteamOS dock diagnostics, G1 sleep safety, and guarded user-approved eGPU client release.",
     "image": ""
   }
 }
