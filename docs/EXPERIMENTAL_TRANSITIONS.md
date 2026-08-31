@@ -35,6 +35,25 @@ The planner rejects a missing, stale, or differently bound permit. This is not
 a general `allow_experimental` frontend boolean. No public RPC or automatic
 attach path can currently issue or consume the permit.
 
+## Presentation shim boundary
+
+The plugin package contains an inactive `bin/gamescope` shim and a fixed-path
+boot-scoped config store. Packaging is not activation. No installer, systemd
+override, Gamescope restart, public RPC, or automatic attach path currently
+enables it.
+
+For a docked selection, the shim requires the config's exact external connector
+and GPU vendor/device pair to remain uniquely present in the current boot. It
+never chooses a GPU by DRM card order or PCI address. Invalid or stale config
+falls back to a unique connected internal panel when possible and always clears
+an inherited HDM eGPU render selector. If a safe output cannot be selected, it
+preserves the existing output arguments rather than guessing.
+
+Future activation must be reversible, must refuse conflicts with another
+user-service `PATH` override, and must remain a distinct supervised operation.
+The orchestrator must still re-observe and verify the resulting placement; a
+successful Gamescope exec is not transition success.
+
 ## Certification boundary
 
 An approved Experimental plan authorizes one controlled attempt after the

@@ -32,7 +32,7 @@ No broader label may be inferred from a narrower one.
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
-| Display/GPU transitions | Durable guarded orchestrator implemented and simulated | Presentation mechanism and Decky request facade remain before supervised hardware proof. |
+| Display/GPU transitions | Durable guarded orchestrator plus inactive boot-scoped Gamescope shim/config store implemented and simulated | Reversible user-service integration, mechanism wiring, and Decky request facade remain before supervised hardware proof. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
@@ -147,8 +147,10 @@ two-minute single-use backend permit can authorize one explicitly confirmed
 Experimental Ally/G1 plan without promoting the capability. The engine
 re-observes before apply, journals before mutation, verifies within deadlines,
 recovers after failure or a non-durable commit, and handles interrupted
-journals without resuming the target request. No presentation mechanism, Decky
-construction, or RPC exists.
+journals without resuming the target request. No active presentation mechanism,
+Decky construction, or RPC exists. The first packaged Gamescope shim/config
+boundary is implemented and simulated but remains inactive: it installs no
+override and cannot restart Gamescope.
 
 - Implement one idempotent Portable/Docked transition path with journal,
   precondition re-observation, verification, rollback, and crash recovery.

@@ -71,6 +71,17 @@ commit-persistence failure. Startup recovery distinguishes pre-mutation
 interruption from a persisted attempted step and never resumes the original
 request automatically. The mechanism port is still unwired.
 
+A packaged but inactive Gamescope shim provides the first presentation
+mechanism boundary. It reads one strict, bounded, boot-scoped config from a
+fixed state root, removes inherited eGPU render selection, and applies an
+external connector/GPU only when the exact connector and vendor/device remain
+uniquely present in the same boot. Stale, malformed, missing, or ambiguous
+evidence selects a unique internal panel when available and otherwise preserves
+the existing output arguments while clearing the eGPU selector. The companion
+config store writes atomically from an exact transition binding. Neither the
+shim nor its config store installs a systemd override, restarts Gamescope, or is
+constructed by Decky.
+
 The SteamOS signal adapter is a dormant leaf mechanism: it maps only typed
 graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess,
 and returns categorical results. It is not constructed by `main.py`; delivery
@@ -159,6 +170,11 @@ holder chain. Warning suppression is frontend-only and cannot affect the lease.
 Future transition mutation is exposed through a small, typed API with no arbitrary command
 or path inputs. The Decky entrypoint remains an adapter; it is not the domain or
 transition engine.
+
+Presentation activation will use a separately reviewed reversible user-service
+integration. HDM will not patch SteamOS's `/usr/lib/steamos/gamescope-session`
+script. Any existing user-service override that also owns `PATH` is a conflict
+and must fail closed until it is resolved during a supervised validation.
 
 Snapshot discovery records privacy-safe stage durations and the Decky frontend
 uses an adaptive non-overlapping refresh loop: one second while discovering or

@@ -9,7 +9,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-from scripts.build_plugin import OUTPUT, PLUGIN_DIRECTORY, archive_name  # noqa: E402
+from scripts.build_plugin import (  # noqa: E402
+    OUTPUT,
+    PLUGIN_DIRECTORY,
+    archive_mode,
+    archive_name,
+    included_files,
+)
 
 
 class DeckyContractTests(unittest.TestCase):
@@ -86,6 +92,11 @@ class DeckyContractTests(unittest.TestCase):
                 top_levels = {name.split("/", 1)[0] for name in archive.namelist()}
                 self.assertEqual(top_levels, {PLUGIN_DIRECTORY})
                 self.assertIn(f"{PLUGIN_DIRECTORY}/plugin.json", archive.namelist())
+
+    def test_gamescope_shim_is_packaged_as_executable(self):
+        wrapper = ROOT / "bin" / "gamescope"
+        self.assertIn(wrapper, included_files())
+        self.assertEqual(archive_mode(wrapper) & 0o777, 0o755)
 
 
 if __name__ == "__main__":
