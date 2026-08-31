@@ -140,6 +140,15 @@ class GameCompatibilityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "title"):
             dataclasses.replace(record(), title="unsafe\nvalue")
 
+    def test_direct_verified_status_without_promotion_history_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "promotion history"):
+            dataclasses.replace(record(), egpu_handoff=EgpuHandoffStatus.VERIFIED)
+        with self.assertRaisesRegex(ValueError, "promotion history"):
+            dataclasses.replace(
+                record(),
+                save_sleep=GameSaveCapability.GRACEFUL_EXIT_VERIFIED,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

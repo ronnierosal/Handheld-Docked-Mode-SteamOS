@@ -98,6 +98,14 @@ class CompatibilityPromotion:
         for value in (self.evidence_id, self.from_status, self.to_status):
             if not TOKEN_RE.fullmatch(value):
                 raise ValueError("compatibility promotion value is invalid")
+        status_type = (
+            EgpuHandoffStatus
+            if self.dimension == "egpu_handoff"
+            else GameSaveCapability
+        )
+        status_type(self.from_status)
+        if status_type(self.to_status).value == "untested":
+            raise ValueError("compatibility promotion cannot target untested")
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +135,18 @@ class GameCompatibilityRecord:
             raise ValueError("Steam AppID is invalid")
         if len(self.promotions) > MAX_PROMOTIONS:
             raise ValueError("compatibility promotion history exceeds its bound")
+        states = {
+            "egpu_handoff": EgpuHandoffStatus.UNTESTED.value,
+            "save_sleep": GameSaveCapability.UNTESTED.value,
+        }
+        for promotion in self.promotions:
+            if promotion.from_status != states[promotion.dimension]:
+                raise ValueError("compatibility promotion history is not contiguous")
+            states[promotion.dimension] = promotion.to_status
+        if states["egpu_handoff"] != self.egpu_handoff.value:
+            raise ValueError("eGPU handoff status lacks matching promotion history")
+        if states["save_sleep"] != self.save_sleep.value:
+            raise ValueError("save/sleep status lacks matching promotion history")
 
 
 def promote_egpu_handoff(

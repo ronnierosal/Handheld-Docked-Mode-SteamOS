@@ -14,6 +14,26 @@ removal retain independent evidence/status. In particular, the certified
 Ally X/G1 identity does not override its shutdown-before-disconnect rule or
 turn untested live removal into a supported capability.
 
+## Catalog evidence model
+
+The pure catalog schema stores a combination status separately from individual
+capability claims. Capabilities include exact identity, eGPU detection, external
+display output, display/audio handoff, Docked-iGPU, sleep behavior, live
+removal, controller handoff/suppression, and optional controller power-off.
+
+Simulation and passive observation cannot promote either a combination or a
+capability. Promotion requires an intentional reviewed test with exact
+host/eGPU profiles, HDM and SteamOS versions, and a timestamp. Read-only hardware
+evidence may verify identity/detection/output observation, but a mutating
+capability needs supervised hardware evidence plus verified rollback or
+recovery. Live-removal verification additionally requires expected removal,
+verified Portable recovery, and clean kernel evidence.
+
+Known Issue and Unsupported remain first-class outcomes rather than being
+silently translated into support. The schema and tests do not create or promote
+an installed catalog record; existing claims remain limited to the evidence in
+this document and dated validation records.
+
 ## First certified profile
 
 | Component | Identity |

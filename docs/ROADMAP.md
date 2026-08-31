@@ -47,6 +47,7 @@ No broader label may be inferred from a narrower one.
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
 | Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Process-tree/title/Proton identity and public schema design remain. |
+| Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 
 ## Required architecture corrections
 
