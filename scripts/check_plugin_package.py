@@ -18,6 +18,7 @@ REQUIRED_FILES = (
     "backend/hdm/delivery/gamescope_integration.py",
     "backend/hdm/delivery/presentation_config.py",
     "backend/hdm/adapters/steamos/gamescope_user.py",
+    "backend/hdm/adapters/presentation_transition.py",
     "bin/gamescope",
     "dist/index.js",
     "dist/index.js.map",

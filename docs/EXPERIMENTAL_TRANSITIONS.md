@@ -71,6 +71,16 @@ eGPUBridge path shim is a conflict to resolve explicitly during a supervised
 test. Deactivation removes only the byte-exact HDM file and leaves its bounded
 state directory for recovery evidence.
 
+The runtime presentation mechanism is implemented and simulated behind the
+existing orchestrator port. It does not install its own integration: a separate
+supervised action must first make the exact drop-in ready. For each attempt it
+revalidates the complete transition binding and Gamescope user, reloads the
+fixed user manager, verifies the fixed service, writes the boot-scoped target,
+and queues only `gamescope-session.target`. If that queue operation fails, it
+immediately restores the config for the still-observed source placement. The
+orchestrator remains responsible for fresh placement verification and bounded
+recovery after an accepted queue operation.
+
 ## Certification boundary
 
 An approved Experimental plan authorizes one controlled attempt after the

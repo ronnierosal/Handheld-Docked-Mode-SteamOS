@@ -26,7 +26,11 @@ from ..ports.runtime_transition import (
     DeadlineWaitPort,
     RuntimeTransitionMechanismPort,
 )
-from ..ports.transition import MonotonicClockPort, TransitionObservationPort
+from ..ports.transition import (
+    MechanismResult,
+    MonotonicClockPort,
+    TransitionObservationPort,
+)
 from ..ports.transition_journal import TransitionJournalPort
 from .transition_runtime_policy import StrictRuntimeTransitionPolicy
 
@@ -372,18 +376,22 @@ class TransitionOrchestrator:
                     False,
                 )
         started = self._clock.now_ms()
-        try:
-            result = self._mechanism.recover(
-                source,
-                None,
-                observed.snapshot if observed is not None else None,
-            )
-        except Exception:
-            result = None
         prior_generation = observed.generation if observed is not None else ""
-        verified = self._verify_recovery(
-            source, prior_generation, started, deadline_ms
-        )
+        if observed is not None and placement is source:
+            result = MechanismResult(True, "recovery.already_satisfied")
+            verified = observed
+        else:
+            try:
+                result = self._mechanism.recover(
+                    source,
+                    None,
+                    observed.snapshot if observed is not None else None,
+                )
+            except Exception:
+                result = None
+            verified = self._verify_recovery(
+                source, prior_generation, started, deadline_ms
+            )
         if result is not None and result.succeeded and verified is not None:
             recovered = infer_placement(verified.snapshot)
             try:
@@ -497,20 +505,29 @@ class TransitionOrchestrator:
             durable = False
         before = self._observe()
         started = self._clock.now_ms()
-        try:
-            result = self._mechanism.recover(
-                plan.from_placement,
-                plan.binding,
-                before.snapshot if before is not None else None,
-            )
-        except Exception:
-            result = None
-        verified = self._verify_recovery(
-            plan.from_placement,
-            before.generation if before is not None else prior_generation,
-            started,
-            plan.recovery_deadline_ms,
+        before_placement = (
+            infer_placement(before.snapshot)
+            if before is not None
+            else PlacementState.UNKNOWN
         )
+        if before is not None and before_placement is plan.from_placement:
+            result = MechanismResult(True, "recovery.already_satisfied")
+            verified = before
+        else:
+            try:
+                result = self._mechanism.recover(
+                    plan.from_placement,
+                    plan.binding,
+                    before.snapshot if before is not None else None,
+                )
+            except Exception:
+                result = None
+            verified = self._verify_recovery(
+                plan.from_placement,
+                before.generation if before is not None else prior_generation,
+                started,
+                plan.recovery_deadline_ms,
+            )
         if result is not None and result.succeeded and verified is not None:
             recovered = infer_placement(verified.snapshot)
             if durable:

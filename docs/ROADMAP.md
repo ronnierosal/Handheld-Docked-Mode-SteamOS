@@ -32,7 +32,7 @@ No broader label may be inferred from a narrower one.
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
-| Display/GPU transitions | Durable guarded orchestrator, inactive boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, and fixed user-service command boundary implemented and simulated | Mechanism composition, guarded Decky request facade, and supervised hardware proof remain. |
+| Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, and presentation mechanism composition implemented and simulated | Supervised activation/test facade and hardware proof remain; nothing is wired to Decky. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
@@ -153,7 +153,10 @@ boundary is implemented and simulated but remains inactive: it installs no
 override and cannot restart Gamescope. Exact Gamescope-owner resolution and a
 fixed root-to-user command runner are also implemented and unwired; no plugin
 path invokes the runner. Reversible fixed drop-in management is simulated and
-fails closed on competing `PATH` ownership, including eGPUBridge.
+fails closed on competing `PATH` ownership, including eGPUBridge. The dormant
+presentation mechanism composes these parts with immediate config rollback on a
+synchronous restart failure; the orchestrator still independently verifies or
+recovers the observed placement.
 
 - Implement one idempotent Portable/Docked transition path with journal,
   precondition re-observation, verification, rollback, and crash recovery.

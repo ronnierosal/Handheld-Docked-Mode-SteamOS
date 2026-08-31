@@ -257,7 +257,7 @@ class TransitionOrchestratorTests(unittest.TestCase):
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.SUCCEEDED)
         self.assertEqual(clock.waits, [100])
 
-    def test_verification_timeout_recovers_and_never_commits_target(self):
+    def test_verification_timeout_observes_source_and_avoids_redundant_recovery(self):
         portable = snapshot("connected-internal.json")
         plan = experimental_plan(portable)
         clock = FakeClockWaiter()
@@ -280,13 +280,13 @@ class TransitionOrchestratorTests(unittest.TestCase):
         ).run(plan)
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.RECOVERED)
         self.assertEqual(result.outcome.placement, PlacementState.PORTABLE)
-        self.assertEqual(len(mechanism.recoveries), 1)
+        self.assertEqual(len(mechanism.recoveries), 0)
         self.assertNotIn(
             JournalEventKind.COMMITTED,
             [entry.kind for entry in result.journal.entries],
         )
 
-    def test_mechanism_exception_is_categorical_and_runs_recovery(self):
+    def test_mechanism_exception_is_categorical_and_source_proof_recovers(self):
         portable = snapshot("connected-internal.json")
         plan = experimental_plan(portable)
         clock = FakeClockWaiter()
@@ -352,7 +352,7 @@ class TransitionOrchestratorTests(unittest.TestCase):
         self.assertEqual(result.outcome.failure.code, "journal.recovery_required")
         self.assertEqual(mechanism.applied, [])
 
-    def test_restart_recovers_after_persisted_step_started(self):
+    def test_restart_at_source_terminals_recovery_without_redundant_mutation(self):
         portable = snapshot("connected-internal.json")
         plan = experimental_plan(portable)
         journal = TransitionJournal(plan.plan_id, plan.request_id)
@@ -390,7 +390,7 @@ class TransitionOrchestratorTests(unittest.TestCase):
         ).recover_interrupted()
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.RECOVERED)
         self.assertEqual(result.journal.entries[-1].kind, JournalEventKind.RECOVERY_VERIFIED)
-        self.assertIsNone(mechanism.recoveries[0][1])
+        self.assertEqual(mechanism.recoveries, [])
 
     def test_restart_before_any_mutation_terminals_without_recovery(self):
         portable = snapshot("connected-internal.json")

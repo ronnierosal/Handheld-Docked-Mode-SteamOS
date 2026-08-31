@@ -71,6 +71,15 @@ commit-persistence failure. Startup recovery distinguishes pre-mutation
 interruption from a persisted attempted step and never resumes the original
 request automatically. The mechanism port is still unwired.
 
+The dormant presentation mechanism now composes fresh binding/profile
+revalidation, exact Gamescope-user revalidation, reversible integration status,
+daemon-reload, fixed-unit verification, atomic target configuration, and a
+non-blocking fixed-target restart. It rechecks the user before and after staging
+the config. A synchronous restart failure restores the currently observed
+source config immediately; a rollback-write failure is reported separately.
+The orchestrator skips a redundant recovery restart when a fresh observation
+already proves the source placement. Neither component is constructed by Decky.
+
 A packaged but inactive Gamescope shim provides the first presentation
 mechanism boundary. It reads one strict, bounded, boot-scoped config from a
 fixed state root, removes inherited eGPU render selection, and applies an

@@ -84,6 +84,10 @@ class GamescopeIntegrationStore:
         return self._state_root
 
     @property
+    def user(self) -> GamescopeUserContext:
+        return self._user
+
+    @property
     def target(self) -> Path:
         return self._target
 
