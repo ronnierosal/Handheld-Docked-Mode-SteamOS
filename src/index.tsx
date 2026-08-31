@@ -1,8 +1,10 @@
 import { definePlugin, toaster } from "@decky/api";
 import {
   ButtonItem,
+  ConfirmModal,
   PanelSection,
   PanelSectionRow,
+  showModal,
   staticClasses,
 } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -36,6 +38,7 @@ const LABELS: Record<string, string> = {
 
 const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
 const SNAPSHOT_STALE_AFTER_MS = 10_000;
+const BLOCKED_ATTEMPT_MODAL_DELAY_MS = 750;
 
 function label(value: string): string {
   return LABELS[value] ?? value.replaceAll("_", " ");
@@ -308,19 +311,52 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   );
 }
 
-function showBlockedAttempt(warning: BlockedAttemptWarning): void {
-  toaster.toast({
-    title: warning.title,
-    body: warning.body,
-    critical: warning.critical,
-    duration: 10_000,
-  });
+function showBlockedAttempt(
+  warning: BlockedAttemptWarning,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle={warning.title}
+      strDescription={warning.body}
+      strOKButtonText="OK"
+      bAlertDialog={true}
+      bDestructiveWarning={warning.critical}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={close}
+    />,
+    window,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
 }
 
 export default definePlugin(() => {
+  let warningModal: ReturnType<typeof showModal> | null = null;
+  let warningTimer: number | null = null;
   const preflight = new SleepPreflightCoordinator(
     createDeckySteamSuspendAdapter(),
-    showBlockedAttempt,
+    (warning) => {
+      if (warningTimer !== null) {
+        window.clearTimeout(warningTimer);
+      }
+      warningModal?.Close();
+      warningModal = null;
+      // Steam closes the Power menu after dispatching OnSuspendRequest. Defer the
+      // acknowledgement dialog so it is not discarded with that transient menu.
+      warningTimer = window.setTimeout(() => {
+        warningTimer = null;
+        warningModal = showBlockedAttempt(warning, () => {
+          warningModal = null;
+        });
+      }, BLOCKED_ATTEMPT_MODAL_DELAY_MS);
+    },
   );
   preflight.start();
 
@@ -331,6 +367,12 @@ export default definePlugin(() => {
     icon: <MonitorIcon />,
     alwaysRender: true,
     onDismount() {
+      if (warningTimer !== null) {
+        window.clearTimeout(warningTimer);
+        warningTimer = null;
+      }
+      warningModal?.Close();
+      warningModal = null;
       preflight.stop();
     },
   };

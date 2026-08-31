@@ -288,6 +288,7 @@ const LABELS = {
 };
 const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
 const SNAPSHOT_STALE_AFTER_MS = 10_000;
+const BLOCKED_ATTEMPT_MODAL_DELAY_MS = 750;
 function label(value) {
     return LABELS[value] ?? value.replaceAll("_", " ");
 }
@@ -423,16 +424,33 @@ function Content({ preflight }) {
                                             ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
                                             : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), disconnect?.clients.map((client) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { children: [SP_JSX.jsxs("div", { children: [client.name, " \u00B7 PID ", client.pid, " \u00B7 ", label(client.kind)] }), SP_JSX.jsxs("div", { style: { fontSize: "0.85em", opacity: 0.7 }, children: [client.resources.map(label).join(", "), " \u00B7 ", client.reason] })] }) }, client.instance_id))), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only evidence. HDM did not close processes or disconnect hardware." })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Diagnostics only", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "HDM 0.2 observes the current state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, Gamescope, or close processes." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void refresh(), disabled: loading, children: loading ? "Reading…" : "Refresh" }) }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] })] }));
 }
-function showBlockedAttempt(warning) {
-    toaster.toast({
-        title: warning.title,
-        body: warning.body,
-        critical: warning.critical,
-        duration: 10_000,
-    });
+function showBlockedAttempt(warning, onClose) {
+    let modal;
+    const close = () => {
+        modal.Close();
+        onClose();
+    };
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: warning.title, strDescription: warning.body, strOKButtonText: "OK", bAlertDialog: true, bDestructiveWarning: warning.critical, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    return modal;
 }
 var index = definePlugin(() => {
-    const preflight = new SleepPreflightCoordinator(createDeckySteamSuspendAdapter(), showBlockedAttempt);
+    let warningModal = null;
+    let warningTimer = null;
+    const preflight = new SleepPreflightCoordinator(createDeckySteamSuspendAdapter(), (warning) => {
+        if (warningTimer !== null) {
+            window.clearTimeout(warningTimer);
+        }
+        warningModal?.Close();
+        warningModal = null;
+        // Steam closes the Power menu after dispatching OnSuspendRequest. Defer the
+        // acknowledgement dialog so it is not discarded with that transient menu.
+        warningTimer = window.setTimeout(() => {
+            warningTimer = null;
+            warningModal = showBlockedAttempt(warning, () => {
+                warningModal = null;
+            });
+        }, BLOCKED_ATTEMPT_MODAL_DELAY_MS);
+    });
     preflight.start();
     return {
         name: "Handheld Dock Mode",
@@ -441,6 +459,12 @@ var index = definePlugin(() => {
         icon: SP_JSX.jsx(MonitorIcon, {}),
         alwaysRender: true,
         onDismount() {
+            if (warningTimer !== null) {
+                window.clearTimeout(warningTimer);
+                warningTimer = null;
+            }
+            warningModal?.Close();
+            warningModal = null;
             preflight.stop();
         },
     };

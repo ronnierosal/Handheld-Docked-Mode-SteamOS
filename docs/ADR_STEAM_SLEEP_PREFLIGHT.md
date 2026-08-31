@@ -2,9 +2,12 @@
 
 ## Status
 
-Implemented with deterministic tests. The non-sleep lifecycle proof passed on
-the certified Ally X/SteamOS build on 2026-08-31. The supervised request proof
-remains pending; this ADR does not authorize an unsupervised sleep attempt.
+Implemented with deterministic tests. The non-sleep lifecycle proof and the
+supervised enforcement/display-safety portion passed on the certified Ally
+X/SteamOS build on 2026-08-31. Toast and synchronous-modal warning iterations
+failed the acknowledgement UX criterion. A delayed, non-popout modal build is
+installed, but its supervised visible-warning proof remains pending; this ADR
+does not authorize an unsupervised sleep attempt.
 
 ## Problem
 
@@ -77,6 +80,12 @@ When a blocked request occurs:
   G1 is safely absent.
 - A game owns the G1: use a critical warning that the game and eGPU are active.
 - Snapshot or game state unknown: use the stronger fail-closed warning.
+
+Steam closes its transient Power menu after dispatching the suspend request.
+HDM therefore schedules the acknowledgement modal after that menu closes and
+uses Decky's non-popout modal host. Rendering the modal synchronously from the
+pre-request hook is not accepted because Steam may discard it with the Power
+menu.
 
 **Never show this explanation again** may continue to hide the passive panel
 explanation. It does not hide feedback for an attempted blocked action, disable

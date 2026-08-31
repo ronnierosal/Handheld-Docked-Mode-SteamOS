@@ -39,6 +39,18 @@ class DeckyContractTests(unittest.TestCase):
         for forbidden in ("apply_transition", "restart_gamescope", "switch_display"):
             self.assertNotIn(forbidden, source.lower())
 
+    def test_attempted_sleep_warning_requires_acknowledgement(self):
+        source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")
+        self.assertIn("<ConfirmModal", source)
+        self.assertIn('strOKButtonText="OK"', source)
+        self.assertIn("bAlertDialog={true}", source)
+        self.assertIn("bDisableBackgroundDismiss={true}", source)
+        self.assertIn("bHideCloseIcon={true}", source)
+        self.assertIn("BLOCKED_ATTEMPT_MODAL_DELAY_MS", source)
+        self.assertIn("window.setTimeout", source)
+        self.assertIn("window.clearTimeout", source)
+        self.assertIn("bNeverPopOut: true", source)
+
     def test_decky_archive_has_one_top_level_plugin_directory(self):
         self.assertEqual(
             archive_name(ROOT / "plugin.json"),

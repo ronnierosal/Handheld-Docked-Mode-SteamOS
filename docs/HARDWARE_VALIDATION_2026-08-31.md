@@ -194,3 +194,26 @@ Phase A therefore passes. Phase B remains blocked until it is deliberately
 supervised: one visible Steam **Power → Sleep** request must show HDM's warning,
 leave the internal display usable, preserve boot ID and continuous uptime, and
 never begin Steam's preparation sequence.
+
+## Steam preflight supervised warning iteration
+
+Three supervised Steam **Power → Sleep** requests were made after phase A. In
+all three, Steam logged that the suspend request was ignored because of its
+native blockers. The kernel boot identifier stayed unchanged, uptime advanced
+continuously, login1 `PreparingForSleep` stayed `false`, Gamescope remained
+running, and the internal eDP connector remained connected. The earlier black
+presentation failure did not recur.
+
+The first two attempts used a ten-second Decky toast. The player observed that
+the toast disappeared too quickly, so these runs pass enforcement and display
+safety but fail acknowledgement UX. The third attempt used a synchronous Decky
+confirmation modal; no warning was visible after Steam closed its Power menu,
+so that attempt also fails the UX criterion. The likely cause is that Steam
+discarded the modal with the transient Power menu that was still closing.
+
+HDM now delays the modal by 750 ms, anchors it to Decky's non-popout window, and
+requires the player to press **OK**. That exact bundle is installed and its hash
+matches the local build. Decky reports one HDM native blocker, the frontend
+reload lock is clear, and the root login1 inhibitor is active. A further Sleep
+request is intentionally pending until the player is present to confirm that
+the delayed modal stays visible; no unsupervised sleep test is authorized.
