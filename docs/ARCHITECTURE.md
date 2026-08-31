@@ -249,14 +249,20 @@ render-node ownership. PID/start time, exact profile/eGPU identity, complete
 scan, and game classification must all agree. This evidence explicitly does not
 prove active rendering or authorize a placement transition.
 
-A stronger dormant read-only path samples bounded DRM `fdinfo` engine counters
+A stronger read-only path samples bounded DRM `fdinfo` engine counters
 twice for an exact backend-resolved GPU binding. It requires stable game
 processes, exact render node and PCI identity, unchanged DRM client/engine sets,
 and monotonic counters. Only an observed counter increase proves activity on
 that GPU for the sample window. The private G1 binding resolver independently
 re-runs exact DRM/PCI/USB4 matching and accepts one character-device render node
-under the exact GPU PCI device. It remains unwired; the evidence cannot
-authorize a transition or certify a game by itself.
+under the exact GPU PCI device. The internal resolver independently rechecks the
+Ally DMI profile, one matching AMD boot GPU, and one character-device render
+node. Support Preview constructs both as a one-shot read-only diagnostic,
+samples them under one shared runtime/snapshot window, and records only
+categorical identity-free results. Either Unknown target makes the comparison
+incomplete. It creates no new RPC, performs
+no background polling, and cannot authorize a transition or certify a game by
+itself.
 
 Compatibility Test Mode has one dormant application consumer for this evidence.
 It requires a same-AppID internal-GPU baseline plus active G1 counters in a

@@ -18,6 +18,10 @@ G1 and TV are connected.
   Action Required on unknown identity/profile evidence.
 - Public watcher payloads omit AppID, scopes, profile IDs, eGPU identity, and
   observation generations.
+- Support Preview can now run one explicit bounded, read-only comparison of the
+  exact game's DRM engine activity on the independently re-resolved Ally
+  internal GPU and G1. Only categorical, identity-free results enter the
+  support event log; this does not arm or execute a transition.
 
 The watcher emits only `promotion_ready`. It cannot create approval, write
 config, restart Gamescope, or invoke the transition engine. Current Ally X/G1
@@ -36,6 +40,10 @@ Decky RPC.
 
 - prove on hardware that a running iGPU game can be presented on the TV through
   the G1 without changing game or Gamescope identity
+- use a complete one-shot Support Preview comparison on the current candidate
+  to observe internal activity and no G1 activity during that supervised
+  experiment; either Unknown result is incomplete and proves neither absence
+  nor placement
 - add a backend-owned scheduler and production lifecycle for the in-memory
   watcher
 - wire the opaque facade through a reviewed Decky delivery path

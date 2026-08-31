@@ -240,6 +240,10 @@ cause in source, rebuild one complete artifact, and repeat from D0.
 2. With the player present and G1 disconnected, repeat D2 and the corrected
    persistent-warning proof.
 3. Complete controller-visible support preview/save acceptance separately.
+   On the next candidate, inspect the new identity-free `game_evidence` event
+   while idle and while one game is running; idle must skip deep scans and the
+   running result must never expose AppID, scope, PID, PCI, DRM-node, or
+   generation data.
 4. Inspect for the known eGPUBridge/HDM `PATH` conflict before any presentation
    preparation.
 5. Review the Decky-native preparation preview/confirm flow on the built

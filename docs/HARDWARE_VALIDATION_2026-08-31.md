@@ -270,3 +270,24 @@ stopped without prompting, retrying, saving a capture, or running a fallback.
 The privileged success path therefore remains UNVERIFIED on hardware; this
 failed attempt supplies no additional Gamescope, client, or sleep-lease
 evidence and performed no HDM or hardware mutation.
+
+## Gaming-safe read-only capture before the next candidate
+
+At `2026-08-31T15:08:58-07:00`, the fixed unprivileged SSH-stdin collector ran
+while the player was using the Ally. It completed with zero collection errors,
+wrote only the bounded local capture on the development computer, and reported:
+
+- one Steam, one Gamescope, and one Decky plugin-loader process
+- an exact Ally X host profile and known running-game state
+- one verified internal GPU and the active internal panel
+- no observed external GPU or connected external display in that sample
+- Gamescope running, but render selection unverified because the unprivileged
+  collector could not read the protected environment
+
+The observation does not establish physical cable state and does not validate a
+G1 workflow. The standalone collector again could not observe the Decky-owned
+sleep lease. All five installed critical-file hashes differed from current
+commit `85b8feb`, although both packages report version `0.2.0`; this proves the
+Ally was still running an older 0.2.0 candidate and prevents attributing this
+capture to current code. No install, reload, suspend, signal, service restart,
+display/GPU change, or hardware action occurred while the game was running.

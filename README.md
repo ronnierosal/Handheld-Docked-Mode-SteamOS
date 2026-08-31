@@ -68,7 +68,7 @@ between production-safe features and dormant or simulated transition work.
 | Read-only Ally X / G1 discovery | Implemented and hardware tested | Available |
 | Portable placement inference | Implemented and hardware tested | Available |
 | G1 sleep inhibitor and Steam preflight | Implemented and hardware tested | Available; persistent warning needs one final supervised visible proof |
-| Redacted support preview and approved save | Implemented and simulated | Available; controller-visible save acceptance is pending |
+| Redacted support preview, one-shot game/GPU evidence, and approved save | Implemented and simulated | Available; new evidence and controller-visible save acceptance are pending hardware proof |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
 | Portable ↔ TV Docked transition engine | Implemented and simulated | Not wired to Decky; no transition RPC exists |
 | Guarded process release | Implemented and simulated | Decky-native experimental flow; supervised disposable-process proof pending |

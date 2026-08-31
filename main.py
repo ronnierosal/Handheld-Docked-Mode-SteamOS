@@ -26,11 +26,32 @@ from hdm.adapters.steamos.sleep_inhibitor import (  # noqa: E402
     SleepGuardController,
 )
 from hdm.adapters.steamos.process_signal import PosixProcessSignalAdapter  # noqa: E402
+from hdm.adapters.game_runtime import CgroupProcGameRuntimeAdapter  # noqa: E402
+from hdm.adapters.game_session import (  # noqa: E402
+    GameScopeSessionObservationAdapter,
+    UserBoundGameScopeScanAdapter,
+)
+from hdm.adapters.drm_engine_activity import (  # noqa: E402
+    ProcfsDrmEngineCounterAdapter,
+)
+from hdm.adapters.steamos.game_render_binding import (  # noqa: E402
+    AllyInternalDrmRenderBindingResolver,
+    GpdG1DrmRenderBindingResolver,
+)
+from hdm.adapters.steamos.game_scopes import SystemdGameScopeDiscovery  # noqa: E402
 from hdm.adapters.steamos.version_info import SteamOsVersionDiscovery  # noqa: E402
 from hdm.api import DiagnosticsApi  # noqa: E402
 from hdm.adapters.transition_runtime import (  # noqa: E402
+    BoundedDeadlineWaiter,
     SnapshotTransitionObservationAdapter,
     SystemMonotonicClock,
+)
+from hdm.application.game_evidence_support import (  # noqa: E402
+    SupportGameEvidenceService,
+)
+from hdm.application.game_gpu_client import GameEgpuClientEvidenceService  # noqa: E402
+from hdm.application.game_render_activity import (  # noqa: E402
+    GameRenderActivityComparisonService,
 )
 from hdm.application.presentation_activation import (  # noqa: E402
     PresentationActivationApprovalStore,
@@ -59,6 +80,9 @@ from hdm.delivery.process_release import (  # noqa: E402
     execution_to_payload,
     preview_to_payload,
     status_to_payload,
+)
+from hdm.delivery.game_evidence_support import (  # noqa: E402
+    game_evidence_to_event_details,
 )
 from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
 from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
@@ -92,6 +116,7 @@ class Plugin:
     async def preview_support_bundle(self) -> dict[str, object]:
         """Return a redacted preview and one-time approval token."""
         report = await self.get_snapshot()
+        await asyncio.to_thread(self._record_support_game_evidence)
         self._events.append(
             severity="info",
             code="support.preview_created",
@@ -127,6 +152,75 @@ class Plugin:
             details={"size_bytes": bundle.size_bytes},
         )
         return result
+
+    def _record_support_game_evidence(self) -> None:
+        try:
+            evidence = self._support_game_evidence_service().observe()
+            details = game_evidence_to_event_details(evidence)
+            unavailable = (
+                not evidence.identity_exact
+                or evidence.internal_render.status.value == "unknown"
+                or evidence.external_render.status.value == "unknown"
+            )
+            self._events.append(
+                severity="warning" if unavailable else "info",
+                code=(
+                    "game_evidence.incomplete"
+                    if unavailable
+                    else "game_evidence.captured"
+                ),
+                component="game_evidence",
+                stage="support_preview",
+                details=details,
+            )
+        except Exception:
+            self._events.append(
+                severity="warning",
+                code="game_evidence.unavailable",
+                component="game_evidence",
+                stage="support_preview",
+            )
+
+    def _support_game_evidence_service(self) -> SupportGameEvidenceService:
+        resolution = resolve_gamescope_user(GamescopeDiscovery().scan())
+        if not resolution.ok or resolution.context is None:
+            raise ValueError("Gamescope user is unavailable")
+        user_uid = resolution.context.uid
+        snapshots = SnapshotTransitionObservationAdapter(self._discovery)
+        runtime = CgroupProcGameRuntimeAdapter()
+        counters = ProcfsDrmEngineCounterAdapter()
+        sessions = GameScopeSessionObservationAdapter(
+            UserBoundGameScopeScanAdapter(
+                SystemdGameScopeDiscovery(),
+                user_uid,
+            )
+        )
+        return SupportGameEvidenceService(
+            sessions=sessions,
+            egpu_clients=GameEgpuClientEvidenceService(
+                runtime=runtime,
+                snapshots=snapshots,
+            ),
+            render_comparison=GameRenderActivityComparisonService(
+                runtime=runtime,
+                snapshots=snapshots,
+                internal_binding=AllyInternalDrmRenderBindingResolver(),
+                external_binding=GpdG1DrmRenderBindingResolver(),
+                counters=counters,
+                waiter=BoundedDeadlineWaiter(),
+            ),
+            user_uid=user_uid,
+            verify_user=self._gamescope_user_matches,
+        )
+
+    @staticmethod
+    def _gamescope_user_matches(expected_uid: int) -> bool:
+        resolution = resolve_gamescope_user(GamescopeDiscovery().scan())
+        return bool(
+            resolution.ok
+            and resolution.context is not None
+            and resolution.context.uid == expected_uid
+        )
 
     async def preview_presentation_preparation(self) -> dict[str, object]:
         """Inspect the reversible integration without writing or restarting."""

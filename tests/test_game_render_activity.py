@@ -16,13 +16,16 @@ from hdm.adapters.drm_engine_activity import (  # noqa: E402
 )
 from hdm.adapters.steamos.drm import DrmCardRecord  # noqa: E402
 from hdm.adapters.steamos.game_render_binding import (  # noqa: E402
+    AllyInternalDrmRenderBindingResolver,
     GpdG1DrmRenderBindingResolver,
 )
+from hdm.adapters.steamos.host import HostRecord  # noqa: E402
 from hdm.adapters.steamos.pci import (  # noqa: E402
     PciDeviceRecord,
     Usb4DeviceRecord,
 )
 from hdm.application.game_render_activity import (  # noqa: E402
+    GameRenderActivityComparisonService,
     GameRenderActivityEvidenceService,
 )
 from hdm.domain.game_render_activity import (  # noqa: E402
@@ -37,7 +40,7 @@ from hdm.domain.game_runtime import (  # noqa: E402
     GameRuntimeKind,
 )
 from hdm.domain.game_session import ActiveGameIdentity  # noqa: E402
-from hdm.domain.models import GameState  # noqa: E402
+from hdm.domain.models import GameState, GpuRole  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.ports.transition import VersionedObservation  # noqa: E402
 
@@ -45,6 +48,9 @@ from hdm.ports.transition import VersionedObservation  # noqa: E402
 FIXTURES = ROOT / "tests" / "fixtures"
 EGPU_ID = "gpd-g1:0123456789abcdef"
 BINDING = DrmRenderBinding(EGPU_ID, "0000:08:00.0", "/dev/dri/renderD131")
+INTERNAL_BINDING = DrmRenderBinding(
+    "internal-gpu", "0000:01:00.0", "/dev/dri/renderD128"
+)
 IDENTITY = ActiveGameIdentity("1234", ("app-steam-app1234-test.scope",))
 PROCESS = GameProcessInstance(101, 500, 1, "game", False)
 
@@ -220,6 +226,18 @@ class FakePciUsb4:
         )
 
 
+class FakeHost:
+    def __init__(self, value=None):
+        self.value = value or HostRecord(
+            "ASUSTeK COMPUTER INC.",
+            "ROG Ally X RC72LA",
+            "RC72LA",
+        )
+
+    def scan(self):
+        return self.value
+
+
 class DrmRenderBindingResolverTests(unittest.TestCase):
     def test_exact_fresh_topology_resolves_one_private_render_node(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -278,6 +296,61 @@ class DrmRenderBindingResolverTests(unittest.TestCase):
         self.assertIsNone(ambiguous)
         self.assertIsNone(changed)
 
+    def test_exact_ally_boot_gpu_resolves_one_private_render_node(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pci = root / "pci"
+            (pci / "0000_01_00.0" / "drm" / "renderD128").mkdir(parents=True)
+            resolver = AllyInternalDrmRenderBindingResolver(
+                drm=FakeDrm(
+                    (
+                        DrmCardRecord(
+                            "card0",
+                            "0000:01:00.0",
+                            "0x1002",
+                            "0x0000",
+                            True,
+                            "amdgpu",
+                        ),
+                    )
+                ),
+                host=FakeHost(),
+                pci_path_resolver=lambda bdf: pci / bdf.replace(":", "_"),
+                dri_root=Path("/dev/dri"),
+                node_validator=lambda path: path.name == "renderD128",
+            )
+            result = resolver.resolve(snapshot())
+
+        self.assertEqual(
+            result,
+            DrmRenderBinding(
+                "internal-gpu", "0000:01:00.0", "/dev/dri/renderD128"
+            ),
+        )
+
+    def test_internal_binding_rejects_unknown_host_and_ambiguous_boot_gpu(self):
+        card = DrmCardRecord(
+            "card0",
+            "0000:01:00.0",
+            "0x1002",
+            "0x0000",
+            True,
+            "amdgpu",
+        )
+        unknown_host = AllyInternalDrmRenderBindingResolver(
+            drm=FakeDrm((card,)),
+            host=FakeHost(HostRecord("Other", "Other", "Other")),
+            node_validator=lambda path: True,
+        ).resolve(snapshot())
+        ambiguous = AllyInternalDrmRenderBindingResolver(
+            drm=FakeDrm((card, dataclasses.replace(card, name="card1"))),
+            host=FakeHost(),
+            node_validator=lambda path: True,
+        ).resolve(snapshot())
+
+        self.assertIsNone(unknown_host)
+        self.assertIsNone(ambiguous)
+
 
 def runtime(*, generation="a" * 64, sample="b" * 64):
     return ActiveGameRuntimeObservation(
@@ -321,6 +394,14 @@ class SnapshotPort:
         return VersionedObservation("snapshot", self.value, "sample")
 
 
+class SnapshotSequencePort:
+    def __init__(self, *values):
+        self.values = list(values)
+
+    def observe(self):
+        return self.values.pop(0)
+
+
 class BindingPort:
     def __init__(self, value=BINDING):
         self.value = value
@@ -345,7 +426,15 @@ class Waiter:
         self.waits.append(value)
 
 
-def service(first, second, *, before=None, after=None, binding=BINDING):
+def service(
+    first,
+    second,
+    *,
+    before=None,
+    after=None,
+    binding=BINDING,
+    target_role=GpuRole.EXTERNAL,
+):
     waiter = Waiter()
     value = GameRenderActivityEvidenceService(
         runtime=RuntimePort(
@@ -356,6 +445,7 @@ def service(first, second, *, before=None, after=None, binding=BINDING):
         bindings=BindingPort(binding),
         counters=CounterPort(first, second),
         waiter=waiter,
+        target_role=target_role,
         sample_interval_ms=250,
     )
     return value, waiter
@@ -419,6 +509,100 @@ class GameRenderActivityServiceTests(unittest.TestCase):
 
         self.assertEqual(result.status, GameRenderActivityStatus.UNKNOWN)
         self.assertEqual(result.reason_code, "render_activity.binding_unverified")
+
+    def test_internal_target_accepts_only_exact_internal_binding(self):
+        internal = DrmRenderBinding(
+            "internal-gpu", "0000:01:00.0", "/dev/dri/renderD128"
+        )
+        active, _ = service(
+            counter(100),
+            counter(125),
+            binding=internal,
+            target_role=GpuRole.INTERNAL,
+        )
+        wrong, _ = service(
+            counter(100),
+            counter(125),
+            binding=BINDING,
+            target_role=GpuRole.INTERNAL,
+        )
+
+        self.assertEqual(
+            active.observe(IDENTITY, user_uid=1000).status,
+            GameRenderActivityStatus.ACTIVE,
+        )
+        self.assertEqual(
+            wrong.observe(IDENTITY, user_uid=1000).reason_code,
+            "render_activity.binding_unverified",
+        )
+
+
+class GameRenderActivityComparisonServiceTests(unittest.TestCase):
+    def comparison(
+        self,
+        *,
+        snapshots=None,
+        external_binding=BINDING,
+        counters=None,
+    ):
+        waiter = Waiter()
+        snapshot_values = snapshots or (
+            VersionedObservation("snapshot", snapshot(), "sample-1"),
+            VersionedObservation("snapshot", snapshot(), "sample-2"),
+        )
+        value = GameRenderActivityComparisonService(
+            runtime=RuntimePort(
+                runtime(sample="b" * 64),
+                runtime(sample="c" * 64),
+            ),
+            snapshots=SnapshotSequencePort(*snapshot_values),
+            internal_binding=BindingPort(INTERNAL_BINDING),
+            external_binding=BindingPort(external_binding),
+            counters=CounterPort(
+                *(counters or (counter(100), counter(10), counter(125), counter(10)))
+            ),
+            waiter=waiter,
+            sample_interval_ms=250,
+        )
+        return value, waiter
+
+    def test_both_targets_share_one_runtime_snapshot_and_wait_window(self):
+        value, waiter = self.comparison()
+
+        result = value.observe(IDENTITY, user_uid=1000)
+
+        self.assertEqual(result.internal.status, GameRenderActivityStatus.ACTIVE)
+        self.assertEqual(result.external.status, GameRenderActivityStatus.IDLE_WINDOW)
+        self.assertEqual(result.internal.placement, result.external.placement)
+        self.assertEqual(waiter.waits, [250])
+
+    def test_snapshot_change_discards_both_target_results(self):
+        changed = dataclasses.replace(snapshot(), game_state=GameState.IDLE)
+        value, _waiter = self.comparison(
+            snapshots=(
+                VersionedObservation("snapshot", snapshot(), "sample-1"),
+                VersionedObservation("changed", changed, "sample-2"),
+            )
+        )
+
+        result = value.observe(IDENTITY, user_uid=1000)
+
+        self.assertEqual(result.internal.status, GameRenderActivityStatus.UNKNOWN)
+        self.assertEqual(result.external.status, GameRenderActivityStatus.UNKNOWN)
+        self.assertEqual(result.internal.reason_code, "render_activity.snapshot_changed")
+
+    def test_missing_external_binding_keeps_internal_evidence_non_comparative(self):
+        value, waiter = self.comparison(
+            external_binding=None,
+            counters=(counter(100), counter(125)),
+        )
+
+        result = value.observe(IDENTITY, user_uid=1000)
+
+        self.assertEqual(result.internal.status, GameRenderActivityStatus.ACTIVE)
+        self.assertEqual(result.external.status, GameRenderActivityStatus.UNKNOWN)
+        self.assertEqual(result.external.reason_code, "render_activity.binding_unverified")
+        self.assertEqual(waiter.waits, [250])
 
 
 if __name__ == "__main__":

@@ -53,7 +53,7 @@ No broader label may be inferred from a narrower one.
 | Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Steam title/version and consumer wiring remain. |
 | Private active-game process/runtime evidence | Implemented and unit tested, dormant read-only | Exact Proton version, consumers, Decky wiring, and hardware proof remain. |
 | Bracketed game/eGPU render-client correlation | Implemented and unit tested, dormant read-only | Production consumers and hardware comparison with engine evidence remain. |
-| Bounded exact DRM engine-activity evidence | Implemented and simulated with exact unwired G1 binding resolver, dormant read-only | Decky/compatibility consumers and hardware proof remain. |
+| Bounded exact DRM engine-activity evidence | Implemented and simulated for independently re-resolved Ally internal and G1 bindings; one-shot shared-window categorical comparison is wired into existing Support Preview | Hardware proof, continuous consumers, and reviewed compatibility use remain. |
 | Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 | Reduced transition/compatibility support context | Implemented and privacy tested, dormant optional input | Live owners and controller-visible preview acceptance remain. |
 | Compatibility Test Mode session policy | Implemented and simulated with dormant exact external-render collector | UI, persistence, save evidence consumer, trusted hardware runs, and reviewed tests remain. |
@@ -248,17 +248,20 @@ SSH remains supervised; the GPD G1 is not eligible.
 **Status:** PARTIAL READ-ONLY FOUNDATION IMPLEMENTED — exact Steam AppID/scope
 identity can be enriched with bounded PID/start-time process instances,
 parent/launcher relationships, executable basenames, and native-versus-Proton
-classification. All evidence remains private and fail closed; no consumer,
-mutation, relaunch path, or Decky RPC exists. See
+classification. All exact identity remains private and fail closed; the only
+production consumer is the existing user-invoked Support Preview, and no
+mutation, relaunch path, or new Decky RPC exists. See
 [Active game runtime evidence](GAME_RUNTIME.md). Stable exact game processes can
 also be correlated with a complete exact G1 client scan to prove render-node
 ownership or absence, but that result deliberately does not claim active
 rendering or identify another GPU. A separate bounded DRM `fdinfo` sampler can
 now prove that one exact game's engine counters increased on one exact GPU
-during a stable sample window. The exact read-only G1 binding resolver is
-implemented but unwired; it revalidates the complete topology and one render
-node before sampling. Hardware validation and production consumers remain
-absent. The dormant Compatibility Test Mode collector can consume this proof
+during a stable sample window. Exact read-only Ally internal and G1 binding
+resolvers revalidate their profiles and one render node before sampling. The
+existing Support Preview action can now collect one bounded shared-window,
+identity-free internal/G1 comparison; either Unknown target remains incomplete
+and hardware validation remains absent. The dormant
+Compatibility Test Mode collector can consume this proof
 only for a
 same-AppID internal-GPU baseline and Docked-eGPU observation; it cannot finish,
 review, promote, or publish the result.
@@ -270,6 +273,8 @@ scheduler or Decky delivery. An in-memory facade composes its private ready
 generation with the existing supervised preview and consumes the watch only
 after explicit approval-token issuance; it never executes the token. See
 [Docked-iGPU workflow](DOCKED_IGPU.md).
+The support-preview comparison adds no scheduler, transition approval, or
+execution authority and never promotes a compatibility record.
 
 - Complete the existing read-only experiment and prove unchanged Gamescope and
   game identity, iGPU rendering, and TV presentation.

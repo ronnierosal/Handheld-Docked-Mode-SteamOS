@@ -33,12 +33,12 @@ and native-versus-Proton classification only. It does not yet prove:
 - Steam title or game version
 - a specific Proton build/version
 - launcher child ownership outside the exact scope set
-- actual rendering GPU for the game
+- actual rendering GPU for the game without a separate bounded engine probe
 - save behavior, relaunch behavior, or compatibility status
 
-No Decky RPC constructs this adapter yet. A future consumer must revalidate the
-exact AppID/scopes and a fresh runtime generation before using it in a guarded
-operation.
+The existing Support Preview RPC now constructs this adapter only for one
+explicit read-only evidence pass. Any future guarded operation must still
+revalidate the exact AppID/scopes and a fresh runtime generation independently.
 
 ## eGPU render-client correlation
 
@@ -79,11 +79,33 @@ runtime race, unreadable evidence, or binding conflict is `unknown`.
 exact GPU during that bounded window. It does not prove exclusive use, future
 use, display placement, or broad compatibility.
 
-The read-only GPD G1 binding resolver is implemented and unwired. It requires
+The read-only GPD G1 binding resolver is implemented. It requires
 the exact snapshot profile/identity, independently re-runs the complete
 DRM/PCI/USB4 G1 matcher, requires the same stable ID and GPU BDF, accepts exactly
 one render node under that PCI device, and verifies that its `/dev/dri` target is
-a character device. The complete path still has no Decky RPC or hardware proof.
+a character device. A separate Ally internal-GPU resolver re-observes the exact
+certified DMI tuple, exactly one verified internal snapshot GPU, and exactly one
+AMD `boot_vga` card with a matching vendor/device identity before accepting one
+character-device render node. Neither resolver trusts DRM card numbers, render
+node suffixes, or PCI addresses supplied by delivery.
+
+The existing Support Preview action is now the first production construction
+of these read-only pieces. When an exact Gamescope user and one exact running
+Steam game are available, it samples internal and G1 engine counters inside one
+shared runtime/snapshot bracket and one bounded wait interval, then adds only
+categorical evidence to the preview event log. Either target being Unknown marks
+the comparison incomplete. The payload carries
+game state, exactness, native/Proton category, eGPU-client category/count,
+internal/external activity category, active-engine count, reason, and placement.
+It excludes AppID, scopes, PID/start time, executable data, PCI/DRM identities,
+stable IDs, and generations. Idle or unknown game state skips all deep process
+and DRM scans. Fresh exact game-session samples bracket the complete comparison;
+a changed game, Gamescope user, runtime category, snapshot, or cross-target placement
+discards the complete observation.
+
+This is not a new RPC, continuous monitor, transition authority, or hardware
+proof. It runs only when the user already requests a support preview and any
+unknown or changing identity remains categorical Unknown.
 
 The dormant compatibility-test collector is the first consumer. It accepts an
 eGPU-handoff result only when the intentional test baseline names the same exact

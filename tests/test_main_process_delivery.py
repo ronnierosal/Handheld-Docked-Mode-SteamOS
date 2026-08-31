@@ -17,7 +17,15 @@ from hdm.application.guarded_process_release import (  # noqa: E402
     GuardedProcessReleasePreview,
     GuardedProcessReleaseStatus,
 )
-from hdm.domain.models import EgpuResourceKind  # noqa: E402
+from hdm.application.game_evidence_support import (  # noqa: E402
+    SupportGameEvidence,
+    SupportRenderEvidence,
+)
+from hdm.domain.control_plane import PlacementState  # noqa: E402
+from hdm.domain.game_gpu_client import GameEgpuClientStatus  # noqa: E402
+from hdm.domain.game_render_activity import GameRenderActivityStatus  # noqa: E402
+from hdm.domain.game_runtime import GameRuntimeKind  # noqa: E402
+from hdm.domain.models import EgpuResourceKind, GameState  # noqa: E402
 from hdm.domain.process_release import (  # noqa: E402
     ProcessReleasePreview,
     ProcessReleasePreviewRow,
@@ -76,6 +84,65 @@ class Service:
     def acknowledge(self, operation_id):
         self.acknowledgements.append(operation_id)
         return operation_id == "operation-public-1"
+
+
+class SupportEvidenceService:
+    def __init__(self, *, external_unknown=False):
+        self.calls = 0
+        self.external_unknown = external_unknown
+
+    def observe(self):
+        self.calls += 1
+        return SupportGameEvidence(
+            GameState.RUNNING,
+            True,
+            GameEgpuClientStatus.ABSENT,
+            0,
+            "game_gpu.egpu_render_client_absent",
+            SupportRenderEvidence(
+                GameRenderActivityStatus.ACTIVE,
+                GameRuntimeKind.PROTON,
+                1,
+                "render_activity.active",
+                PlacementState.DOCKED_IGPU,
+            ),
+            (
+                SupportRenderEvidence(
+                    GameRenderActivityStatus.UNKNOWN,
+                    GameRuntimeKind.UNKNOWN,
+                    0,
+                    "render_activity.binding_unverified",
+                    PlacementState.UNKNOWN,
+                )
+                if self.external_unknown
+                else SupportRenderEvidence(
+                    GameRenderActivityStatus.NO_CLIENT,
+                    GameRuntimeKind.PROTON,
+                    0,
+                    "render_activity.no_client",
+                    PlacementState.DOCKED_IGPU,
+                )
+            ),
+        )
+
+
+async def support_snapshot():
+    return {
+        "snapshot": {
+            "schema_version": 3,
+            "observed_at": "2026-08-31T00:00:00+00:00",
+            "host_profile": "asus-rog-ally-x",
+            "support_tier": "certified",
+            "game_state": "running",
+            "gpus": [],
+            "displays": [],
+            "gamescope": {},
+            "disconnect_readiness": {},
+            "sleep_guard": {},
+            "blockers": [],
+        },
+        "diagnostics": {},
+    }
 
 
 def load_main_module():
@@ -148,6 +215,61 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertFalse(rejected["acknowledged"])
         self.assertTrue(accepted["acknowledged"])
         self.assertEqual(service.executions, ["approval_public_1"])
+
+    def test_support_preview_runs_one_shot_identity_free_game_evidence(self):
+        plugin, _service = self.plugin()
+        evidence = SupportEvidenceService()
+        plugin.get_snapshot = support_snapshot
+        plugin._support_game_evidence_service = lambda: evidence
+
+        result = asyncio.run(plugin.preview_support_bundle())
+        payload = json.loads(result["preview_json"])
+        rows = [
+            event
+            for event in payload["events"]
+            if event["component"] == "game_evidence"
+        ]
+
+        self.assertEqual(evidence.calls, 1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["code"], "game_evidence.captured")
+        encoded = json.dumps(rows, sort_keys=True).lower()
+        for private in ("appid", "scope", "pid", "renderd", "0000:", "stable_id"):
+            self.assertNotIn(private, encoded)
+
+    def test_support_preview_survives_game_evidence_failure(self):
+        plugin, _service = self.plugin()
+        plugin.get_snapshot = support_snapshot
+
+        def unavailable():
+            raise RuntimeError("private failure")
+
+        plugin._support_game_evidence_service = unavailable
+        result = asyncio.run(plugin.preview_support_bundle())
+        payload = json.loads(result["preview_json"])
+
+        self.assertTrue(result["preview_token"])
+        self.assertIn(
+            "game_evidence.unavailable",
+            {event["code"] for event in payload["events"]},
+        )
+
+    def test_support_preview_marks_either_unknown_target_incomplete(self):
+        plugin, _service = self.plugin()
+        plugin.get_snapshot = support_snapshot
+        plugin._support_game_evidence_service = lambda: SupportEvidenceService(
+            external_unknown=True
+        )
+
+        result = asyncio.run(plugin.preview_support_bundle())
+        payload = json.loads(result["preview_json"])
+        rows = [
+            event
+            for event in payload["events"]
+            if event["component"] == "game_evidence"
+        ]
+
+        self.assertEqual(rows[0]["code"], "game_evidence.incomplete")
 
 
 if __name__ == "__main__":

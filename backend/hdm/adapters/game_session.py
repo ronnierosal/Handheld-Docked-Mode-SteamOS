@@ -15,6 +15,23 @@ class GameScopeScanPort(Protocol):
     def scan(self) -> GameScopeScan: ...
 
 
+class UserGameScopeDiscoveryPort(Protocol):
+    def scan(self, user_uid: int | None = None) -> GameScopeScan: ...
+
+
+class UserBoundGameScopeScanAdapter:
+    """Bind an exact backend-resolved Gamescope UID to later scope scans."""
+
+    def __init__(self, discovery: UserGameScopeDiscoveryPort, user_uid: int) -> None:
+        if user_uid <= 0 or user_uid > 2_147_483_647:
+            raise ValueError("game scope user is invalid")
+        self._discovery = discovery
+        self._user_uid = user_uid
+
+    def scan(self) -> GameScopeScan:
+        return self._discovery.scan(self._user_uid)
+
+
 class GameScopeSessionObservationAdapter:
     def __init__(self, discovery: GameScopeScanPort) -> None:
         self._discovery = discovery

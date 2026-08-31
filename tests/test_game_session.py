@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.adapters.game_session import (  # noqa: E402
     GameScopeSessionObservationAdapter,
+    UserBoundGameScopeScanAdapter,
 )
 from hdm.adapters.steamos.game_scopes import GameScopeScan  # noqa: E402
 from hdm.domain.game_session import ActiveGameIdentity  # noqa: E402
@@ -24,7 +25,27 @@ class Discovery:
         return self.value
 
 
+class UserDiscovery:
+    def __init__(self, scan):
+        self.value = scan
+        self.calls = []
+
+    def scan(self, user_uid=None):
+        self.calls.append(user_uid)
+        return self.value
+
+
 class GameSessionObservationTests(unittest.TestCase):
+    def test_user_bound_scan_uses_only_the_backend_resolved_uid(self):
+        scan = GameScopeScan(GameState.IDLE)
+        discovery = UserDiscovery(scan)
+        adapter = UserBoundGameScopeScanAdapter(discovery, 1000)
+
+        self.assertIs(adapter.scan(), scan)
+        self.assertEqual(discovery.calls, [1000])
+        with self.assertRaisesRegex(ValueError, "user"):
+            UserBoundGameScopeScanAdapter(discovery, 0)
+
     def test_exact_single_appid_scopes_get_semantic_and_sample_identity(self):
         scan = GameScopeScan(
             GameState.RUNNING,

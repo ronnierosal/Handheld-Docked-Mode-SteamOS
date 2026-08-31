@@ -143,6 +143,18 @@ cgroup paths, file-descriptor targets, and device paths.
 Raw hardware evidence belongs in supervised, redacted test captures and is not
 part of this default payload.
 
+Support Preview performs one additional bounded game/GPU evidence pass only
+when the user invokes that existing action. Idle or unknown game state skips
+deep process and DRM inspection. For one exact running Steam game, HDM brackets
+private runtime identity and samples the independently resolved internal and G1
+render nodes within one shared snapshot/runtime window. Either target being
+Unknown marks the comparison incomplete. The support event contains only categorical game exactness,
+runtime type, client/activity states and counts, reason codes, and placement.
+AppID, scopes, PIDs, process start times, executable data, PCI addresses, DRM
+nodes, stable IDs, and evidence generations never enter the preview. Failure of
+this optional pass records a categorical unavailable event and does not prevent
+the base support preview.
+
 ## Temporary verbose logging policy
 
 Normal bounded HDM events remain available for support bundles. Additional
