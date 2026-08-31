@@ -61,7 +61,10 @@ not authorize retrying later stages with speculative fixes.
 ### D0 — Local deterministic checks
 
 Run the complete build/check matrix. For transition work, also run snapshot
-replay, fake-clock, timeout, rollback, and failure-injection scenarios.
+replay, fake-clock, timeout, rollback, failure-injection, and unexpected-loss
+Portable recovery scenarios. R5 checks must prove exact trigger/sample binding,
+no raw-event sleep authority, bounded primary/fallback attempts, and fail-closed
+unknown evidence.
 
 Permitted: local files and simulators.  
 Prohibited: device mutation.
@@ -172,6 +175,14 @@ unplug, and eGPU teardown/removal.
 The current Ally X/G1 profile may not enter a live-removal experiment merely
 because software clients are gone. AMDGPU teardown safety is an independent
 hardware gate.
+
+Unexpected-undock R5 hardware validation additionally requires production
+event/mechanism wiring through the shared serialized transition authority,
+exact pre-event and loss evidence, verified internal recovery readiness, bounded
+Portable-preservation fallback, and independent audio/controller verification.
+It may run only on a profile whose live-removal capability has already been
+verified. The current GPD G1 is therefore ineligible; do not use it for an
+unexpected-unplug test.
 
 The first presentation experiment must start G1-disconnected and Portable. It
 restarts Gamescope once through the shim with a Portable target, proves the

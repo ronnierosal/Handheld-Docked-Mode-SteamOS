@@ -170,7 +170,21 @@ acknowledgement. It is not constructed by Decky and has no directive mechanism.
 Asynchronous cable-loss policy can request Portable recovery but can never
 continue sleep. Even when the observed workflow is SleepPendingDisconnect, only
 the canonical reducer may continue the exact unexpired request after separate
-removal and Portable verification. Unknown placement fails closed.
+removal and Portable verification. Unknown pre-event placement fails closed;
+after a verified loss invalidates the composite placement, every individual
+recovery-critical identity and state must still be known before an attempt.
+
+A dormant application-level unexpected-undock coordinator now binds one raw
+eGPU/display-loss event to an exact semantic generation and independent sample,
+re-observes exact loss and internal recovery readiness, makes one injected
+Portable recovery attempt, verifies a fresh Portable result, and returns a
+bounded identity-free trace. Primary failure invokes one separately bounded
+Portable-preservation fallback; unknown/stale evidence or failed verification
+enters Action Required. A sleep-pending event also requires the exact canonical
+operation identity, but the coordinator has no sleep port and can only request a
+later canonical re-check. It is not constructed by Decky and has no production
+mechanism adapter. See
+[Unexpected-undock recovery coordinator](UNEXPECTED_UNDOCK_RECOVERY.md).
 
 The manual planner supports only the bounded Portable↔Docked-eGPU path and
 verified no-ops. A mutating plan requires exact runtime host/eGPU profile

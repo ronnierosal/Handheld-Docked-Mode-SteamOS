@@ -218,17 +218,26 @@ sleep stage, and recovery within the 128-entry journal.
 
 ### R5 — Unexpected-undock recovery
 
-**Status:** PURE EVENT POLICY IMPLEMENTED — unsolicited and sleep-pending cable
-loss both route only to Portable recovery; no raw topology event can continue
-sleep. Duplicate Portable events observe stability and unknown placement fails
-closed. Display/audio/controller recovery mechanisms remain designed only.
+**Status:** APPLICATION COORDINATOR IMPLEMENTED AND SIMULATED — unsolicited and
+exact canonical sleep-pending loss remain distinct, and both route only through
+fresh detect/validate/attempt/verify/commit Portable recovery. The coordinator
+returns a bounded identity-free trace, uses a separately bounded
+Portable-preservation fallback, and rejects stale/unknown evidence. It has no
+sleep port: a verified sleep-pending result only requests a later canonical
+transaction re-check. Production topology, display/GPU, audio, controller,
+Decky, journal/facade, and startup-recovery wiring remain gated. Physical G1
+removal remains unsupported. See
+[Unexpected-undock recovery coordinator](UNEXPECTED_UNDOCK_RECOVERY.md).
 
 - Distinguish unsolicited loss from an expected SleepPendingDisconnect event.
 - Restore internal display, audio, and controls; verify Portable; never sleep
   after an unsolicited unplug.
 
-Exit: deterministic replay plus a separately approved hardware test. Any test
-that can strand SSH remains supervised.
+Exit: deterministic replay is implemented. Production exit still requires the
+shared serialized transition authority, reviewed SteamOS event/mechanism
+adapters, audio/controller recovery coverage, and a separately approved D6
+hardware test on a profile with verified live removal. Any test that can strand
+SSH remains supervised; the GPD G1 is not eligible.
 
 ### R6 — Docked-iGPU research and game-aware launch policy
 
