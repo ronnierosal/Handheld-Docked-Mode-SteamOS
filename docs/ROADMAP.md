@@ -49,6 +49,7 @@ No broader label may be inferred from a narrower one.
 | Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Process-tree/title/Proton identity and public schema design remain. |
 | Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 | Reduced transition/compatibility support context | Implemented and privacy tested, dormant optional input | Live owners and controller-visible preview acceptance remain. |
+| Compatibility Test Mode session policy | Implemented and simulated, dormant | Hardware observation/mechanism adapters, UI, persistence, and reviewed tests remain. |
 
 ## Required architecture corrections
 

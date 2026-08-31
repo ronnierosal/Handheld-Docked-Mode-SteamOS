@@ -49,6 +49,7 @@ Start with:
 - [Canonical sleep workflow policy](docs/SLEEP_WORKFLOW.md)
 - [Game compatibility catalog](docs/GAME_COMPATIBILITY.md)
 - [Game developer compatibility notes](docs/GAME_DEVELOPER_COMPATIBILITY.md)
+- [Compatibility Test Mode policy](docs/COMPATIBILITY_TEST_MODE.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
