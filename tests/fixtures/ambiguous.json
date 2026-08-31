@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-30T19:13:00-07:00",
+  "host_profile": "asus-rog-ally-x",
+  "support_tier": "unknown",
+  "game_state": "unknown",
+  "gpus": [
+    {
+      "stable_id": "internal-gpu",
+      "role": "internal",
+      "vendor_device": "1002:0000",
+      "present": true,
+      "selected_for_render": null,
+      "confidence": "observed"
+    },
+    {
+      "stable_id": "unverified-external-gpu",
+      "role": "unknown",
+      "vendor_device": "1002:7480",
+      "present": true,
+      "selected_for_render": null,
+      "confidence": "unknown"
+    }
+  ],
+  "displays": [
+    {
+      "stable_id": "internal-panel",
+      "kind": "internal",
+      "connector": "eDP-1",
+      "connected": true,
+      "active": null,
+      "edid_ready": true,
+      "confidence": "observed"
+    }
+  ],
+  "gamescope": {
+    "running": true,
+    "pid": 70000,
+    "output_order": [],
+    "render_gpu_stable_id": "",
+    "render_vendor_device": "",
+    "confidence": "observed"
+  },
+  "blockers": [
+    {
+      "code": "render_gpu_unknown",
+      "message": "The active render GPU could not be verified."
+    },
+    {
+      "code": "game_state_unknown",
+      "message": "Steam game state could not be verified."
+    }
+  ],
+  "expected_mode": "unknown"
+}

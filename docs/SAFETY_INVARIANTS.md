@@ -1,0 +1,29 @@
+# Safety invariants
+
+These invariants are release gates, not preferences.
+
+1. A running game stays on its current GPU. HDM does not attempt live GPU
+   workload migration.
+2. A transition that requires restarting Gamescope is blocked while a game is
+   running.
+3. Failure to determine game state is treated as a running-game blocker.
+4. GPU mutation requires one exact, verified hardware identity. Ambiguous,
+   changed, incomplete, or missing identity fails closed.
+5. DRM card numbers, connector suffixes, and PCI bus addresses are observations,
+   never persistent identity.
+6. A connected connector is not proof that it is the active display.
+7. A requested transition is not complete until live render GPU, output target,
+   Gamescope state, and user-visible readiness are verified.
+8. An already-satisfied request is a no-op and must not restart Gamescope.
+9. Failure preserves the current known-good state or executes a bounded rollback.
+10. The tested Ally X/GPD G1 combination does not support physical live unplug.
+    Restore internal operation and shut down before disconnecting it.
+11. No normal-use force override may bypass running-game, identity, or unknown-
+    state blockers.
+12. Diagnostics redact hostnames, addresses, home paths, hardware unique IDs, and
+    other user identifiers by default.
+13. Display mutation and hardware experiments require supervised execution plus
+    redacted before/live/after evidence.
+
+The first milestone is read-only. Introducing mutation requires explicit 0.2
+scope approval, durable transaction design, rollback tests, and hardware gates.

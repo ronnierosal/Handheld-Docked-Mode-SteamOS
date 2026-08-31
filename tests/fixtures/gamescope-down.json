@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-30T19:14:00-07:00",
+  "host_profile": "asus-rog-ally-x",
+  "support_tier": "certified",
+  "game_state": "unknown",
+  "gpus": [],
+  "displays": [],
+  "gamescope": {
+    "running": false,
+    "pid": null,
+    "output_order": [],
+    "render_gpu_stable_id": "",
+    "render_vendor_device": "",
+    "confidence": "verified"
+  },
+  "blockers": [
+    {
+      "code": "gamescope_unavailable",
+      "message": "Gamescope is not running."
+    }
+  ],
+  "expected_mode": "degraded"
+}

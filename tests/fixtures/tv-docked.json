@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-30T19:02:24-07:00",
+  "host_profile": "asus-rog-ally-x",
+  "support_tier": "certified",
+  "game_state": "idle",
+  "gpus": [
+    {
+      "stable_id": "internal-gpu",
+      "role": "internal",
+      "vendor_device": "1002:0000",
+      "present": true,
+      "selected_for_render": false,
+      "confidence": "verified"
+    },
+    {
+      "stable_id": "gpd-g1-redacted-hash",
+      "role": "external",
+      "vendor_device": "1002:7480",
+      "present": true,
+      "selected_for_render": true,
+      "confidence": "verified"
+    }
+  ],
+  "displays": [
+    {
+      "stable_id": "internal-panel",
+      "kind": "internal",
+      "connector": "eDP-1",
+      "connected": true,
+      "active": false,
+      "edid_ready": true,
+      "confidence": "verified"
+    },
+    {
+      "stable_id": "external-tv",
+      "kind": "external",
+      "connector": "HDMI-A-1",
+      "connected": true,
+      "active": true,
+      "edid_ready": true,
+      "confidence": "verified"
+    }
+  ],
+  "gamescope": {
+    "running": true,
+    "pid": 47959,
+    "output_order": ["HDMI-A-1"],
+    "render_gpu_stable_id": "gpd-g1-redacted-hash",
+    "render_vendor_device": "1002:7480",
+    "confidence": "verified"
+  },
+  "expected_mode": "tv_docked"
+}
