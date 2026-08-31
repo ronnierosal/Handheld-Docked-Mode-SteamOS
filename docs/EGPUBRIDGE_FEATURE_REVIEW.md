@@ -17,7 +17,7 @@ native Decky UI; its monolithic backend and legacy UI are not ported.
 | Restore Internal recovery | Reimplement | 0.2 | Required rollback and black-screen recovery path. |
 | Running-game transition block | Reimplement | 0.2 | Required safety invariant; unknown game state also blocks. |
 | eGPU sleep warning and resume observation | Reimplement | 0.2 | The certified Ally X/GPD G1 immediately wakes from attached sleep. |
-| Sleep blocking while the G1 is attached | New HDM behavior | 0.2 | Prevent a known-broken sleep attempt instead of merely observing its result. |
+| Sleep blocking while the G1 is attached | Implemented; live lease/UI validated | 0.2 | A crash-safe login1 lease and Decky warnings are active on the certified Ally X/G1; supervised sleep-request paths remain pending. |
 | Exact disconnect readiness report | Read-only core implemented | 0.1/0.2 | Schema 2 now explains exact GPU/audio process clients and mounted/swap storage; transition actions remain 0.2. |
 | Close processes using the exact eGPU | New guarded workflow | 0.2 | Addresses stale non-game clients without presenting live unplug as safe. |
 | Hot-plug observation and internal failback | Reimplement | 0.2 | Protects the next Gamescope session when the configured eGPU is absent. |
@@ -103,7 +103,8 @@ only a short-lived approval token issued for the backend-computed candidate set.
 2. Add pure policy for sleep eligibility, process classification, and disconnect
    readiness.
 3. Add the durable transition journal and manual Portable / TV Docked engine.
-4. Add the sleep inhibitor and native warning preferences.
+4. Add the sleep inhibitor and native warning preferences. Implemented; direct
+   sleep-request path validation remains.
 5. Add graceful close and separately confirmed force-close for eligible clients.
 6. Add supervised Ally X/G1 tests for transitions, sleep attempts, process
    closure, failure injection, and internal recovery.

@@ -100,3 +100,27 @@ The native Quick Access panel rendered the same blocker and the explicit
 read-only notice. No process was signaled, no GPU/display selector changed, and
 no disconnect or hardware removal was attempted. TV Docked transition
 validation remains pending.
+
+## Live G1 sleep-guard validation
+
+The schema 3 package was installed through the same Decky-native flow while the
+G1 remained naturally attached. Decky's temporary dynamic-loader environment
+initially prevented the system `systemd-inhibit` binary from starting; the
+bounded process adapter was corrected to remove only loader and Python path
+overrides before launching the SteamOS system binaries.
+
+After reinstall, three independent observations agreed:
+
+- the root Decky RPC reported `sleep_guard.required=true`,
+  `sleep_guard.active=true`, and `confidence=verified`
+- `systemd-inhibit --list` showed **Handheld Dock Mode** holding a `sleep` lock
+  in `block` mode as root
+- the Quick Access panel showed **Sleep protection** and **Blocked while G1
+  attached**, with the frontend-only **Never show this explanation again**
+  control
+
+The system remained in Portable mode, no game was running, and `wireplumber`
+remained the protected audio client blocking disconnect readiness. No sleep
+request, process signal, GPU/display change, disconnect, or physical removal was
+attempted. Quick Access, physical-button, idle, and direct login1 sleep-request
+tests remain separate supervised acceptance work.

@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["system", "hardware", "diagnostics"],
-    "description": "Read-only SteamOS dock diagnostics for supported handheld hardware.",
+    "description": "SteamOS dock diagnostics and G1 sleep safety for supported handheld hardware.",
     "image": ""
   }
 }

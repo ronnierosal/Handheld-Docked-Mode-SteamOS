@@ -13,11 +13,11 @@ from scripts.build_plugin import OUTPUT, PLUGIN_DIRECTORY, archive_name  # noqa:
 
 
 class DeckyContractTests(unittest.TestCase):
-    def test_manifest_requests_root_for_protected_procfs_read(self):
+    def test_manifest_requests_root_for_observation_and_sleep_guard(self):
         manifest = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["flags"], ["root"])
         self.assertEqual(manifest["api_version"], 1)
-        self.assertIn("read-only", manifest["publish"]["description"].lower())
+        self.assertIn("sleep safety", manifest["publish"]["description"].lower())
 
     def test_backend_exposes_only_snapshot_rpc(self):
         path = ROOT / "main.py"

@@ -52,6 +52,14 @@ export interface DisconnectReadinessPayload {
   error: string;
 }
 
+export interface SleepGuardPayload {
+  required: boolean;
+  active: boolean;
+  confidence: "unknown" | "observed" | "verified";
+  reason: string;
+  error: string;
+}
+
 export interface SnapshotPayload {
   snapshot: {
     schema_version: number;
@@ -70,6 +78,7 @@ export interface SnapshotPayload {
       confidence: string;
     };
     disconnect_readiness: DisconnectReadinessPayload;
+    sleep_guard: SleepGuardPayload;
     blockers: BlockerPayload[];
   };
   inference: {

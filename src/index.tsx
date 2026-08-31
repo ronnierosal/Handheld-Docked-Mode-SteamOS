@@ -1,11 +1,11 @@
-import { definePlugin } from "@decky/api";
+import { definePlugin, toaster } from "@decky/api";
 import {
   ButtonItem,
   PanelSection,
   PanelSectionRow,
   staticClasses,
 } from "@decky/ui";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getSnapshot, type SnapshotPayload } from "./backend";
 
@@ -26,6 +26,8 @@ const LABELS: Record<string, string> = {
   unsupported: "Unsupported",
   user: "User",
 };
+
+const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
 
 function label(value: string): string {
   return LABELS[value] ?? value.replaceAll("_", " ");
@@ -62,28 +64,40 @@ function Content() {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sleepWarningHidden, setSleepWarningHidden] = useState(
+    () => localStorage.getItem(SLEEP_WARNING_KEY) === "1",
+  );
+  const warningToastShown = useRef(false);
+  const inactiveToastShown = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const refresh = useCallback(async (quiet = false) => {
+    if (!quiet) {
+      setLoading(true);
+      setError("");
+    }
     try {
       setPayload(await getSnapshot());
     } catch {
-      setPayload(null);
       setError("Read-only snapshot unavailable. Check the Decky log for details.");
     } finally {
-      setLoading(false);
+      if (!quiet) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     void refresh();
+    const timer = window.setInterval(() => void refresh(true), 3000);
+    return () => window.clearInterval(timer);
   }, [refresh]);
 
   const snapshot = payload?.snapshot;
   const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
   const display = snapshot?.displays.find((item) => item.active === true);
   const disconnect = snapshot?.disconnect_readiness;
+  const sleepGuard = snapshot?.sleep_guard;
+  const gameUsesEgpu = disconnect?.clients.some((client) => client.kind === "game") ?? false;
   const disconnectStatus = loading
     ? "Reading…"
     : !disconnect?.applicable
@@ -94,6 +108,44 @@ function Content() {
           ? "Ready"
           : "Blocked";
 
+  useEffect(() => {
+    if (!sleepGuard?.required) {
+      warningToastShown.current = false;
+      inactiveToastShown.current = false;
+      return;
+    }
+    if (sleepGuard.active) {
+      inactiveToastShown.current = false;
+    } else if (!inactiveToastShown.current) {
+      toaster.toast({
+        title: "G1 sleep protection is inactive",
+        body: sleepGuard.error || "Do not put the handheld to sleep while the G1 is attached.",
+        critical: true,
+        duration: 10000,
+      });
+      inactiveToastShown.current = true;
+    }
+    if (!sleepWarningHidden && !warningToastShown.current) {
+      toaster.toast({
+        title: gameUsesEgpu ? "Sleep blocked while game uses G1" : "Sleep blocked while G1 is attached",
+        body: "This hardware is known to wake immediately after sleep. Restore Portable and disconnect only after shutdown.",
+        duration: 10000,
+      });
+      warningToastShown.current = true;
+    }
+  }, [gameUsesEgpu, sleepGuard, sleepWarningHidden]);
+
+  const hideSleepWarning = useCallback(() => {
+    localStorage.setItem(SLEEP_WARNING_KEY, "1");
+    setSleepWarningHidden(true);
+  }, []);
+
+  const showSleepWarning = useCallback(() => {
+    localStorage.removeItem(SLEEP_WARNING_KEY);
+    warningToastShown.current = false;
+    setSleepWarningHidden(false);
+  }, []);
+
   return (
     <>
       <PanelSection title="Observed state">
@@ -103,6 +155,34 @@ function Content() {
         <DiagnosticRow name="Active display" value={display ? label(display.kind) : "Unknown"} />
         <DiagnosticRow name="Hardware" value={label(snapshot?.support_tier ?? "unknown")} />
       </PanelSection>
+
+      {sleepGuard?.required && (
+        <PanelSection title="Sleep protection">
+          <DiagnosticRow
+            name="Sleep"
+            value={sleepGuard.active ? "Blocked while G1 attached" : "Protection inactive"}
+          />
+          {!sleepWarningHidden && (
+            <>
+              <PanelSectionRow>
+                {gameUsesEgpu
+                  ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
+                  : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent."}
+              </PanelSectionRow>
+              <PanelSectionRow>
+                <ButtonItem layout="below" onClick={hideSleepWarning}>
+                  Never show this explanation again
+                </ButtonItem>
+              </PanelSectionRow>
+            </>
+          )}
+          {sleepWarningHidden && (
+            <PanelSectionRow>
+              The explanation is hidden. Sleep protection remains active.
+            </PanelSectionRow>
+          )}
+        </PanelSection>
+      )}
 
       <PanelSection title="Disconnect readiness">
         <DiagnosticRow name="Status" value={disconnectStatus} />
@@ -145,13 +225,20 @@ function Content() {
 
       <PanelSection title="Diagnostics only">
         <PanelSectionRow>
-          HDM 0.1 observes the current state. It cannot switch displays, GPUs, Gamescope, or close processes.
+          HDM 0.2 observes the current state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, Gamescope, or close processes.
         </PanelSectionRow>
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={() => void refresh()} disabled={loading}>
             {loading ? "Reading…" : "Refresh"}
           </ButtonItem>
         </PanelSectionRow>
+        {sleepGuard?.required && sleepWarningHidden && (
+          <PanelSectionRow>
+            <ButtonItem layout="below" onClick={showSleepWarning}>
+              Show sleep warning again
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
       </PanelSection>
     </>
   );
@@ -162,5 +249,6 @@ export default definePlugin(() => ({
   titleView: <div className={staticClasses.Title}>Handheld Dock Mode</div>,
   content: <Content />,
   icon: <MonitorIcon />,
+  alwaysRender: true,
   onDismount() {},
 }));

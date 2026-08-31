@@ -16,6 +16,7 @@ from hdm.adapters.steamos.game_scopes import GameScopeScan  # noqa: E402
 from hdm.adapters.steamos.gamescope import GamescopeProcessRecord, GamescopeScan  # noqa: E402
 from hdm.adapters.steamos.host import HostRecord  # noqa: E402
 from hdm.adapters.steamos.pci import PciDeviceRecord, Usb4DeviceRecord  # noqa: E402
+from hdm.adapters.steamos.sleep_inhibitor import InhibitorLeaseStatus  # noqa: E402
 from hdm.application.snapshot import SnapshotService, report_to_dict  # noqa: E402
 from hdm.api import DiagnosticsApi  # noqa: E402
 from hdm.domain.models import GameState, OperatingMode, SupportTier  # noqa: E402
@@ -145,6 +146,7 @@ class SteamOsSnapshotTests(unittest.TestCase):
             pci_usb4=FixedTopology(pci, usb4),
             host=Fixed(HostRecord("ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "RC72LA")),
             egpu_clients=Fixed(EgpuClientScan(True, True)),
+            sleep_guard_status=lambda: InhibitorLeaseStatus(True),
             clock=lambda: datetime(2026, 8, 31, tzinfo=timezone.utc),
         )
 
@@ -154,7 +156,8 @@ class SteamOsSnapshotTests(unittest.TestCase):
         self.assertEqual(report.snapshot.support_tier, SupportTier.CERTIFIED)
         self.assertEqual(report.snapshot.blockers, ())
         self.assertTrue(report.snapshot.disconnect_readiness.ready)
-        self.assertEqual(report.snapshot.schema_version, 2)
+        self.assertEqual(report.snapshot.schema_version, 3)
+        self.assertTrue(report.snapshot.sleep_guard.active)
         payload = report_to_dict(report)
         self.assertEqual(payload["inference"]["mode"], "tv_docked")
         self.assertEqual(snapshot_from_dict(payload["snapshot"]), report.snapshot)

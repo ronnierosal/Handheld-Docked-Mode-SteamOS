@@ -60,7 +60,7 @@ def main() -> int:
                 if node.func.attr in FORBIDDEN_WRITE_CALLS:
                     failures.append(
                         f"{path.relative_to(REPOSITORY_ROOT)}:{node.lineno}: "
-                        f"read-only adapter calls forbidden writer {node.func.attr!r}"
+                        f"adapter calls forbidden filesystem writer {node.func.attr!r}"
                     )
         if path.name != "commands.py" and "subprocess" in {
             root for node in ast.walk(tree) for root in imported_roots(node)
@@ -78,7 +78,10 @@ def main() -> int:
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("Architecture check passed: domain is I/O-free and adapters are read-only.")
+    print(
+        "Architecture check passed: domain is I/O-free and the adapter "
+        "subprocess boundary is constrained."
+    )
     return 0
 
 

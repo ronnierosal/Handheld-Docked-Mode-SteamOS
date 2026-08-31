@@ -19,6 +19,7 @@ from .models import (
     GpuObservation,
     GpuRole,
     ObservedSnapshot,
+    SleepGuardObservation,
     SupportTier,
 )
 
@@ -96,6 +97,13 @@ def snapshot_to_dict(snapshot: ObservedSnapshot) -> dict[str, Any]:
             "storage_in_use": snapshot.disconnect_readiness.storage_in_use,
             "error": snapshot.disconnect_readiness.error,
         },
+        "sleep_guard": {
+            "required": snapshot.sleep_guard.required,
+            "active": snapshot.sleep_guard.active,
+            "confidence": snapshot.sleep_guard.confidence.value,
+            "reason": snapshot.sleep_guard.reason,
+            "error": snapshot.sleep_guard.error,
+        },
         "blockers": [
             {"code": blocker.code, "message": blocker.message}
             for blocker in snapshot.blockers
@@ -137,7 +145,7 @@ def _evidence(values: list[dict[str, Any]] | None) -> tuple[Evidence, ...]:
 
 def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
     version = int(value["schema_version"])
-    if version not in (1, 2):
+    if version not in (1, 2, 3):
         raise ValueError(f"Unsupported snapshot schema version: {version}")
 
     gpus = tuple(
@@ -208,6 +216,18 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         ),
         error=str(readiness_value.get("error", "")),
     )
+    sleep_guard_value = value.get("sleep_guard", {})
+    sleep_guard = SleepGuardObservation(
+        required=_required_bool(
+            sleep_guard_value.get("required", False), "sleep_guard.required"
+        ),
+        active=_required_bool(
+            sleep_guard_value.get("active", False), "sleep_guard.active"
+        ),
+        confidence=Confidence(sleep_guard_value.get("confidence", "unknown")),
+        reason=str(sleep_guard_value.get("reason", "")),
+        error=str(sleep_guard_value.get("error", "")),
+    )
     blockers = tuple(
         Blocker(code=str(blocker["code"]), message=str(blocker["message"]))
         for blocker in value.get("blockers", [])
@@ -222,5 +242,6 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         displays=displays,
         gamescope=gamescope,
         disconnect_readiness=readiness,
+        sleep_guard=sleep_guard,
         blockers=blockers,
     )

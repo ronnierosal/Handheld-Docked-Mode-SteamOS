@@ -8,7 +8,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "out" / "HandheldDockMode-0.1.0.zip"
+PACKAGE_VERSION = str(
+    json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
+)
+OUTPUT = ROOT / "out" / f"HandheldDockMode-{PACKAGE_VERSION}.zip"
 PLUGIN_DIRECTORY = "HandheldDockMode"
 TOP_LEVEL_FILES = (
     "LICENSE",

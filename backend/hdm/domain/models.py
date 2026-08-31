@@ -63,6 +63,18 @@ class EgpuResourceKind(StrEnum):
     AUDIO_HARDWARE = "audio_hardware"
 
 
+class EgpuPresence(StrEnum):
+    PRESENT = "present"
+    ABSENT = "absent"
+    UNKNOWN = "unknown"
+
+
+class SleepGuardAction(StrEnum):
+    ACQUIRE = "acquire"
+    RELEASE = "release"
+    HOLD = "hold"
+
+
 class TransitionPhase(StrEnum):
     IDLE = "idle"
     DETECTING = "detecting"
@@ -149,6 +161,15 @@ class DisconnectReadinessObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class SleepGuardObservation:
+    required: bool
+    active: bool
+    confidence: Confidence
+    reason: str = ""
+    error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class ObservedSnapshot:
     schema_version: int
     observed_at: str
@@ -160,6 +181,11 @@ class ObservedSnapshot:
     gamescope: GamescopeObservation
     disconnect_readiness: DisconnectReadinessObservation = field(
         default_factory=lambda: DisconnectReadinessObservation(False, True, True)
+    )
+    sleep_guard: SleepGuardObservation = field(
+        default_factory=lambda: SleepGuardObservation(
+            False, False, Confidence.UNKNOWN
+        )
     )
     blockers: tuple[Blocker, ...] = field(default_factory=tuple)
 

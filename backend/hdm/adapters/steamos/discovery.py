@@ -17,6 +17,7 @@ from ...domain.models import (
     GpuObservation,
     GpuRole,
     ObservedSnapshot,
+    SleepGuardObservation,
     SupportTier,
 )
 from ...profiles.ally_x import PROFILE_ID as ALLY_X_PROFILE_ID
@@ -28,6 +29,7 @@ from .game_scopes import GameScopeScan, SystemdGameScopeDiscovery
 from .gamescope import GamescopeDiscovery, GamescopeScan
 from .host import HostDiscovery, HostRecord
 from .pci import PciDeviceRecord, PciUsb4Discovery, Usb4DeviceRecord
+from .sleep_inhibitor import InhibitorLeaseStatus
 
 
 def _default_clock() -> datetime:
@@ -70,6 +72,7 @@ class SteamOsDiscovery:
         pci_usb4: PciUsb4Discovery | None = None,
         host: HostDiscovery | None = None,
         egpu_clients: EgpuClientDiscovery | None = None,
+        sleep_guard_status: Callable[[], InhibitorLeaseStatus] | None = None,
         clock: Callable[[], datetime] = _default_clock,
     ) -> None:
         self._drm = drm or DrmDiscovery()
@@ -78,6 +81,11 @@ class SteamOsDiscovery:
         self._pci_usb4 = pci_usb4 or PciUsb4Discovery()
         self._host = host or HostDiscovery()
         self._egpu_clients = egpu_clients or EgpuClientDiscovery()
+        self._sleep_guard_status = sleep_guard_status or (
+            lambda: InhibitorLeaseStatus(
+                False, "Sleep guard is available only through the Decky lifecycle."
+            )
+        )
         self._clock = clock
 
     def collect_snapshot(self) -> ObservedSnapshot:
@@ -113,6 +121,7 @@ class SteamOsDiscovery:
                 error=g1.reason if g1.detected else "",
             )
         disconnect_readiness = self._disconnect_readiness(g1, client_scan)
+        sleep_guard = self._build_sleep_guard(g1, self._sleep_guard_status())
 
         gpu_rows = self._build_gpus(cards, gamescope_scan, g1)
         display_rows = self._build_displays(cards, gamescope_scan)
@@ -126,12 +135,13 @@ class SteamOsDiscovery:
             gpu_rows,
             display_rows,
             disconnect_readiness,
+            sleep_guard,
         )
         host_profile = ALLY_X_PROFILE_ID if matches_ally_x(host) else "unknown"
         support_tier = self._support_tier(host_profile, cards, g1)
         observed_at = self._clock().astimezone(timezone.utc).isoformat()
         return ObservedSnapshot(
-            schema_version=2,
+            schema_version=3,
             observed_at=observed_at,
             host_profile=host_profile,
             support_tier=support_tier,
@@ -140,7 +150,30 @@ class SteamOsDiscovery:
             displays=display_rows,
             gamescope=gamescope,
             disconnect_readiness=disconnect_readiness,
+            sleep_guard=sleep_guard,
             blockers=blockers,
+        )
+
+    @staticmethod
+    def _build_sleep_guard(
+        g1: GpdG1Match, status: InhibitorLeaseStatus
+    ) -> SleepGuardObservation:
+        required = g1.detected
+        confidence = (
+            Confidence.VERIFIED
+            if (g1.verified and status.active) or not required
+            else Confidence.OBSERVED
+        )
+        return SleepGuardObservation(
+            required=required,
+            active=status.active,
+            confidence=confidence,
+            reason=(
+                "Sleep is blocked because the attached GPD G1 is known to wake immediately."
+                if required
+                else ""
+            ),
+            error=status.error,
         )
 
     @staticmethod
@@ -336,6 +369,7 @@ class SteamOsDiscovery:
         gpus: tuple[GpuObservation, ...],
         displays: tuple[DisplayObservation, ...],
         disconnect: DisconnectReadinessObservation,
+        sleep_guard: SleepGuardObservation,
     ) -> tuple[Blocker, ...]:
         blockers: list[Blocker] = []
         if not matches_ally_x(host):
@@ -404,6 +438,21 @@ class SteamOsDiscovery:
                 Blocker(
                     "egpu_storage_in_use",
                     "Storage attached through the eGPU is mounted or used as swap.",
+                )
+            )
+        if sleep_guard.required and not sleep_guard.active:
+            blockers.append(
+                Blocker(
+                    "sleep_guard_inactive",
+                    sleep_guard.error
+                    or "The G1 is attached but the sleep inhibitor is not active.",
+                )
+            )
+        if sleep_guard.active and not sleep_guard.required:
+            blockers.append(
+                Blocker(
+                    "sleep_guard_release_pending",
+                    "The sleep inhibitor is still active while G1 absence is reconciled.",
                 )
             )
         if len([gpu for gpu in gpus if gpu.selected_for_render is True]) != 1:

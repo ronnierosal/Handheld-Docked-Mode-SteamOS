@@ -45,12 +45,15 @@ The first certified profile is:
 - GPD G1 with AMD Radeon RX 7600M XT
 - TV connected through the G1 display output
 
-Milestone 0.1 implements reliable read-only discovery and diagnostics only.
+Milestone 0.1 implements reliable read-only discovery and diagnostics. The first
+approved 0.2 mechanism is a reversible login1 sleep-inhibitor lease for the G1;
+display/GPU transitions and process signals remain unimplemented.
 
 The proposed eGPUBridge-derived feature selection, including sleep blocking and
 guarded process closure, is documented in
 [eGPUBridge feature review for HDM](EGPUBRIDGE_FEATURE_REVIEW.md). These are 0.2
-candidates and do not change the read-only 0.1 safety boundary.
+candidates. The sleep guard is now explicitly in 0.2 scope; the other mutation
+boundaries remain closed until their own design and validation gates pass.
 
 ## Non-goals for the initial release
 

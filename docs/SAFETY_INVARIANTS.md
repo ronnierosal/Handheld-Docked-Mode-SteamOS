@@ -39,5 +39,7 @@ These invariants are release gates, not preferences.
     the plugin unloads. The plugin must not leave a permanent inhibitor after a
     crash.
 
-The first milestone is read-only. Introducing mutation requires explicit 0.2
-scope approval, durable transaction design, rollback tests, and hardware gates.
+The first milestone is read-only. The approved 0.2 sleep guard is an ephemeral,
+crash-released lease governed by its documented lifecycle state machine. Durable
+transaction design, rollback tests, and hardware gates remain mandatory before
+display/GPU mutation or process signals.

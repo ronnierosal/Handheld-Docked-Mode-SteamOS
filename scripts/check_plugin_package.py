@@ -1,4 +1,4 @@
-"""Validate the Decky plugin layout and read-only delivery contract."""
+"""Validate the Decky plugin layout and narrow 0.2 delivery contract."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pathlib import Path
 REQUIRED_FILES = (
     "LICENSE",
     "backend/hdm/api.py",
+    "backend/hdm/adapters/steamos/sleep_inhibitor.py",
     "dist/index.js",
     "dist/index.js.map",
     "main.py",
@@ -38,8 +39,8 @@ def main() -> int:
         if manifest.get("flags") != ["root"]:
             failures.append("plugin.json must request only the root delivery flag")
         description = str(manifest.get("publish", {}).get("description", "")).lower()
-        if "read-only" not in description:
-            failures.append("plugin.json must describe the milestone as read-only")
+        if "sleep safety" not in description:
+            failures.append("plugin.json must describe the approved sleep-safety scope")
 
     main_path = root / "main.py"
     if main_path.is_file():
@@ -73,7 +74,9 @@ def main() -> int:
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("Plugin package check passed: root delivery exposes read-only diagnostics only.")
+    print(
+        "Plugin package check passed: diagnostics RPC and sleep-guard lease only."
+    )
     return 0
 
 

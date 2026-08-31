@@ -1,7 +1,8 @@
-"""Constrained subprocess execution for read-only discovery commands."""
+"""Constrained subprocess mechanisms with exact, shell-free command shapes."""
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -20,6 +21,98 @@ class CommandResult:
     @property
     def ok(self) -> bool:
         return self.returncode == 0 and not self.error
+
+
+@dataclass(frozen=True, slots=True)
+class ManagedProcessStatus:
+    running: bool
+    error: str = ""
+
+
+class SleepInhibitorProcess:
+    """Own the exact systemd-inhibit process used by the G1 sleep guard."""
+
+    STARTUP_GRACE_SECONDS = 0.25
+    STOP_TIMEOUT_SECONDS = 2.0
+    PYTHON = "/usr/bin/python"
+    EXCLUDED_ENVIRONMENT = frozenset(
+        {"LD_LIBRARY_PATH", "LD_PRELOAD", "PYTHONHOME", "PYTHONPATH"}
+    )
+
+    def __init__(self) -> None:
+        self._process: subprocess.Popen[str] | None = None
+
+    @staticmethod
+    def argv() -> tuple[str, ...]:
+        guard = Path(__file__).with_name("inhibitor_guard.py")
+        return (SleepInhibitorProcess.PYTHON, str(guard), "--guard", str(os.getpid()))
+
+    @classmethod
+    def environment(cls) -> dict[str, str]:
+        return {
+            key: value
+            for key, value in os.environ.items()
+            if key not in cls.EXCLUDED_ENVIRONMENT
+        }
+
+    def start(self) -> ManagedProcessStatus:
+        status = self.status()
+        if status.running:
+            return status
+        argv = self.argv()
+        try:
+            process = subprocess.Popen(
+                argv,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                env=self.environment(),
+                shell=False,
+                text=True,
+            )
+            self._process = process
+            try:
+                process.wait(timeout=self.STARTUP_GRACE_SECONDS)
+            except subprocess.TimeoutExpired:
+                return ManagedProcessStatus(True)
+            detail = (process.stderr.read() if process.stderr else "").strip()[:512]
+            self._process = None
+            return ManagedProcessStatus(
+                False,
+                detail or f"systemd-inhibit exited with status {process.returncode}",
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            self._process = None
+            return ManagedProcessStatus(False, str(error))
+
+    def stop(self) -> ManagedProcessStatus:
+        process = self._process
+        self._process = None
+        if process is None or process.poll() is not None:
+            return ManagedProcessStatus(False)
+        try:
+            process.terminate()
+            process.wait(timeout=self.STOP_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=self.STOP_TIMEOUT_SECONDS)
+        except OSError as error:
+            return ManagedProcessStatus(False, str(error))
+        return ManagedProcessStatus(False)
+
+    def status(self) -> ManagedProcessStatus:
+        process = self._process
+        if process is None:
+            return ManagedProcessStatus(False)
+        returncode = process.poll()
+        if returncode is None:
+            return ManagedProcessStatus(True)
+        detail = (process.stderr.read() if process.stderr else "").strip()[:512]
+        self._process = None
+        return ManagedProcessStatus(
+            False,
+            detail or f"systemd-inhibit exited with status {returncode}",
+        )
 
 
 class ReadOnlyCommandRunner:

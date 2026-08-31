@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Milestone 0.1 exposes one privacy-safe JSON snapshot. It observes current state
-and derives a mode; it does not write configuration, restart services, control a
-display, or select a GPU.
+The plugin exposes one privacy-safe JSON snapshot. It observes current state and
+derives a mode; it does not write configuration, restart services, control a
+display, select a GPU, or signal a process. In 0.2 the Decky lifecycle also owns
+the narrowly scoped login1 sleep-inhibitor lease.
 
 From a source checkout on SteamOS:
 
@@ -31,8 +32,9 @@ python scripts/build_plugin.py
 
 The distributable archive is written under `out/`. Its Quick Access view shows
 the inferred mode, running-game state, render GPU role, active display kind,
-hardware support tier, blockers, and read-only eGPU disconnect readiness.
-Refresh is its only action.
+hardware support tier, blockers, sleep-protection state, and read-only eGPU
+disconnect readiness. Its only controls refresh the snapshot or hide/show the
+explanation; neither control changes system state or releases the inhibitor.
 
 ## Evidence sources
 
@@ -72,12 +74,20 @@ boundary.
 diagnostic command can still report an Unknown or Degraded mode; command success
 means the report was produced, not that the machine is safe to mutate.
 
-Snapshot schema 2 adds `disconnect_readiness`. A disconnected eGPU is not an
+Snapshot schema 2 adds `disconnect_readiness`. Schema 3 adds `sleep_guard`,
+including whether the guard is required, active, and verified. A disconnected eGPU is not an
 error and reports `applicable: false`. With an exact certified G1 present, the
 scan fails closed unless both card and render nodes, every visible process FD,
 and attached-storage usage can be inspected. Any exact resource holder or
-mounted/swap storage makes `ready` false. This is evidence only: milestone 0.1
-does not signal a process or remove hardware.
+mounted/swap storage makes `ready` false. This is evidence only: HDM does not
+signal a process or remove hardware.
+
+The CLI never acquires an inhibitor. The root Decky backend polls only the host,
+DRM, PCI, and USB4 identity needed for the sleep lease. Candidate G1 presence
+acquires a login1 `sleep`/`block` inhibitor; verified absence and plugin unload
+release it. Unknown observations hold the current state. The exact
+`systemd-inhibit` holder and its no-op child both carry Linux parent-death
+signals, so plugin failure tears down the holder chain and releases the lock.
 
 HDM verifies Portable only when the unique Steam Gamescope process, its
 environment, one boot VGA GPU, and one active internal connector agree. It

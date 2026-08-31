@@ -60,7 +60,12 @@ unknown. The Decky adapter runs as root so it can read that environment, then
 reads the Gamescope owner's user cgroups directly. A strict user-systemd command
 allowlist remains only as a fallback. Its only public RPC is `get_snapshot`.
 
-Future mutation is exposed through a small, typed API with no arbitrary command
+The first 0.2 safety mechanism is a backend-owned, parent-death-guarded
+`systemd-inhibit` process. Exact G1 presence acquires its login1 lease, verified
+absence or plugin unload terminates it, and backend process death terminates the
+holder chain. Warning suppression is frontend-only and cannot affect the lease.
+
+Future transition mutation is exposed through a small, typed API with no arbitrary command
 or path inputs. The Decky entrypoint remains an adapter; it is not the domain or
 transition engine.
 
@@ -78,6 +83,10 @@ Milestone 0.2 must add a durable transaction journal containing:
 
 The engine re-observes safety-critical state immediately before applying a plan
 to limit time-of-check/time-of-use races.
+
+The sleep guard is not a display transition and does not use the transaction
+journal. Its complete acquire/hold/release lifecycle and failure behavior are
+defined in [ADR: G1 sleep guard](ADR_SLEEP_GUARD.md).
 
 ## Verification strategy
 

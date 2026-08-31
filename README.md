@@ -7,16 +7,17 @@ GPU identity, display routing, Gamescope state, and safety policy.
 
 ## Status
 
-HDM 0.1 read-only discovery is available as a Decky Loader diagnostics plugin. The current code inventories DRM,
+HDM 0.2 is in development as a Decky Loader-native safety plugin. The current code inventories DRM,
 Gamescope, Steam game scopes, PCI/USB4 topology, and the certified Ally X/GPD G1
-profile; aggregates a typed snapshot; and derives a confidence-aware mode. It
-does not switch displays, restart Gamescope, select GPUs, or support live eGPU
+profile; aggregates a typed snapshot; derives a confidence-aware mode; and holds
+a crash-safe login1 sleep inhibitor while the G1 is attached. It does not switch
+displays, restart Gamescope, select GPUs, close processes, or support live eGPU
 removal.
 
 Planned milestones:
 
 - **0.1:** reliable read-only discovery and diagnostics
-- **0.2:** safe manual Portable ↔ TV Docked transitions
+- **0.2:** sleep safety followed by safe manual Portable ↔ TV Docked transitions
 - **0.3:** policy-gated automatic docking
 
 The first certified target is an ASUS ROG Ally X running SteamOS with a GPD G1
@@ -36,7 +37,8 @@ Start with:
 
 ## Development
 
-The foundation uses the Python standard library only.
+The core uses the Python standard library and SteamOS's native
+`systemd-inhibit` command for the bounded login1 lease.
 
 ```text
 python scripts/check_architecture.py
@@ -51,9 +53,10 @@ PYTHONPATH=backend python -m hdm.cli
 ```
 
 The Decky package uses a root delivery adapter because SteamOS protects the
-Gamescope process environment. Root access is limited to observation: the only
-public plugin RPC is `get_snapshot`, and the command runner accepts only the
-Steam game-scope inventory query.
+Gamescope process environment. The only public plugin RPC remains
+`get_snapshot`. Root access is limited to observation plus the exact login1
+sleep-inhibitor lease; the command runner still accepts only the Steam game-scope
+inventory query.
 
 ## License
 
