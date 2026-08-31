@@ -15,9 +15,23 @@ PYTHONPATH=backend python -m hdm.cli --compact
 
 After package installation, the equivalent command is `hdm-diagnose`.
 
-Delivery adapters can call `DiagnosticsApi.get_snapshot()` to receive the same
-versioned dictionary without parsing CLI output. Decky integration should remain
-a thin wrapper around this API.
+Delivery adapters call `DiagnosticsApi.get_snapshot()` to receive the same
+versioned dictionary without parsing CLI output. The Decky plugin is a thin
+root-privileged wrapper around this API and exposes only `get_snapshot`.
+
+Build the Decky package from a source checkout with:
+
+```text
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm build
+python scripts/check_plugin_package.py .
+python scripts/build_plugin.py
+```
+
+The distributable archive is written under `out/`. Its Quick Access view shows
+the inferred mode, running-game state, render GPU role, active display kind,
+hardware support tier, and blockers. Refresh is its only action.
 
 ## Evidence sources
 
@@ -27,11 +41,14 @@ a thin wrapper around this API.
 - `/sys/bus/thunderbolt/devices`: authorization and hashed USB4 identity
 - `/proc/<pid>/cmdline`: unique Steam Gamescope session and output arguments
 - `/proc/<pid>/environ`: Mesa Vulkan selector cross-check
-- `systemctl --user list-units`: running Steam game scopes
+- `systemctl --user list-units`: running Steam game scopes, queried in the
+  Gamescope owner's user bus when the adapter itself runs as root
 
-The only subprocess command currently allowed is the read-only systemd scope
-inventory. It runs without a shell. Mutation-shaped systemctl arguments are
-rejected by the command boundary.
+The only subprocess command currently allowed is the exact read-only systemd
+scope inventory. It runs without a shell. The root delivery form uses a fixed
+`runuser`/`env` prefix whose username and UID are derived from the Gamescope
+process owner. All alternate commands and mutation-shaped arguments are rejected
+by the command boundary.
 
 ## Interpretation
 
@@ -54,6 +71,8 @@ On the validated Ally X SteamOS build, the normal `deck` user cannot read the
 Gamescope process environment even though it owns the process. An unprivileged
 source-checkout run will therefore report `gamescope_environment_unreadable` and
 leave render GPU and mode unknown. This is expected; do not weaken the rule.
+The root Decky adapter exists specifically to make that protected environment
+observable without changing the snapshot or inference policy.
 
 ## Privacy boundary
 

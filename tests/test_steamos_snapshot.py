@@ -25,7 +25,7 @@ class Fixed:
     def __init__(self, value):
         self.value = value
 
-    def scan(self):
+    def scan(self, *args, **kwargs):
         return self.value
 
 

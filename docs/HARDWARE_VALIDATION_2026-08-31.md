@@ -35,13 +35,17 @@ The CLI therefore reported:
 
 This is the intended fail-closed result.
 
-## Design consequence
+## Delivery follow-up
 
-The future Decky delivery adapter may run the same read-only snapshot service at
-Decky's root privilege, which should make the exact process environment readable.
-Mode inference must not fall back to assuming that absence of
-`--prefer-vk-device` means the iGPU is selected.
+The Decky delivery adapter has now been implemented locally around the unchanged
+snapshot service. Its manifest requests Decky's root execution flag, and its
+only public RPC is the read-only `get_snapshot` operation. When root observes the
+Gamescope owner, the game-scope adapter queries that owner's user systemd bus
+through one strictly validated command shape.
 
-The next hardware check should exercise the unchanged snapshot service through
-that root boundary and verify both Portable and TV Docked states. No transition
-implementation is required for that check.
+Live root validation remains pending. The next hardware check must install the
+package beside eGPUBridge, verify Portable through the Decky process, and later
+repeat the same read-only check in a naturally established TV Docked state. Mode
+inference must not fall back to assuming that absence of `--prefer-vk-device`
+means the iGPU is selected. No transition implementation is required for either
+check.

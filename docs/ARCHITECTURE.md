@@ -37,7 +37,7 @@ automatic requests.
 Ports are narrow protocols defined by the application. The first SteamOS
 adapters observe:
 
-- DRM cards, connectors, modes, and EDID through sysfs and `modetest`
+- DRM cards, connectors, modes, and EDID through sysfs
 - PCI and USB4 topology
 - Gamescope PID, arguments, active output, and render device
 - Steam user-systemd game scopes
@@ -52,9 +52,15 @@ by enumeration order.
 
 ## Privilege boundary
 
-Read-only discovery should use the least privilege available. Future mutation is
-exposed through a small, typed API with no arbitrary command or path inputs. The
-Decky entrypoint remains an adapter; it is not the domain or transition engine.
+Read-only discovery uses the least privilege that can verify each source. The
+CLI runs unprivileged and reports protected Gamescope environment state as
+unknown. The Decky adapter runs as root so it can read that environment, then
+queries the Gamescope owner's user systemd bus through a strict command
+allowlist. Its only public RPC is `get_snapshot`.
+
+Future mutation is exposed through a small, typed API with no arbitrary command
+or path inputs. The Decky entrypoint remains an adapter; it is not the domain or
+transition engine.
 
 ## Transition design gate
 

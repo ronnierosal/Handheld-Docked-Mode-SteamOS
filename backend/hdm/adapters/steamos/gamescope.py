@@ -14,6 +14,7 @@ class GamescopeProcessRecord:
     prefer_vk_device: str = ""
     mesa_vk_device_select: str = ""
     environment_readable: bool = False
+    uid: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +50,7 @@ def parse_gamescope_process(
     argv: tuple[str, ...],
     environment: dict[str, str] | None = None,
     environment_readable: bool = False,
+    uid: int | None = None,
 ) -> GamescopeProcessRecord:
     output = _option(argv, "-O", "--prefer-output")
     output_order = tuple(part.strip() for part in output.split(",") if part.strip())
@@ -59,6 +61,7 @@ def parse_gamescope_process(
         prefer_vk_device=_option(argv, "", "--prefer-vk-device").lower(),
         mesa_vk_device_select=str((environment or {}).get("MESA_VK_DEVICE_SELECT", "")).lower(),
         environment_readable=environment_readable,
+        uid=uid,
     )
 
 
@@ -96,6 +99,10 @@ class GamescopeDiscovery:
             except OSError:
                 environment_raw = b""
                 environment_readable = False
+            try:
+                uid = process_path.stat().st_uid
+            except (AttributeError, OSError):
+                uid = None
             environment: dict[str, str] = {}
             for part in environment_raw.split(b"\0"):
                 if not part.startswith(b"MESA_VK_DEVICE_SELECT="):
@@ -110,6 +117,7 @@ class GamescopeDiscovery:
                     argv,
                     environment,
                     environment_readable,
+                    uid,
                 )
             )
         if len(candidates) == 1:

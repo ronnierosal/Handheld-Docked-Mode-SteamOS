@@ -7,7 +7,7 @@ GPU identity, display routing, Gamescope state, and safety policy.
 
 ## Status
 
-HDM 0.1 read-only discovery is in progress. The current code inventories DRM,
+HDM 0.1 read-only discovery is available as a Decky Loader diagnostics plugin. The current code inventories DRM,
 Gamescope, Steam game scopes, PCI/USB4 topology, and the certified Ally X/GPD G1
 profile; aggregates a typed snapshot; and derives a confidence-aware mode. It
 does not switch displays, restart Gamescope, select GPUs, or support live eGPU
@@ -48,6 +48,11 @@ On SteamOS, emit a read-only diagnostic snapshot with:
 ```text
 PYTHONPATH=backend python -m hdm.cli
 ```
+
+The Decky package uses a root delivery adapter because SteamOS protects the
+Gamescope process environment. Root access is limited to observation: the only
+public plugin RPC is `get_snapshot`, and the command runner accepts only the
+Steam game-scope inventory query.
 
 ## License
 

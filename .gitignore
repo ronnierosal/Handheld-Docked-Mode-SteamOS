@@ -7,7 +7,10 @@ __pycache__/
 .ruff_cache/
 .venv/
 dist/
+!dist/
+!dist/index.js
 build/
+out/
 node_modules/
 test-results/
 *.local.json

@@ -86,6 +86,7 @@ class GamescopeDiscoveryTests(unittest.TestCase):
             self.assertEqual(result.process.prefer_vk_device, "1002:7480")
             self.assertEqual(result.process.mesa_vk_device_select, "1002:7480")
             self.assertTrue(result.process.environment_readable)
+            self.assertIsInstance(result.process.uid, int)
             self.assertNotIn("must-not-be-retained", repr(result.process))
 
     def test_multiple_gamescope_processes_are_ambiguous(self):
@@ -146,6 +147,39 @@ gamescope-session.scope loaded active running compositor
         self.assertEqual(result.state, GameState.UNKNOWN)
         self.assertIn("Could not verify", result.error)
 
+    def test_root_queries_the_gamescope_owners_user_manager(self):
+        class CapturingRunner:
+            argv = ()
+
+            def run(self, argv):
+                self.argv = tuple(argv)
+                return CommandResult(tuple(argv), 0, "", "")
+
+        runner = CapturingRunner()
+        result = SystemdGameScopeDiscovery(
+            runner,
+            effective_uid=lambda: 0,
+            username_for_uid=lambda uid: "deck" if uid == 1000 else "unexpected",
+        ).scan(user_uid=1000)
+
+        self.assertEqual(result.state, GameState.IDLE)
+        self.assertEqual(runner.argv[0:4], ("/usr/bin/runuser", "-u", "deck", "--"))
+        self.assertIn("XDG_RUNTIME_DIR=/run/user/1000", runner.argv)
+
+    def test_invalid_gamescope_username_fails_closed(self):
+        class UnusedRunner:
+            def run(self, argv):
+                raise AssertionError("invalid user context must not run")
+
+        result = SystemdGameScopeDiscovery(
+            UnusedRunner(),
+            effective_uid=lambda: 0,
+            username_for_uid=lambda uid: "deck;touch /tmp/nope",
+        ).scan(user_uid=1000)
+
+        self.assertEqual(result.state, GameState.UNKNOWN)
+        self.assertIn("Could not resolve", result.error)
+
 
 class ReadOnlyCommandRunnerTests(unittest.TestCase):
     def test_rejects_unapproved_executable(self):
@@ -161,6 +195,12 @@ class ReadOnlyCommandRunnerTests(unittest.TestCase):
             ReadOnlyCommandRunner.validate(SystemdGameScopeDiscovery.COMMAND),
             SystemdGameScopeDiscovery.COMMAND,
         )
+
+    def test_accepts_only_the_strict_user_context_scope_query(self):
+        command = SystemdGameScopeDiscovery.command_for_user(1000, "deck")
+        self.assertEqual(ReadOnlyCommandRunner.validate(command), command)
+        with self.assertRaisesRegex(ValueError, "not approved"):
+            ReadOnlyCommandRunner.validate((*command[:-1], "--all"))
 
 
 class PciUsb4DiscoveryTests(unittest.TestCase):

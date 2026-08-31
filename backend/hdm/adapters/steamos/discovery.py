@@ -79,7 +79,10 @@ class SteamOsDiscovery:
     def collect_snapshot(self) -> ObservedSnapshot:
         cards = self._drm.scan()
         gamescope_scan = self._gamescope.scan()
-        game_scan = self._game_scopes.scan()
+        gamescope_uid = (
+            gamescope_scan.process.uid if gamescope_scan.process is not None else None
+        )
+        game_scan = self._game_scopes.scan(user_uid=gamescope_uid)
         pci_devices = self._pci_usb4.scan_pci()
         usb4_devices = self._pci_usb4.scan_usb4()
         host = self._host.scan()

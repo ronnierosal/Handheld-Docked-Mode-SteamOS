@@ -1,0 +1,11 @@
+{
+  "name": "Handheld Dock Mode",
+  "author": "Ronnie Rosal",
+  "flags": ["root"],
+  "api_version": 1,
+  "publish": {
+    "tags": ["system", "hardware", "diagnostics"],
+    "description": "Read-only SteamOS dock diagnostics for supported handheld hardware.",
+    "image": ""
+  }
+}
