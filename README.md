@@ -46,6 +46,7 @@ Start with:
 - [Remote read-only validation](docs/REMOTE_VALIDATION.md)
 - [Guarded process-release contract](docs/PROCESS_RELEASE.md)
 - [Durable transition journal](docs/TRANSITION_JOURNAL.md)
+- [Canonical sleep workflow policy](docs/SLEEP_WORKFLOW.md)
 - [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 

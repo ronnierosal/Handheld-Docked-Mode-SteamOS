@@ -67,6 +67,12 @@ graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess
 and returns categorical results. It is not constructed by `main.py`; delivery
 contract tests forbid process-release wiring and RPC terms.
 
+The canonical sleep reducer is pure policy over exact eGPU presence/identity,
+profile capabilities, game/save state, disconnect evidence, placement, and a
+bounded original-request deadline. It cannot show Safe to disconnect from
+software-client readiness alone and cannot continue the original sleep request
+before verified Portable recovery. See [Canonical sleep workflow](SLEEP_WORKFLOW.md).
+
 ## Application layer
 
 Application services coordinate ports and domain policy. Milestone 0.1 has a

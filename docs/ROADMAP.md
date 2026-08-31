@@ -42,6 +42,7 @@ No broader label may be inferred from a narrower one.
 | Guarded process-release approvals | Implemented and unit tested, internal only | Production adapter, RPC, and hardware proof remain. |
 | Process-release signal/re-scan simulator, audit, and journal | Implemented and simulated | Production mechanism remains; hardware removal authority is always false. |
 | Narrow POSIX process-signal adapter | Implemented and unit tested, dormant | Decky wiring/RPC and supervised disposable-process proof remain prohibited. |
+| Canonical sleep/disconnect reducer | Implemented and unit tested, pure policy only | Game/save/process/display/sleep mechanisms and supervised proof remain. |
 
 ## Required architecture corrections
 
@@ -141,6 +142,11 @@ Exit: simulation passes first; then supervised Ally X/G1/TV testing with the G1
 connected naturally and no live unplug.
 
 ### R4 — Canonical sleep request orchestration
+
+**Status:** POLICY IMPLEMENTED AND SIMULATED — request expiry, consent/save
+branching, process-release routing, removal capability, independent removal
+readiness, Portable recovery, and original-request continuation are covered.
+No live mechanism or RPC is enabled.
 
 - Normalize Steam menu and physical-button attempts into one request intent
   where the platform exposes a verified interception mechanism.

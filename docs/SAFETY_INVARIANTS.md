@@ -42,6 +42,12 @@ These invariants are release gates, not preferences.
     suspend whenever G1 presence is required, loading, stale, unavailable, or
     unknown. A missing frontend preflight is a critical degraded state, never
     evidence that Sleep is safe.
+20. **Safe to disconnect** requires a profile explicitly verified for live
+    removal plus independent verified render/display readiness and complete
+    client/storage evidence. Clearing software clients alone is insufficient.
+21. A pending original sleep request is continued only after expected removal
+    and Portable recovery are verified and before its deadline. Expired,
+    cancelled, unexpected, or out-of-order flows remain awake.
 
 The first milestone is read-only. The approved 0.2 sleep guard is an ephemeral,
 crash-released lease governed by its documented lifecycle state machine. Durable
