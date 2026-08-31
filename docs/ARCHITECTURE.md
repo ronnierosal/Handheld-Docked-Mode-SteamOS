@@ -158,9 +158,15 @@ Read-only discovery uses the least privilege that can verify each source. The
 CLI runs unprivileged and reports protected Gamescope environment state as
 unknown. The Decky adapter runs as root so it can read that environment, then
 reads the Gamescope owner's user cgroups directly. A strict user-systemd command
-allowlist remains only as a fallback. Public RPCs are limited to `get_snapshot`
-and the preview/token-approved support-bundle flow. No RPC accepts a command,
-system path, device identity, or process target.
+allowlist remains only as a fallback. The dormant mutation runner independently
+resolves the single verified Gamescope process owner's passwd record and live
+user bus without username, UID, environment, or home-directory fallbacks. It
+accepts only unit verification, daemon-reload, and a non-blocking restart of the
+fixed `gamescope-session.target`; it uses absolute executables, a sanitized
+environment, no shell, bounded output, and categorical errors. No plugin code
+constructs it. Public RPCs are limited to `get_snapshot` and the
+preview/token-approved support-bundle flow. No RPC accepts a command, system
+path, device identity, or process target.
 
 The first 0.2 safety mechanism is a backend-owned, parent-death-guarded
 `systemd-inhibit` process. Exact G1 presence acquires its login1 lease, verified

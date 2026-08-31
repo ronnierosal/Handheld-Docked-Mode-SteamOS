@@ -54,6 +54,14 @@ user-service `PATH` override, and must remain a distinct supervised operation.
 The orchestrator must still re-observe and verify the resulting placement; a
 successful Gamescope exec is not transition success.
 
+The fixed user-service command boundary is implemented but unwired. It derives
+the target user only from the one verified Gamescope process owner and requires
+the matching passwd home plus a live user bus. There is no `deck`, UID 1000, or
+environment fallback. It can verify the fixed service, reload that user's unit
+configuration, or queue a non-blocking restart of the fixed Gamescope target;
+it cannot accept an executable, unit, path, command, or environment value from
+an RPC.
+
 ## Certification boundary
 
 An approved Experimental plan authorizes one controlled attempt after the

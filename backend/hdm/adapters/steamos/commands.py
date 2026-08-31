@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Sequence
 
@@ -27,6 +28,21 @@ class CommandResult:
 class ManagedProcessStatus:
     running: bool
     error: str = ""
+
+
+class UserServiceOperation(StrEnum):
+    DAEMON_RELOAD = "daemon_reload"
+    VERIFY_GAMESCOPE_UNIT = "verify_gamescope_unit"
+    RESTART_GAMESCOPE_SESSION = "restart_gamescope_session"
+
+
+@dataclass(frozen=True, slots=True)
+class UserServiceCommandResult:
+    operation: UserServiceOperation
+    ok: bool
+    returncode: int | None = None
+    output: str = ""
+    error_code: str = ""
 
 
 class SleepInhibitorProcess:
@@ -220,4 +236,132 @@ class ReadOnlyCommandRunner:
             completed.returncode,
             completed.stdout,
             completed.stderr,
+        )
+
+
+class UserServiceCommandRunner:
+    """Execute only HDM's fixed Gamescope user-service operations."""
+
+    SYSTEMCTL = "/usr/bin/systemctl"
+    RUNUSER = "/usr/bin/runuser"
+    ENV = "/usr/bin/env"
+    MAX_OUTPUT_BYTES = 4096
+    SAFE_USERNAME = ReadOnlyCommandRunner.SAFE_USERNAME
+    SUFFIXES = {
+        UserServiceOperation.DAEMON_RELOAD: ("daemon-reload",),
+        UserServiceOperation.VERIFY_GAMESCOPE_UNIT: (
+            "show",
+            "gamescope-session.service",
+            "--property=LoadState",
+            "--value",
+            "--no-pager",
+        ),
+        UserServiceOperation.RESTART_GAMESCOPE_SESSION: (
+            "--no-block",
+            "restart",
+            "gamescope-session.target",
+        ),
+    }
+    CLEAN_ENVIRONMENT = {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "PATH": "/usr/bin:/bin",
+    }
+
+    def __init__(
+        self,
+        timeout_seconds: float = 8.0,
+        effective_uid=None,
+    ) -> None:
+        self._timeout_seconds = timeout_seconds
+        self._effective_uid = effective_uid or getattr(os, "geteuid", lambda: -1)
+
+    @classmethod
+    def argv(
+        cls,
+        operation: UserServiceOperation,
+        *,
+        uid: int,
+        username: str,
+    ) -> tuple[str, ...]:
+        if type(uid) is not int or uid <= 0:
+            raise ValueError("Gamescope user uid is invalid")
+        if not cls.SAFE_USERNAME.fullmatch(username):
+            raise ValueError("Gamescope username is invalid")
+        try:
+            suffix = cls.SUFFIXES[operation]
+        except (KeyError, TypeError) as error:
+            raise ValueError("User-service operation is not approved") from error
+        return (
+            cls.RUNUSER,
+            "-u",
+            username,
+            "--",
+            cls.ENV,
+            f"XDG_RUNTIME_DIR=/run/user/{uid}",
+            f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{uid}/bus",
+            cls.SYSTEMCTL,
+            "--user",
+            *suffix,
+        )
+
+    def run(
+        self,
+        operation: UserServiceOperation,
+        *,
+        uid: int,
+        username: str,
+    ) -> UserServiceCommandResult:
+        if self._effective_uid() != 0:
+            return UserServiceCommandResult(operation, False, error_code="root_required")
+        argv = self.argv(operation, uid=uid, username=username)
+        try:
+            completed = subprocess.run(
+                argv,
+                capture_output=True,
+                check=False,
+                shell=False,
+                text=False,
+                timeout=self._timeout_seconds,
+                env=dict(self.CLEAN_ENVIRONMENT),
+            )
+        except subprocess.TimeoutExpired:
+            return UserServiceCommandResult(operation, False, error_code="timeout")
+        except (OSError, subprocess.SubprocessError):
+            return UserServiceCommandResult(
+                operation, False, error_code="command_unavailable"
+            )
+        output = bytes(completed.stdout or b"")
+        error = bytes(completed.stderr or b"")
+        if len(output) + len(error) > self.MAX_OUTPUT_BYTES:
+            return UserServiceCommandResult(
+                operation,
+                False,
+                returncode=completed.returncode,
+                error_code="output_too_large",
+            )
+        decoded = output.decode("utf-8", errors="replace").strip()
+        if completed.returncode != 0:
+            return UserServiceCommandResult(
+                operation,
+                False,
+                returncode=completed.returncode,
+                error_code="nonzero_exit",
+            )
+        if (
+            operation is UserServiceOperation.VERIFY_GAMESCOPE_UNIT
+            and decoded != "loaded"
+        ):
+            return UserServiceCommandResult(
+                operation,
+                False,
+                returncode=completed.returncode,
+                output=decoded,
+                error_code="unit_not_loaded",
+            )
+        return UserServiceCommandResult(
+            operation,
+            True,
+            returncode=completed.returncode,
+            output=decoded,
         )
