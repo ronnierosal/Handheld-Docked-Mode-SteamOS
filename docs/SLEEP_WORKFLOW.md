@@ -106,6 +106,16 @@ generation reports Verified. A mechanism success is never treated as save
 proof. No production recipes, proof adapters, mechanisms, or Decky delivery are
 wired. See [Verified game-save child](GAME_SAVE.md).
 
+Deterministic integration replay now drives the real coordinator, guarded game
+close, and guarded process-release services through one in-memory journal. The
+data fixture covers the complete ordered flow plus partial ordering, bounded
+request and game-close timeouts, stale child observations, unexpected unplug,
+controller/display loss, and restart recovery failures. Asynchronous topology
+events remain policy-only inputs: they can request recovery but cannot advance
+or continue the canonical sleep transaction. Replay assertions inspect only
+categorical codes and journal events; process, game, scope, and hardware
+identities remain outside the journal.
+
 There is still no production game-close mechanism adapter, game-specific save
 recipe/proof/mechanism adapter, removal mechanism, sleep-continuation adapter,
 physical-button interception adapter, or Decky sleep workflow RPC. Current

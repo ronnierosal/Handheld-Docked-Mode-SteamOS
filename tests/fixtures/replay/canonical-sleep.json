@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "scenarios": {
+    "full_guarded_flow": {
+      "actions": [
+        "start",
+        "grant_game_consent",
+        "guarded_game_close",
+        "guarded_process_release",
+        "verify_egpu_removal",
+        "verify_portable_recovery",
+        "continue_original_sleep"
+      ],
+      "expected_codes": [
+        "game.consent_required",
+        "game.close_requested",
+        "game.exit_verified",
+        "process_release.completed",
+        "disconnect.live_removal_verified",
+        "egpu.removed_restore_portable",
+        "portable.recovery_verified",
+        "sleep.original_request_continued"
+      ],
+      "final_stage": "completed",
+      "terminal_kind": "committed"
+    },
+    "unexpected_unplug_partial_order": {
+      "topology_reason": "egpu.removed_sleep_pending_recover",
+      "topology_directives": ["recover_portable"],
+      "skipped_event": "egpu_removal_verified",
+      "attempted_event": "portable_recovery_verified",
+      "final_code": "sleep.event_invalid",
+      "terminal_kind": "blocked"
+    },
+    "peripheral_loss": {
+      "events": [
+        {
+          "event": "external_controller_lost",
+          "builtin_controller_available": true,
+          "reason": "controller.restore_builtin",
+          "directives": ["restore_builtin_controller"]
+        },
+        {
+          "event": "external_display_lost",
+          "reason": "display.external_lost",
+          "directives": ["recover_portable"]
+        }
+      ],
+      "sleep_stage_remains": "awaiting_disconnect"
+    },
+    "game_close_timeout": {
+      "final_code": "game.close_timeout",
+      "waits_ms": [100, 100, 100],
+      "terminal_kind": "failed"
+    },
+    "request_timeout": {
+      "advance_ms": 1001,
+      "final_code": "sleep.request_expired",
+      "final_stage": "cancelled"
+    },
+    "stale_children": {
+      "game_close_code": "game.identity_changed",
+      "process_release_code": "approval.revalidation_failed",
+      "signals": 0,
+      "terminal_kind": "blocked"
+    },
+    "restart_recovery_failures": {
+      "observation_unavailable": "sleep.recovery_observation_unavailable",
+      "persistence_failure": "sleep.recovery_persist_failed"
+    }
+  }
+}
