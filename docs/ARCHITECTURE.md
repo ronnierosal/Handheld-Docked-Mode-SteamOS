@@ -224,6 +224,12 @@ the entire process graph and returns a categorical Unknown result. No process
 identity is public or journaled, and no Decky route or game mechanism uses this
 adapter. See [Active game runtime evidence](GAME_RUNTIME.md).
 
+One dormant read-only application service can bracket an exact eGPU-client
+snapshot between two unchanged game-runtime samples and report categorical G1
+render-node ownership. PID/start time, exact profile/eGPU identity, complete
+scan, and game classification must all agree. This evidence explicitly does not
+prove active rendering or authorize a placement transition.
+
 ## Application layer
 
 Application services coordinate ports and domain policy. The snapshot,

@@ -50,7 +50,8 @@ No broader label may be inferred from a narrower one.
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
 | Exact Steam-scope AppID extraction | Implemented and unit tested, internal read-only | Steam title/version and consumer wiring remain. |
-| Private active-game process/runtime evidence | Implemented and unit tested, dormant read-only | Exact Proton version, render-GPU ownership, consumers, Decky wiring, and hardware proof remain. |
+| Private active-game process/runtime evidence | Implemented and unit tested, dormant read-only | Exact Proton version, active render-GPU proof, consumers, Decky wiring, and hardware proof remain. |
+| Bracketed game/eGPU render-client correlation | Implemented and unit tested, dormant read-only | Active engine-counter evidence and actual render-GPU verification remain. |
 | Independent hardware capability catalog and review gate | Implemented and unit tested, pure schema only | Persistence, collection UI, and intentional capability tests remain. |
 | Reduced transition/compatibility support context | Implemented and privacy tested, dormant optional input | Live owners and controller-visible preview acceptance remain. |
 | Compatibility Test Mode session policy | Implemented and simulated, dormant | Hardware observation/mechanism adapters, UI, persistence, and reviewed tests remain. |
@@ -247,7 +248,10 @@ identity can be enriched with bounded PID/start-time process instances,
 parent/launcher relationships, executable basenames, and native-versus-Proton
 classification. All evidence remains private and fail closed; no consumer,
 mutation, relaunch path, or Decky RPC exists. See
-[Active game runtime evidence](GAME_RUNTIME.md).
+[Active game runtime evidence](GAME_RUNTIME.md). Stable exact game processes can
+also be correlated with a complete exact G1 client scan to prove render-node
+ownership or absence, but that result deliberately does not claim active
+rendering or identify another GPU.
 
 - Complete the existing read-only experiment and prove unchanged Gamescope and
   game identity, iGPU rendering, and TV presentation.

@@ -39,3 +39,18 @@ and native-versus-Proton classification only. It does not yet prove:
 No Decky RPC constructs this adapter yet. A future consumer must revalidate the
 exact AppID/scopes and a fresh runtime generation before using it in a guarded
 operation.
+
+## eGPU render-client correlation
+
+A dormant application service brackets one exact, complete eGPU-client snapshot
+between two fresh game-runtime samples. Only an unchanged process graph, exact
+host/eGPU profile, exact eGPU identity, complete blocker scan, matching
+PID/start-time instance, game classification, and G1 DRM render-node ownership
+can produce `present`. A complete scan with no matching render client can
+produce `absent`; races and conflicts produce `unknown`.
+
+This is ownership evidence, not rendering proof. An open render node does not
+prove that engine counters are active, and absence from the G1 does not by
+itself identify which other GPU is rendering. The result therefore exposes an
+always-false `proves_rendering_gpu` property and cannot promote compatibility or
+claim Docked-eGPU by itself.
