@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -20,6 +21,10 @@ class MechanismResult:
     succeeded: bool
     code: str
 
+    def __post_init__(self) -> None:
+        if not re.fullmatch(r"[a-z0-9_.-]{1,64}", self.code):
+            raise ValueError("transition mechanism result code must be categorical")
+
 
 class MonotonicClockPort(Protocol):
     def now_ms(self) -> int:
@@ -37,4 +42,3 @@ class TransitionMechanismPort(Protocol):
 
     def recover(self, plan: TransitionPlan) -> MechanismResult:
         """Attempt bounded restoration of the plan's known-good placement."""
-

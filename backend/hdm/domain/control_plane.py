@@ -224,6 +224,7 @@ class TransitionPlan:
     recovery_deadline_ms: int = 10_000
     binding: TransitionBinding | None = None
     experimental: bool = False
+    experimental_authorization_id: str = ""
 
     def __post_init__(self) -> None:
         if not self.plan_id or not self.request_id or not self.observed_generation:
@@ -235,6 +236,12 @@ class TransitionPlan:
             raise ValueError("planned step codes must be unique")
         if self.steps and self.binding is None:
             raise ValueError("a mutating transition plan requires an exact binding")
+        if any(step.expected_placement is None for step in self.steps):
+            raise ValueError("every mutating step requires an expected placement")
+        if self.experimental != bool(self.experimental_authorization_id):
+            raise ValueError(
+                "experimental plans require one explicit authorization identity"
+            )
 
 
 @dataclass(frozen=True, slots=True)

@@ -30,14 +30,14 @@ The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,
 SleepPendingDisconnect, ActionRequired, and Failure describe a request's
-progress. The current code implements only the original placement inference and
-transition vocabulary. The typed split, journal, and replay engine are the next
-read-only control-plane milestone; see [Authoritative roadmap](ROADMAP.md).
+progress. The typed split, durable journal, deterministic replay, and guarded
+runtime orchestrator are implemented; mechanism wiring remains experimental and
+uninstalled. See [Authoritative roadmap](ROADMAP.md).
 
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
-composition, and a strict bounded transaction-journal schema. The journal is an
-immutable value with a persistence port only: no storage adapter or production
+composition, and a strict bounded transaction-journal schema. Its fixed-path
+store and runtime orchestrator remain unconstructed by Decky, so no production
 transition endpoint is enabled yet.
 
 The guarded-process backlog has an internal approval service that issues
@@ -61,6 +61,15 @@ The journal's dormant fixed-path file adapter enforces atomic append-only
 progress for one operation, no-follow/exclusive temporary creation, byte bounds,
 file and directory synchronization, and matching-terminal-only cleanup. It is
 not constructed by Decky. See [Durable transition journal](TRANSITION_JOURNAL.md).
+
+The guarded runtime orchestrator uses that journal contract for real mechanism
+ports. It revalidates the exact profile/device/display binding and idle game
+immediately before every attempt, persists `step_started` before the mechanism
+call, polls fresh observations only inside the step deadline, commits only a
+verified destination, and recovers to the source after apply, verification, or
+commit-persistence failure. Startup recovery distinguishes pre-mutation
+interruption from a persisted attempted step and never resumes the original
+request automatically. The mechanism port is still unwired.
 
 The SteamOS signal adapter is a dormant leaf mechanism: it maps only typed
 graceful/force actions to POSIX `SIGTERM`/`SIGKILL`, uses no shell or subprocess,
@@ -101,9 +110,10 @@ Required is reported. No input/audio observation or mechanism adapter is wired.
 
 ## Application layer
 
-Application services coordinate ports and domain policy. Milestone 0.1 has a
-snapshot service plus a bounded privacy-safe support-report service. Later, one
-transition service will accept both manual and automatic requests.
+Application services coordinate ports and domain policy. The snapshot,
+support-report, approval, replay, and guarded transition services share the
+same authoritative observations and journal vocabulary. Manual and automatic
+delivery still need one request facade before production wiring.
 
 ## Ports and adapters
 

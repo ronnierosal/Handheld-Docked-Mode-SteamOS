@@ -136,7 +136,11 @@ class TransitionReplayTests(unittest.TestCase):
             observations,
             mechanism,
             dock_plan(
-                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+                PlannedStep(
+                    TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                    100,
+                    expected_placement=PlacementState.DOCKED_EGPU,
+                )
             ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.BLOCKED)
@@ -182,7 +186,11 @@ class TransitionReplayTests(unittest.TestCase):
             observations,
             mechanism,
             dock_plan(
-                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+                PlannedStep(
+                    TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                    100,
+                    expected_placement=PlacementState.DOCKED_EGPU,
+                )
             ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.RECOVERED)
@@ -206,7 +214,11 @@ class TransitionReplayTests(unittest.TestCase):
             observations,
             mechanism,
             dock_plan(
-                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+                PlannedStep(
+                    TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                    100,
+                    expected_placement=PlacementState.DOCKED_EGPU,
+                )
             ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.FAILED)
@@ -226,7 +238,11 @@ class TransitionReplayTests(unittest.TestCase):
             observations,
             mechanism,
             dock_plan(
-                PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+                PlannedStep(
+                    TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                    100,
+                    expected_placement=PlacementState.DOCKED_EGPU,
+                )
             ),
         )
         self.assertEqual(result.outcome.kind, TransitionOutcomeKind.FAILED)
@@ -244,7 +260,11 @@ class TransitionReplayTests(unittest.TestCase):
             (51, MechanismResult(True, "recovery.internal_restored")),
         )
         plan = dock_plan(
-            PlannedStep(TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU, 100)
+            PlannedStep(
+                TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                100,
+                expected_placement=PlacementState.DOCKED_EGPU,
+            )
         )
         plan = TransitionPlan(
             plan_id=plan.plan_id,

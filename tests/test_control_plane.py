@@ -102,10 +102,14 @@ class TransitionContractTests(unittest.TestCase):
                 workflow_state=WorkflowState.CONNECTING,
                 steps=(
                     PlannedStep(
-                        TransitionStepCode.PRESENTATION_RESTORE_PORTABLE, 1000
+                        TransitionStepCode.PRESENTATION_RESTORE_PORTABLE,
+                        1000,
+                        expected_placement=PlacementState.PORTABLE,
                     ),
                     PlannedStep(
-                        TransitionStepCode.PRESENTATION_RESTORE_PORTABLE, 2000
+                        TransitionStepCode.PRESENTATION_RESTORE_PORTABLE,
+                        2000,
+                        expected_placement=PlacementState.PORTABLE,
                     ),
                 ),
                 binding=TransitionBinding(
@@ -116,6 +120,26 @@ class TransitionContractTests(unittest.TestCase):
     def test_step_deadline_must_be_positive(self):
         with self.assertRaisesRegex(ValueError, "positive"):
             PlannedStep(TransitionStepCode.PRESENTATION_RESTORE_PORTABLE, 0)
+
+    def test_mutating_plan_requires_an_expected_placement(self):
+        with self.assertRaisesRegex(ValueError, "expected placement"):
+            TransitionPlan(
+                plan_id="plan-1",
+                request_id="request-1",
+                observed_generation="generation-1",
+                from_placement=PlacementState.PORTABLE,
+                target_placement=PlacementState.DOCKED_EGPU,
+                workflow_state=WorkflowState.CONNECTING,
+                steps=(
+                    PlannedStep(
+                        TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                        1000,
+                    ),
+                ),
+                binding=TransitionBinding(
+                    "host", "egpu", "egpu-1", "igpu", "egpu-gpu", "panel", "tv"
+                ),
+            )
 
     def test_recovery_deadline_must_be_positive(self):
         with self.assertRaisesRegex(ValueError, "recovery deadline"):

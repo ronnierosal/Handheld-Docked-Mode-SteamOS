@@ -265,6 +265,11 @@ def plan_manual_transition(
             recovery_deadline_ms=recovery_deadline_ms,
             binding=binding,
             experimental=experimental,
+            experimental_authorization_id=(
+                experimental_permit.permit_id
+                if experimental_permit is not None and experimental
+                else ""
+            ),
         ),
         (),
     )

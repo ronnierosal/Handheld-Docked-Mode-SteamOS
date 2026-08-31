@@ -47,12 +47,30 @@ directory is rejected.
 Only a matching terminal operation may be cleared. Incomplete state cannot be
 discarded through the store.
 
+## Runtime orchestration
+
+The dormant runtime orchestrator persists every journal state through this
+store. In particular, `step_started` must be durable before it calls a
+mechanism. It re-observes the exact bound profile/GPU/display and game state
+immediately before that point, then accepts a result only after a new snapshot
+verifies the requested placement inside the deadline.
+
+Apply failure, verification timeout, or inability to durably commit causes an
+idempotent source-placement recovery attempt. If a restart finds an incomplete
+journal before `step_started`, it terminals the abandoned request without a
+mechanism call. If a step may have started, it attempts source recovery using a
+fresh observation and records verified recovery or Action Required. It never
+continues the interrupted target request.
+
+The exact transition binding and experimental approval identity are not written
+to this privacy-safe journal.
+
 ## Current boundary
 
-The store and its persistence port are implemented and unit tested, but the
-Decky plugin does not construct them. No transition endpoint is enabled. Wiring
-the store belongs to the first approved live transition and must include startup
-recovery policy and supervised failure testing.
+The store, runtime orchestrator, observation generation, bounded verification
+waiter, and startup recovery are implemented and tested, but the Decky plugin
+does not construct them. No transition endpoint or presentation mechanism is
+enabled. Wiring belongs to the guarded supervised transition milestone.
 
 The pure canonical sleep journal projection uses the same contract. An
 interrupted journal never resumes an original sleep request after restart;
