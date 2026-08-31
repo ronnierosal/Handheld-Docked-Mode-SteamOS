@@ -1,8 +1,10 @@
 # Canonical sleep workflow
 
 The canonical sleep reducer and durable application coordinator model one
-original player request without calling Steam, login1, game processes, display
-mechanisms, or eGPU mechanisms. They are an implementation/simulation
+original player request without directly calling Steam, login1, display, or
+eGPU mechanisms. A separate guarded game-close child now defines the exact
+identity, consent, durability, mechanism, and verification boundary without a
+production close mechanism. This remains an implementation/simulation
 foundation, not an enabled live sleep workflow.
 
 Steam-menu and physical-button intents enter the same coordinator. Physical
@@ -86,7 +88,19 @@ graceful and force evidence cannot cross transactions, and cleared clients
 advance only that same sleep request. No second authoritative journal is opened
 and pre-signal durability remains intact. Decky sleep delivery is still unwired.
 
-There is still no game-close adapter, save adapter, removal mechanism,
-sleep-continuation adapter, physical-button interception adapter, or Decky sleep
-workflow RPC. Current login1 and Steam preflight behavior remains governed by
-the existing sleep ADRs.
+Guarded graceful game close also composes as a child of the same sleep journal.
+The read-only adapter accepts only one exact Steam AppID and its bounded exact
+scope set; ambiguity fails closed. Explicit confirmation issues a bounded,
+single-use token tied to the parent sleep operation and exact game observation.
+Execution requires a newer matching sample, persists an identity-free
+`substep_started` before the injected mechanism, polls to a verified Idle state,
+persists `substep_verified`, and advances only the same sleep request. Identity
+change, timeout, mechanism refusal, observation failure, or wait failure enters
+Action Required. A verified-triggerable-autosave catalog value blocks close
+until a separate verified save child exists. AppID and scope identity never
+enter the transition journal.
+
+There is still no production game-close mechanism adapter, save adapter,
+removal mechanism, sleep-continuation adapter, physical-button interception
+adapter, or Decky sleep workflow RPC. Current login1 and Steam preflight
+behavior remains governed by the existing sleep ADRs.

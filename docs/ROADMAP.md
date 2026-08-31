@@ -42,7 +42,8 @@ No broader label may be inferred from a narrower one.
 | Guarded process-release approvals | Implemented and simulated in Decky-native flow | Supervised disposable-process proof remains. |
 | Process-release signal/re-scan runner, audit, and journal | Implemented and simulated | Supervised mechanism proof remains; hardware removal authority is always false. |
 | Exact-instance Linux pidfd signal adapter | Implemented, unit tested, and guarded by Decky orchestration | Supervised disposable-process proof remains. |
-| Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Game/save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
+| Canonical sleep/disconnect reducer + durable coordinator | Implemented and simulated, delivery-independent | Save/removal/display/sleep mechanisms, Decky wiring, and supervised proof remain. |
+| Exact-identity guarded game-close child | Implemented and simulated, mechanism-injected | Production SteamOS close mechanism, Decky delivery, verified save child, and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
 | Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
@@ -180,7 +181,10 @@ button sources enter one generation-bound service; request expiry, consent/save
 branching, process-release routing, removal capability, independent removal
 readiness, Portable recovery, original-request continuation, fresh verification
 samples, append-only persistence, exact acknowledgement, and fail-closed restart
-recovery are covered. No live sleep mechanism or sleep-continuation RPC is
+recovery are covered. An exact AppID/scope game-close child now binds explicit
+single-use consent to the same parent operation, persists before its injected
+mechanism, and advances only after a fresh verified Idle observation. No
+production game-close or live sleep mechanism and no sleep-continuation RPC is
 enabled.
 
 - Normalize Steam menu and physical-button attempts into one request intent
@@ -198,7 +202,10 @@ removal capability.
 Composition status: guarded process release is now a child step of the same
 sleep transaction journal in the application/simulation layer. It does not run
 two authoritative journals or drop pre-signal persistence. Decky sleep delivery
-and live mechanisms remain gated.
+and live mechanisms remain gated. Guarded game close uses the same composition
+rule and records no AppID or scope identity in the journal. A
+verified-triggerable-autosave game remains blocked until the save child is
+implemented.
 
 ### R5 — Unexpected-undock recovery
 

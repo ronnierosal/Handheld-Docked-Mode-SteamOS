@@ -95,6 +95,13 @@ operation. A second authoritative process journal is never opened. The sleep
 child target bound is 27 so the worst-case two-phase release plus all remaining
 sleep/recovery events still fit the 128-entry journal.
 
+The guarded game-close child uses the same substep ordering. It persists an
+identity-free `game.close_substep_started` event before invoking its injected
+mechanism and closes the substep only after a fresh exact observation proves
+the game Idle. Steam AppID, scope names, approval tokens, and mechanism details
+are never journal fields. Any close failure terminalizes the parent sleep
+transaction as Action Required; no production game-close adapter is wired.
+
 Every recovery/acknowledgement service first verifies the journal's categorical
 owner marker. Process-release startup recovery cannot terminalize, clear, or
 misreport a sleep or other foreign transaction; it returns a foreign-journal

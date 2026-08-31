@@ -144,7 +144,12 @@ cannot show Safe to disconnect from
 software-client readiness alone and cannot continue the original sleep request
 before verified Portable recovery. Process release now participates as a child
 of the same authoritative journal in simulation through strict substep events
-and a backend-injected parent ID; Decky sleep delivery remains unwired. See
+and a backend-injected parent ID. Exact game close has the same child-step
+boundary: one exact AppID/scope identity, explicit bounded consent, fresh
+identity revalidation, durable pre-mechanism state, bounded Idle verification,
+and fail-closed terminalization. The read-only scope adapter and application
+service are implemented and simulated, but no production close mechanism or
+Decky sleep delivery is wired. See
 [Canonical sleep workflow](SLEEP_WORKFLOW.md).
 
 Asynchronous cable-loss policy can request Portable recovery but can never

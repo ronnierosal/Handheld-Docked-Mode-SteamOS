@@ -48,5 +48,10 @@ The SteamOS scope parser extracts a Steam AppID only from exact recognized
 legacy/current Steam unit names. Duplicate scopes for the same AppID collapse to
 one identity. Multiple AppIDs, a future unparsed Steam scope, query failure, or
 no game keeps the active AppID unknown. The result is internal only: the public
-snapshot schema and support bundle do not expose it yet, and it grants no close,
-relaunch, save, or GPU-selection authority.
+snapshot schema and support bundle do not expose it yet.
+
+The guarded sleep child may bind a short-lived approval to one exact AppID and
+its exact scope set, then request close only through an injected narrow
+mechanism after a newer matching observation. It grants no relaunch, save, or
+GPU-selection authority, and no production close mechanism is wired. The
+AppID/scope identity is intentionally excluded from the transition journal.
