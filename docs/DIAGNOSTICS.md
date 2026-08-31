@@ -50,7 +50,10 @@ vendor IDs, or process IDs. It also shows the categorical Docked-iGPU watcher
 stage. If that read-only watcher enters Action Required, the only offered action
 acknowledges and cancels its private watch so observation can resume; it cannot
 approve or execute promotion. Closing/reopening the plugin hides the section
-again.
+again. The section also shows only categorical controller/audio peripheral
+observation state (mapped or unmapped plus evidence codes). It never exposes
+input paths, sound-card paths, device names, addresses, or private bindings,
+and it grants no controller or audio handoff authority.
 
 ## Evidence sources
 
@@ -69,6 +72,9 @@ again.
   Gamescope owner and an exact AppID only when recognized scope names agree
 - `systemctl --user list-units`: fallback scope inventory when the user cgroup
   hierarchy is unavailable
+- `/sys/class/input` and `/sys/class/sound`: read-only candidate inventory for
+  controller/audio diagnostics; paths are hashed privately and are never shown
+  in the Decky payload
 
 The primary game detector reads the Gamescope owner's current cgroup hierarchy,
 which avoids crossing from Decky's root service into a user D-Bus session. The

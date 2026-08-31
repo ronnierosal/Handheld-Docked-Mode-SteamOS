@@ -312,7 +312,9 @@ Unknown/Experimental; no live mechanism adapter or RPC exists. A bounded
 read-only sysfs inventory now discovers gamepad and sound-card candidates using
 hashed private bindings; absent supervised mapping it reports controller
 identity/default audio as unverified and authorizes no steps. See
-[Controller and audio handoff foundation](PERIPHERAL_HANDOFF.md).
+[Controller and audio handoff foundation](PERIPHERAL_HANDOFF.md). The optional
+troubleshooting overlay exposes only the associated categorical mapped/unmapped
+diagnostics and remains non-authorizing.
 
 - Add profile capabilities and independently observable input/audio state.
 - Preserve a usable fallback before suppressing built-in controls or changing

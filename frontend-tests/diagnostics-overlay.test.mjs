@@ -145,6 +145,37 @@ test("overlay exposes useful categorical state without raw identities", () => {
   }
 });
 
+test("peripheral diagnostics remain categorical when an observation is mapped", () => {
+  const rows = diagnosticOverlayRows(payload(), null, null, {
+    schema_version: 1,
+    controller: {
+      complete: true,
+      exact: true,
+      builtin_available: true,
+      external_connected: true,
+      code: "peripheral.controller.mapped",
+    },
+    audio: {
+      complete: true,
+      exact: false,
+      external_available: null,
+      portable_available: true,
+      code: "peripheral.audio.unmapped",
+    },
+  });
+
+  assert.deepEqual(rows.find((row) => row.name === "Peripheral observation"), {
+    name: "Peripheral observation",
+    value: "controller mapped · audio unmapped",
+  });
+  assert.deepEqual(rows.find((row) => row.name === "Peripheral evidence"), {
+    name: "Peripheral evidence",
+    value: "peripheral controller mapped · peripheral audio unmapped",
+  });
+  const text = JSON.stringify(rows);
+  assert.doesNotMatch(text, /binding|\/sys\/class|event[0-9]|card[0-9]/i);
+});
+
 test("verbose logging status exposes a bounded countdown without private state", () => {
   assert.equal(diagnosticLoggingLabel(null), "unavailable");
   assert.equal(diagnosticLoggingLabel({

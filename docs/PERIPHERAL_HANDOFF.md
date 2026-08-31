@@ -31,6 +31,11 @@ There is no mechanism adapter, Decky RPC, or live handoff authority. The Ally X
 and GPD G1 profile values remain Unknown or Experimental and authorize no
 unsupervised controller/audio change.
 
+The optional troubleshooting overlay can request a separate identity-free
+status payload. It displays only mapped/unmapped state and categorical evidence
+codes; it never receives private bindings, inventory paths, device names, or
+handoff controls.
+
 ## Ordering and recovery rules
 
 Dock plans order eligible work as:
