@@ -12,6 +12,7 @@ REQUIRED_FILES = (
     "LICENSE",
     "backend/hdm/api.py",
     "backend/hdm/adapters/steamos/sleep_inhibitor.py",
+    "backend/hdm/adapters/steamos/peripherals.py",
     "backend/hdm/application/support_bundle.py",
     "backend/hdm/delivery/support_export.py",
     "backend/hdm/delivery/gamescope_wrapper.py",
@@ -85,6 +86,7 @@ def main() -> int:
         }
         allowed_methods = {
             "get_snapshot",
+            "get_peripheral_status",
             "get_docked_igpu_status",
             "acknowledge_docked_igpu_status",
             "get_diagnostic_logging_status",
@@ -103,7 +105,7 @@ def main() -> int:
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky RPCs must remain limited to diagnostics/logging, read-only watcher status, approved support export, supervised preparation, and guarded process release"
+                "Decky RPCs must remain limited to diagnostics/logging, read-only peripheral/watcher status, approved support export, supervised preparation, and guarded process release"
             )
 
     delivery_sources = "\n".join(
@@ -121,7 +123,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics/logging, read-only watcher status, support export, sleep guard, supervised preparation, and guarded process release only."
+        "Plugin package check passed: diagnostics/logging, read-only peripheral/watcher status, support export, sleep guard, supervised preparation, and guarded process release only."
     )
     return 0
 
