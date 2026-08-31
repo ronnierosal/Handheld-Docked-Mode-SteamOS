@@ -250,6 +250,11 @@ five end-to-end Decky RPC calls, so parallelizing sysfs/procfs sources is not
 currently justified; snapshot consistency remains more important than shaving
 that bounded observation time.
 
+The Decky payload strips hardware stable IDs, connector/vendor identity,
+Gamescope PID/output selectors, eGPU identity, and process PID/instance IDs.
+Exact values remain in backend observations for revalidation and never cross
+the frontend RPC boundary.
+
 Support bundle construction, redaction, event rotation, size enforcement, and
 one-time preview approval are application policy. The only file mechanism is a
 fixed-boundary Decky delivery helper that creates the exact reviewed bytes in

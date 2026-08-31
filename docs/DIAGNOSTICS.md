@@ -123,12 +123,13 @@ observable without changing the snapshot or inference policy.
 
 ## Privacy boundary
 
-Normal JSON output excludes command lines, DMI strings, PCI bus addresses, raw
-EDID, raw USB4 unique IDs, usernames, hostnames, home paths, IP addresses, and
-systemd stderr. EDID and USB4 identities are represented by bounded hashes only.
-eGPU clients expose a bounded `comm` name, PID, categorical resource types, and
-a short hash bound to the eGPU identity, PID, and process start time. Raw process
-start times, cgroup paths, file-descriptor targets, and device paths are not
+The Decky JSON output excludes command lines, DMI strings, PCI bus addresses,
+raw or hashed hardware identity, connector names, vendor/device IDs, usernames,
+hostnames, home paths, IP addresses, systemd stderr, PIDs, and process-instance
+IDs. eGPU clients expose only a bounded `comm` name and categorical kind,
+resource types, eligibility, and reason. Exact identities remain backend-only
+for revalidation and never cross the Decky RPC boundary. Raw process start
+times, cgroup paths, file-descriptor targets, and device paths are not
 serialized.
 
 Raw hardware evidence belongs in supervised, redacted test captures and is not

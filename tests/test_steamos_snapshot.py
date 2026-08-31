@@ -17,7 +17,11 @@ from hdm.adapters.steamos.gamescope import GamescopeProcessRecord, GamescopeScan
 from hdm.adapters.steamos.host import HostRecord  # noqa: E402
 from hdm.adapters.steamos.pci import PciDeviceRecord, Usb4DeviceRecord  # noqa: E402
 from hdm.adapters.steamos.sleep_inhibitor import InhibitorLeaseStatus  # noqa: E402
-from hdm.application.snapshot import SnapshotService, report_to_dict  # noqa: E402
+from hdm.application.snapshot import (  # noqa: E402
+    SnapshotService,
+    report_to_dict,
+    report_to_public_dict,
+)
 from hdm.api import DiagnosticsApi  # noqa: E402
 from hdm.domain.models import GameState, OperatingMode, SupportTier  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
@@ -194,7 +198,7 @@ class SteamOsSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(snapshot_from_dict(payload["snapshot"]), report.snapshot)
         self.assertEqual(
-            DiagnosticsApi(discovery).get_snapshot()["snapshot"], payload["snapshot"]
+            DiagnosticsApi(discovery).get_snapshot(), report_to_public_dict(report)
         )
 
     def test_unknown_game_state_and_incomplete_g1_are_blocked(self):

@@ -6,18 +6,14 @@ export interface BlockerPayload {
 }
 
 export interface GpuPayload {
-  stable_id: string;
   role: "internal" | "external" | "unknown";
-  vendor_device: string;
   present: boolean;
   selected_for_render: boolean | null;
   confidence: "unknown" | "observed" | "verified";
 }
 
 export interface DisplayPayload {
-  stable_id: string;
   kind: "internal" | "external" | "unknown";
-  connector: string;
   connected: boolean | null;
   active: boolean | null;
   edid_ready: boolean | null;
@@ -25,8 +21,6 @@ export interface DisplayPayload {
 }
 
 export interface EgpuClientPayload {
-  instance_id: string;
-  pid: number;
   name: string;
   kind: "game" | "user" | "protected" | "system" | "unknown";
   resources: Array<
@@ -45,7 +39,6 @@ export interface DisconnectReadinessPayload {
   applicable: boolean;
   scan_complete: boolean;
   ready: boolean;
-  egpu_stable_id: string;
   clients: EgpuClientPayload[];
   storage_devices: number;
   storage_in_use: boolean;
@@ -61,6 +54,7 @@ export interface SleepGuardPayload {
 }
 
 export interface SnapshotPayload {
+  delivery_schema_version: number;
   snapshot: {
     schema_version: number;
     observed_at: string;
@@ -71,10 +65,6 @@ export interface SnapshotPayload {
     displays: DisplayPayload[];
     gamescope: {
       running: boolean | null;
-      pid: number | null;
-      output_order: string[];
-      render_gpu_stable_id: string;
-      render_vendor_device: string;
       confidence: string;
     };
     disconnect_readiness: DisconnectReadinessPayload;

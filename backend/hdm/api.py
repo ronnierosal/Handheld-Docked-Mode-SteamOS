@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .adapters.steamos.discovery import SteamOsDiscovery
-from .application.snapshot import SnapshotService, report_to_dict
+from .application.snapshot import SnapshotService, report_to_public_dict
 from .ports.discovery import DiscoveryPort
 
 
@@ -13,4 +13,4 @@ class DiagnosticsApi:
 
     def get_snapshot(self) -> dict[str, object]:
         """Return the versioned, privacy-safe diagnostic payload."""
-        return report_to_dict(self._service.observe())
+        return report_to_public_dict(self._service.observe())

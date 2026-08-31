@@ -53,3 +53,30 @@ def report_to_dict(report: SnapshotReport) -> dict[str, object]:
             ],
         },
     }
+
+
+def report_to_public_dict(report: SnapshotReport) -> dict[str, object]:
+    """Return only the categorical evidence required by the Decky frontend."""
+    payload = report_to_dict(report)
+    snapshot = payload["snapshot"]
+    for gpu in snapshot["gpus"]:
+        gpu.pop("stable_id", None)
+        gpu.pop("vendor_device", None)
+    for display in snapshot["displays"]:
+        display.pop("stable_id", None)
+        display.pop("connector", None)
+    gamescope = snapshot["gamescope"]
+    for key in (
+        "pid",
+        "output_order",
+        "render_gpu_stable_id",
+        "render_vendor_device",
+    ):
+        gamescope.pop(key, None)
+    readiness = snapshot["disconnect_readiness"]
+    readiness.pop("egpu_stable_id", None)
+    for client in readiness["clients"]:
+        client.pop("instance_id", None)
+        client.pop("pid", None)
+    payload["delivery_schema_version"] = 1
+    return payload
