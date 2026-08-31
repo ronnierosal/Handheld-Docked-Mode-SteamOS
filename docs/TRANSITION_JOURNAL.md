@@ -54,3 +54,7 @@ Decky plugin does not construct them. No transition endpoint is enabled. Wiring
 the store belongs to the first approved live transition and must include startup
 recovery policy and supervised failure testing.
 
+The pure canonical sleep journal projection uses the same contract. An
+interrupted journal never resumes an original sleep request after restart;
+verified Portable recovery is terminal recovery evidence only, while unknown or
+docked state fails closed into Action Required.

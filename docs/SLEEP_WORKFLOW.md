@@ -47,9 +47,24 @@ Each request has a bounded deadline (15 minutes by default, one hour maximum).
 At or after expiry, HDM cancels the request and keeps the device awake instead
 of suspending from stale consent or stale hardware evidence.
 
+## Durable journal projection
+
+Every simulated sleep stage can be projected into the shared strict transition
+journal and persisted atomically by the dormant fixed-path journal store. The
+projection binds the active step to the exact sleep request and stage and only
+allows append-only progress.
+
+On service restart, an incomplete sleep journal never resumes the original
+sleep request. Work that had not begun is blocked. A started transition records
+recovery as verified only when exact eGPU absence and Portable placement are
+both freshly verified; all other restart states require action. Even verified
+restart recovery terminates as recovery, not as a committed sleep request.
+
 ## Current boundary
 
-The reducer and game-save capability vocabulary are pure and unit tested. There
-is no game-close adapter, save adapter, sleep-continuation adapter, power-button
-integration, or Decky workflow RPC. Current login1 and Steam preflight behavior
-remains governed by the existing sleep ADRs.
+The reducer, game-save capability vocabulary, and journal projection are pure
+and unit tested. Journal persistence is dormant and not constructed by the
+Decky runtime. There is no game-close adapter, save adapter,
+sleep-continuation adapter, power-button integration, or Decky workflow RPC.
+Current login1 and Steam preflight behavior remains governed by the existing
+sleep ADRs.

@@ -92,6 +92,7 @@ ALLOWED_NEXT: dict[JournalEventKind | None, frozenset[JournalEventKind]] = {
     JournalEventKind.STEP_STARTED: frozenset(
         {
             JournalEventKind.STEP_VERIFIED,
+            JournalEventKind.BLOCKED,
             JournalEventKind.RECOVERY_STARTED,
             JournalEventKind.FAILED,
         }
@@ -100,6 +101,7 @@ ALLOWED_NEXT: dict[JournalEventKind | None, frozenset[JournalEventKind]] = {
         {
             JournalEventKind.STEP_STARTED,
             JournalEventKind.COMMITTED,
+            JournalEventKind.BLOCKED,
             JournalEventKind.RECOVERY_STARTED,
             JournalEventKind.FAILED,
         }
@@ -259,4 +261,3 @@ def journal_from_dict(value: dict[str, Any]) -> TransitionJournal:
         request_id=str(value["request_id"]),
         entries=tuple(entries),
     )
-
