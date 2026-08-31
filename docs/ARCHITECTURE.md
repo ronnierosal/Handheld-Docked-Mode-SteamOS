@@ -179,8 +179,13 @@ transition engine.
 
 Presentation activation will use a separately reviewed reversible user-service
 integration. HDM will not patch SteamOS's `/usr/lib/steamos/gamescope-session`
-script. Any existing user-service override that also owns `PATH` is a conflict
-and must fail closed until it is resolved during a supervised validation.
+script. The fixed integration store now installs or removes only HDM's exact
+`90-handheld-dock-mode.conf`, refuses symlinks, unsafe ownership, modified
+managed content, unknown environment files, and any competing `PATH` directive,
+and retains the state directory on deactivation. File activation remains
+separate from daemon-reload and restart. Existing eGPUBridge `PATH` ownership is
+therefore reported as a conflict instead of being overwritten or chained. No
+plugin path constructs the store yet.
 
 Snapshot discovery records privacy-safe stage durations and the Decky frontend
 uses an adaptive non-overlapping refresh loop: one second while discovering or

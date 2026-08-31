@@ -32,7 +32,7 @@ No broader label may be inferred from a narrower one.
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated | Controller-visible preview and save acceptance remain pending. |
-| Display/GPU transitions | Durable guarded orchestrator, inactive boot-scoped Gamescope shim/config store, and fixed user-service command boundary implemented and simulated | Reversible drop-in management, mechanism wiring, and Decky request facade remain before supervised hardware proof. |
+| Display/GPU transitions | Durable guarded orchestrator, inactive boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, and fixed user-service command boundary implemented and simulated | Mechanism composition, guarded Decky request facade, and supervised hardware proof remain. |
 | Process release/termination | Policy foundation and design only | Journal/token gates, signal adapter, replay/failure tests, supervised fixtures. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
@@ -152,7 +152,8 @@ Decky construction, or RPC exists. The first packaged Gamescope shim/config
 boundary is implemented and simulated but remains inactive: it installs no
 override and cannot restart Gamescope. Exact Gamescope-owner resolution and a
 fixed root-to-user command runner are also implemented and unwired; no plugin
-path invokes the runner.
+path invokes the runner. Reversible fixed drop-in management is simulated and
+fails closed on competing `PATH` ownership, including eGPUBridge.
 
 - Implement one idempotent Portable/Docked transition path with journal,
   precondition re-observation, verification, rollback, and crash recovery.

@@ -62,6 +62,15 @@ configuration, or queue a non-blocking restart of the fixed Gamescope target;
 it cannot accept an executable, unit, path, command, or environment value from
 an RPC.
 
+The reversible drop-in store is also implemented and unwired. It owns exactly
+`90-handheld-dock-mode.conf`, creates only fixed descendants of the verified
+user home, and never edits Valve's session script. Activation rejects modified
+HDM content, unsafe ownership/symlinks, unknown environment files, and any
+other drop-in that can set, pass, or unset `PATH`. In particular, an installed
+eGPUBridge path shim is a conflict to resolve explicitly during a supervised
+test. Deactivation removes only the byte-exact HDM file and leaves its bounded
+state directory for recovery evidence.
+
 ## Certification boundary
 
 An approved Experimental plan authorizes one controlled attempt after the
