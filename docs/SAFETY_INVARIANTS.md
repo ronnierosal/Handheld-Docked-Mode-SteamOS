@@ -24,6 +24,20 @@ These invariants are release gates, not preferences.
     other user identifiers by default.
 13. Display mutation and hardware experiments require supervised execution plus
     redacted before/live/after evidence.
+14. Suppressing a warning never suppresses its underlying safety check,
+    inhibitor, approval, or audit event.
+15. Process termination targets only backend-discovered users of the exact eGPU
+    nodes. The frontend cannot provide arbitrary PIDs, signals, commands, or
+    paths.
+16. Graceful process closure and force closure are separate approvals. PID start
+    time, eGPU identity, and opened nodes are revalidated immediately before a
+    signal is sent.
+17. HDM never force-closes Gamescope, Steam, Decky, display/session managers,
+    mounted-storage clients, or unknown/system processes to make disconnect look
+    safe.
+18. A sleep inhibitor is released when its verified hardware condition ends or
+    the plugin unloads. The plugin must not leave a permanent inhibitor after a
+    crash.
 
 The first milestone is read-only. Introducing mutation requires explicit 0.2
 scope approval, durable transaction design, rollback tests, and hardware gates.

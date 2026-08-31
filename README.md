@@ -31,6 +31,7 @@ Start with:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Hardware support](docs/HARDWARE_SUPPORT.md)
 - [Read-only diagnostics](docs/DIAGNOSTICS.md)
+- [eGPUBridge feature review](docs/EGPUBRIDGE_FEATURE_REVIEW.md)
 - [Mid-game docking experiment](docs/experiments/MID_GAME_DOCKING.md)
 
 ## Development

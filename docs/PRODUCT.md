@@ -28,6 +28,14 @@ DETECT → VALIDATE → PLAN → PREPARE → APPLY → VERIFY → COMMIT
 
 Manual and automatic requests use the same policy and transition engine.
 
+## Decky-native delivery
+
+HDM is a Decky Loader-native plugin. Its player interface uses Decky's Quick
+Access components and typed Decky RPC. The Python backend runs under Decky's
+managed plugin lifecycle; there is no separate web dashboard or general-purpose
+command endpoint. Root privilege is isolated to narrow observation and future
+approved mechanisms, while policy remains pure and testable.
+
 ## Initial scope
 
 The first certified profile is:
@@ -38,6 +46,11 @@ The first certified profile is:
 - TV connected through the G1 display output
 
 Milestone 0.1 implements reliable read-only discovery and diagnostics only.
+
+The proposed eGPUBridge-derived feature selection, including sleep blocking and
+guarded process closure, is documented in
+[eGPUBridge feature review for HDM](EGPUBRIDGE_FEATURE_REVIEW.md). These are 0.2
+candidates and do not change the read-only 0.1 safety boundary.
 
 ## Non-goals for the initial release
 
