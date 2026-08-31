@@ -24,13 +24,21 @@ config, restart Gamescope, or invoke the transition engine. Current Ally X/G1
 display handoff remains Experimental, so the supervised path still needs the
 existing explicit short-lived approval.
 
+An in-memory backend facade now composes that ready state with supervised
+preview. Delivery supplies only the opaque watch ID. The facade retrieves the
+private ready generation, requires the transition preview to observe that exact
+generation and Docked-iGPU placement, and retains the watch on inspection or a
+blocked preview. It consumes the watch only after explicit confirmation
+produces a short-lived approval token. It does not execute that token and has no
+Decky RPC.
+
 ## Remaining gates
 
 - prove on hardware that a running iGPU game can be presented on the TV through
   the G1 without changing game or Gamescope identity
-- add a backend-owned scheduler/lifecycle for the watcher
-- join `promotion_ready` to supervised preview/approval without trusting
-  frontend generations or identities
+- add a backend-owned scheduler and production lifecycle for the in-memory
+  watcher
+- wire the opaque facade through a reviewed Decky delivery path
 - verify Docked-iGPU rollback before enabling any automatic trigger
 - after transition, use exact DRM engine activity to prove the next game uses
   the G1

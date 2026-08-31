@@ -3,8 +3,8 @@
 The existing supervised Portable-to-Docked-eGPU path now also accepts an exact,
 idle Docked-iGPU source. It uses the same preview, short-lived single-use
 approval, durable journal, Gamescope mechanism, verification, acknowledgement,
-and interrupted-recovery flow. No automatic game-exit watcher or Decky RPC is
-enabled.
+and interrupted-recovery flow. No production game-exit scheduler or Decky RPC
+is enabled.
 
 Docked-iGPU is also a real recovery target. Its boot-scoped config selects the
 external TV connector and explicitly selects the exact internal GPU. If G1
@@ -17,6 +17,12 @@ one exact running Steam game, brackets observations to avoid partial-order
 races, and emits only a privacy-safe `promotion_ready` state after verified
 natural exit. It cannot issue approval or invoke this transition path. See
 [Docked-iGPU workflow](DOCKED_IGPU.md).
+
+An unwired backend facade can pass the watch's private ready generation into the
+existing supervised preview. The frontend supplies only the opaque watch ID;
+generation drift blocks approval. The watch is consumed only when explicit
+confirmation returns an approval token, and execution remains a separate gated
+operation.
 
 Hardware validation is a certification gate, not an implementation gate. HDM
 may implement an Experimental mechanism before certification when the operation

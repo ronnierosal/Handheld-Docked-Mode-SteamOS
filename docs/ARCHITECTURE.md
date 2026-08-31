@@ -218,6 +218,12 @@ bounded, cancels on context change, exposes no private identity in its payload,
 and has no transition/approval port. See
 [Docked-iGPU workflow](DOCKED_IGPU.md).
 
+An in-memory opaque facade composes a ready watch with the existing supervised
+preview without accepting private identity or generation from delivery. It
+binds preview to the stored generation, requires Docked-iGPU again, and consumes
+the watch only after an explicit approval token is issued. No RPC constructs
+the facade and it does not execute the token.
+
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is
 never planned without verified external input and a verified built-in recovery

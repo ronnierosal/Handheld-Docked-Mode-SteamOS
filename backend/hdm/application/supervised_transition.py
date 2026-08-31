@@ -80,6 +80,7 @@ class SupervisedPresentationTransitionService:
         target: PlacementState,
         *,
         user_confirmed: bool,
+        expected_generation: str = "",
     ) -> SupervisedTransitionPreview:
         if target not in {PlacementState.PORTABLE, PlacementState.DOCKED_EGPU}:
             return SupervisedTransitionPreview(
@@ -89,6 +90,12 @@ class SupervisedPresentationTransitionService:
         if observed is None:
             return SupervisedTransitionPreview(
                 target, PlacementState.UNKNOWN, blockers=("observation.unavailable",)
+            )
+        if expected_generation and observed.generation != expected_generation:
+            return SupervisedTransitionPreview(
+                target,
+                infer_placement(observed.snapshot),
+                blockers=("transition.evidence_changed",),
             )
         current = infer_placement(observed.snapshot)
         resolved = resolve_runtime_profiles(observed.snapshot)

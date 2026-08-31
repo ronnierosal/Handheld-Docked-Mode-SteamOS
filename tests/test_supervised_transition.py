@@ -220,6 +220,19 @@ class SupervisedTransitionTests(unittest.TestCase):
         )
         self.assertIn("game.running", preview.blockers)
 
+    def test_bound_preview_rejects_changed_private_generation_before_approval(self):
+        value, _, _ = service(
+            Observations(VersionedObservation("generation-new", snapshot()))
+        )
+        preview = value.preview(
+            PlacementState.DOCKED_EGPU,
+            user_confirmed=True,
+            expected_generation="generation-ready",
+        )
+
+        self.assertEqual(preview.blockers, ("transition.evidence_changed",))
+        self.assertFalse(preview.approval_token)
+
     def test_only_exact_terminal_operation_can_be_acknowledged(self):
         journal = append_journal_entry(
             TransitionJournal("operation-0001", "request-0001"),

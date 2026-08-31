@@ -88,6 +88,12 @@ class DockedIgpuExitArmResult:
     code: str
     watch: DockedIgpuExitWatch | None = None
 
+    def __post_init__(self) -> None:
+        if not REASON_RE.fullmatch(self.code):
+            raise ValueError("Docked-iGPU arm result code must be categorical")
+        if self.accepted != (self.watch is not None):
+            raise ValueError("Docked-iGPU arm result is inconsistent")
+
 
 class DockedIgpuGameExitWatcher:
     def __init__(
