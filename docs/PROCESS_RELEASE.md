@@ -73,7 +73,9 @@ commands.
 Restart recovery never repeats or escalates a signal. It terminalizes any
 incomplete process-release journal as Action Required using a fresh placement
 observation when available, then requires exact operation acknowledgement
-before another release can begin.
+before another release can begin. It first verifies the journal's
+`process_release.requested` owner marker; a sleep or other foreign journal is
+left byte-for-byte untouched and reported as a blocker.
 
 A delivery-independent guarded facade now joins observation, inspection,
 approval, execution, persistence, and recovery. Read-only inspection returns

@@ -21,6 +21,7 @@ from hdm.application.process_release_replay import (  # noqa: E402
     ProcessReleaseJournalRecovery,
     ProcessReleaseReplaySimulator,
 )
+from hdm.domain.control_plane import PlacementState, WorkflowState  # noqa: E402
 from hdm.domain.models import (  # noqa: E402
     EgpuClientKind,
     EgpuClientObservation,
@@ -28,6 +29,11 @@ from hdm.domain.models import (  # noqa: E402
 )
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
+from hdm.domain.transition_journal import (  # noqa: E402
+    JournalEventKind,
+    TransitionJournal,
+    append_journal_entry,
+)
 from hdm.ports.process_signal import (  # noqa: E402
     ProcessSignalAction,
     ProcessSignalResult,
@@ -175,6 +181,25 @@ class GuardedProcessReleaseTests(unittest.TestCase):
         )
         preview = value.preview(ReleasePhase.GRACEFUL, user_confirmed=False)
         self.assertEqual(preview.blockers, ("signal.pidfd_unsupported",))
+        self.assertEqual(signals.actions, [])
+
+    def test_foreign_journal_is_reported_without_recovery_or_acknowledgement(self):
+        foreign = TransitionJournal("sleep-operation-1", "sleep-request-1")
+        foreign = append_journal_entry(
+            foreign,
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="test",
+            workflow_state=WorkflowState.SLEEP_PENDING_DISCONNECT,
+            placement=PlacementState.DOCKED_EGPU,
+            code="sleep.requested",
+        )
+        value, signals, store = service(Observations())
+        store.current = foreign
+        self.assertEqual(value.status().code, "process_release.foreign_journal")
+        preview = value.preview(ReleasePhase.GRACEFUL, user_confirmed=False)
+        self.assertEqual(preview.blockers, ("journal.foreign_operation",))
+        self.assertFalse(value.acknowledge("sleep-operation-1"))
+        self.assertEqual(store.current, foreign)
         self.assertEqual(signals.actions, [])
 
     def test_read_only_preview_has_no_token(self):

@@ -202,6 +202,11 @@ class GuardedProcessReleaseService:
             )
         if current is None:
             return GuardedProcessReleaseStatus("process_release.idle")
+        if not self._recovery.is_process_release_journal(current):
+            return GuardedProcessReleaseStatus(
+                "process_release.foreign_journal",
+                action_required=True,
+            )
         if not current.terminal:
             return GuardedProcessReleaseStatus(
                 "process_release.recovery_required",
@@ -224,6 +229,8 @@ class GuardedProcessReleaseService:
             return "journal.unavailable"
         if current is None:
             return ""
+        if not self._recovery.is_process_release_journal(current):
+            return "journal.foreign_operation"
         return (
             "journal.acknowledgement_required"
             if current.terminal

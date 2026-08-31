@@ -262,6 +262,27 @@ class ProcessReleaseReplayTests(unittest.TestCase):
         )
         self.assertFalse(recovery.acknowledge("../active-transition.json"))
 
+    def test_recovery_never_mutates_or_acknowledges_a_foreign_journal(self):
+        foreign = TransitionJournal("sleep-operation-1", "sleep-request-1")
+        foreign = append_journal_entry(
+            foreign,
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.SLEEP_PENDING_DISCONNECT,
+            placement=PlacementState.DOCKED_EGPU,
+            code="sleep.requested",
+        )
+        store = MemoryJournalStore(foreign)
+        recovery = ProcessReleaseJournalRecovery(
+            store, occurred_at=lambda: "2026-08-31T12:01:00Z"
+        )
+        result = recovery.recover(None)
+        self.assertTrue(result.action_required)
+        self.assertEqual(result.code, "process_release.foreign_journal")
+        self.assertEqual(store.current, foreign)
+        self.assertFalse(recovery.acknowledge("sleep-operation-1"))
+        self.assertEqual(store.current, foreign)
+
     def test_rescans_after_every_fake_signal_and_clears_software_blockers(self):
         first = client("instance-1", 100)
         second = client("instance-2", 200)

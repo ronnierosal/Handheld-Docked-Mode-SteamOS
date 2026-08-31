@@ -433,6 +433,10 @@ class ProcessReleaseJournalRecovery:
             return ProcessReleaseRecoveryResult(
                 None, False, "process_release.no_recovery", True
             )
+        if not self.is_process_release_journal(journal):
+            return ProcessReleaseRecoveryResult(
+                journal, True, "process_release.foreign_journal", True
+            )
         if journal.terminal:
             terminal = journal.entries[-1]
             return ProcessReleaseRecoveryResult(
@@ -477,9 +481,17 @@ class ProcessReleaseJournalRecovery:
                 journal is None
                 or not journal.terminal
                 or journal.operation_id != operation_id
+                or not self.is_process_release_journal(journal)
             ):
                 return False
             self._journal_store.clear_terminal(operation_id)
             return True
         except (OSError, ValueError):
             return False
+
+    @staticmethod
+    def is_process_release_journal(journal: TransitionJournal) -> bool:
+        return bool(
+            journal.entries
+            and journal.entries[0].code == "process_release.requested"
+        )

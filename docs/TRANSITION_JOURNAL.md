@@ -88,3 +88,8 @@ restart; verified Portable recovery is terminal recovery evidence only, while
 unknown or docked state fails closed into Action Required. A pending sleep
 transaction also cannot open a second process-release journal; a same-journal
 child-step protocol is required before those engines are composed.
+
+Every recovery/acknowledgement service first verifies the journal's categorical
+owner marker. Process-release startup recovery cannot terminalize, clear, or
+misreport a sleep or other foreign transaction; it returns a foreign-journal
+blocker without modifying the file.
