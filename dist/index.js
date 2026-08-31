@@ -81,6 +81,84 @@ function createDeckySteamSuspendAdapter() {
     return createSteamSuspendAdapter(() => DFL.findModuleExport((candidate) => isSteamSuspendStore(candidate)), (object, property, handler) => DFL.beforePatch(object, property, handler));
 }
 
+function humanize(value) {
+    return value.replaceAll("_", " ");
+}
+function yesNoUnknown(value) {
+    return value === true ? "yes" : value === false ? "no" : "unknown";
+}
+function diagnosticOverlayRows(payload) {
+    if (!payload) {
+        return [];
+    }
+    const { snapshot } = payload;
+    const renderer = snapshot.gpus.find((gpu) => gpu.selected_for_render === true);
+    const externalGpu = snapshot.gpus.find((gpu) => gpu.role === "external");
+    const externalDisplay = snapshot.displays.find((display) => display.kind === "external");
+    const disconnect = snapshot.disconnect_readiness;
+    const rows = [
+        { name: "Observed mode", value: humanize(payload.inference.mode) },
+        { name: "Snapshot schema", value: String(snapshot.schema_version) },
+        { name: "Device profile", value: snapshot.host_profile },
+        { name: "Support tier", value: humanize(snapshot.support_tier) },
+        {
+            name: "Gamescope",
+            value: `${yesNoUnknown(snapshot.gamescope.running)} · ${humanize(snapshot.gamescope.confidence)}`,
+        },
+        {
+            name: "Observed renderer",
+            value: renderer ? `${humanize(renderer.role)} · ${humanize(renderer.confidence)}` : "unknown",
+        },
+        {
+            name: "External GPU",
+            value: externalGpu
+                ? `present ${yesNoUnknown(externalGpu.present)} · ${humanize(externalGpu.confidence)}`
+                : "not observed",
+        },
+        {
+            name: "External display",
+            value: externalDisplay
+                ? `connected ${yesNoUnknown(externalDisplay.connected)} · active ${yesNoUnknown(externalDisplay.active)} · ${humanize(externalDisplay.confidence)}`
+                : "not observed",
+        },
+        {
+            name: "Sleep flow",
+            value: snapshot.sleep_guard.required
+                ? snapshot.sleep_guard.active ? "guard active" : "guard required but inactive"
+                : "guard not required",
+        },
+        {
+            name: "Disconnect scan",
+            value: disconnect.applicable
+                ? `${disconnect.scan_complete ? "complete" : "incomplete"} · ${disconnect.ready ? "software ready" : "blocked"}`
+                : "not applicable",
+        },
+        {
+            name: "Blocker codes",
+            value: snapshot.blockers.length
+                ? snapshot.blockers.map((blocker) => blocker.code).join(", ")
+                : "none",
+        },
+        {
+            name: "Stage timings",
+            value: payload.diagnostics.timings_ms
+                .map((timing) => `${timing.stage} ${Math.round(timing.duration_ms)}ms`)
+                .join(" · ") || "unavailable",
+        },
+        {
+            name: "Verbose logging",
+            value: "off · control not enabled in this build",
+        },
+    ];
+    disconnect.clients.forEach((client, index) => {
+        rows.push({
+            name: `Client ${index + 1}`,
+            value: `${client.name} · ${humanize(client.kind)} · ${client.resources.map(humanize).join(", ")}`,
+        });
+    });
+    return rows;
+}
+
 const DISCOVERY_REFRESH_MS = 1_000;
 const SETTLING_REFRESH_MS = 750;
 const STABLE_REFRESH_MS = 3_000;
@@ -415,6 +493,7 @@ function Content({ preflight }) {
     const [supportPreview, setSupportPreview] = SP_REACT.useState(null);
     const [supportBusy, setSupportBusy] = SP_REACT.useState(false);
     const [supportMessage, setSupportMessage] = SP_REACT.useState("");
+    const [showDiagnostics, setShowDiagnostics] = SP_REACT.useState(false);
     const lastSnapshotAt = SP_REACT.useRef(null);
     const refreshInFlight = SP_REACT.useRef(false);
     const warningToastShown = SP_REACT.useRef(false);
@@ -491,6 +570,7 @@ function Content({ preflight }) {
                 : disconnect.ready
                     ? "Ready"
                     : "Blocked";
+    const overlayRows = diagnosticOverlayRows(payload);
     SP_REACT.useEffect(() => {
         if (!sleepGuard?.required) {
             warningToastShown.current = false;
@@ -610,7 +690,7 @@ function Content({ preflight }) {
                                 ? "Standby — G1 verified absent"
                                 : "Unavailable" }), preflightStatus.error && (SP_JSX.jsx(DFL.PanelSectionRow, { children: preflightStatus.error })), sleepGuard?.required && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [!sleepWarningHidden && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: gameUsesEgpu
                                             ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
-                                            : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), disconnect?.clients.map((client) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { children: [SP_JSX.jsxs("div", { children: [client.name, " \u00B7 PID ", client.pid, " \u00B7 ", label(client.kind)] }), SP_JSX.jsxs("div", { style: { fontSize: "0.85em", opacity: 0.7 }, children: [client.resources.map(label).join(", "), " \u00B7 ", client.reason] })] }) }, client.instance_id))), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only evidence. HDM did not close processes or disconnect hardware." })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Support bundle", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs, addresses, usernames, home paths, and command lines are excluded or redacted." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void createSupportPreview(), disabled: supportBusy, children: supportBusy ? "Working…" : "Preview redacted support bundle" }) }), supportPreview && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DiagnosticRow, { name: "Preview size", value: `${supportPreview.size_bytes} bytes` }), SP_JSX.jsx(DiagnosticRow, { name: "Recent events", value: String(supportPreview.event_count) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: reviewSupportPreview, disabled: supportBusy, children: "Review exact redacted JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void copySupportPreview(), disabled: supportBusy, children: "Copy reviewed JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void saveApprovedSupportPreview(), disabled: supportBusy, children: "Save reviewed bundle to Downloads" }) })] })), supportMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: supportMessage })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Diagnostics only", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "HDM 0.2 observes the current state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, Gamescope, or close processes." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void refresh(), disabled: loading, children: loading ? "Reading…" : "Refresh" }) }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] })] }));
+                                            : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only evidence. HDM did not close processes or disconnect hardware." })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Support bundle", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs, addresses, usernames, home paths, and command lines are excluded or redacted." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void createSupportPreview(), disabled: supportBusy, children: supportBusy ? "Working…" : "Preview redacted support bundle" }) }), supportPreview && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DiagnosticRow, { name: "Preview size", value: `${supportPreview.size_bytes} bytes` }), SP_JSX.jsx(DiagnosticRow, { name: "Recent events", value: String(supportPreview.event_count) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: reviewSupportPreview, disabled: supportBusy, children: "Review exact redacted JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void copySupportPreview(), disabled: supportBusy, children: "Copy reviewed JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void saveApprovedSupportPreview(), disabled: supportBusy, children: "Save reviewed bundle to Downloads" }) })] })), supportMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: supportMessage })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Diagnostics only", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "HDM 0.2 observes the current state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, Gamescope, or close processes." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void refresh(), disabled: loading, children: loading ? "Reading…" : "Refresh" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setShowDiagnostics((value) => !value), children: showDiagnostics ? "Hide troubleshooting details" : "Show troubleshooting details" }) }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), showDiagnostics && (SP_JSX.jsxs(DFL.PanelSection, { title: "Troubleshooting details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden." }), overlayRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name)))] }))] }));
 }
 function showBlockedAttempt(warning, onClose) {
     let modal;

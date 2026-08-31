@@ -45,6 +45,7 @@ No broader label may be inferred from a narrower one.
 | Canonical sleep/disconnect reducer + durable journal projection | Implemented and unit tested, dormant policy only | Game/save/process/display/sleep mechanisms and supervised proof remain. |
 | Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 | Temporary verbose diagnostic logging policy | Implemented and unit tested, dormant | Decky UI/RPC wiring and controller-visible acceptance remain. |
+| Optional troubleshooting overlay | Implemented and frontend tested, off by default | Controller-visible hardware acceptance remains. |
 
 ## Required architecture corrections
 

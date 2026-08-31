@@ -40,6 +40,12 @@ total snapshot duration. Refresh and warning-preference controls do not change
 system state or release the inhibitor. Support export writes only after an exact
 redacted preview and one-time approval.
 
+An optional controller-friendly troubleshooting section is off by default. It
+derives categorical state, confidence, blocker codes, client categories,
+resource types, and stage timings from the existing snapshot. It does not issue
+a new RPC and does not render stable hardware IDs, connector names, vendor IDs,
+or process IDs. Closing/reopening the plugin hides it again.
+
 ## Evidence sources
 
 - `/sys/class/dmi/id`: host profile

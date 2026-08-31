@@ -18,6 +18,7 @@ import {
   type SupportBundlePreviewPayload,
 } from "./backend";
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
+import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
 import {
   SleepPreflightCoordinator,
@@ -142,6 +143,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [supportPreview, setSupportPreview] = useState<SupportBundlePreviewPayload | null>(null);
   const [supportBusy, setSupportBusy] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const lastSnapshotAt = useRef<number | null>(null);
   const refreshInFlight = useRef(false);
   const warningToastShown = useRef(false);
@@ -227,6 +229,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         : disconnect.ready
           ? "Ready"
           : "Blocked";
+  const overlayRows = diagnosticOverlayRows(payload);
 
   useEffect(() => {
     if (!sleepGuard?.required) {
@@ -408,16 +411,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             value={String(disconnect.clients.length)}
           />
         )}
-        {disconnect?.clients.map((client) => (
-          <PanelSectionRow key={client.instance_id}>
-            <div>
-              <div>{client.name} · PID {client.pid} · {label(client.kind)}</div>
-              <div style={{ fontSize: "0.85em", opacity: 0.7 }}>
-                {client.resources.map(label).join(", ")} · {client.reason}
-              </div>
-            </div>
-          </PanelSectionRow>
-        ))}
         {(disconnect?.storage_devices ?? 0) > 0 && (
           <DiagnosticRow
             name="eGPU storage"
@@ -486,6 +479,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             {loading ? "Reading…" : "Refresh"}
           </ButtonItem>
         </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setShowDiagnostics((value) => !value)}>
+            {showDiagnostics ? "Hide troubleshooting details" : "Show troubleshooting details"}
+          </ButtonItem>
+        </PanelSectionRow>
         {sleepGuard?.required && sleepWarningHidden && (
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={showSleepWarning}>
@@ -494,6 +492,17 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </PanelSectionRow>
         )}
       </PanelSection>
+
+      {showDiagnostics && (
+        <PanelSection title="Troubleshooting details">
+          <PanelSectionRow>
+            Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden.
+          </PanelSectionRow>
+          {overlayRows.map((row) => (
+            <DiagnosticRow key={row.name} name={row.name} value={row.value} />
+          ))}
+        </PanelSection>
+      )}
     </>
   );
 }
