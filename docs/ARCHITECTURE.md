@@ -64,7 +64,10 @@ process/hardware identity never enter the exported journal.
 The journal's dormant fixed-path file adapter enforces atomic append-only
 progress for one operation, no-follow/exclusive temporary creation, byte bounds,
 file and directory synchronization, and matching-terminal-only cleanup. It is
-not constructed by Decky. See [Durable transition journal](TRANSITION_JOURNAL.md).
+not constructed by Decky. A separate hardened boundary can create or validate
+the fixed root-owned mode-0700 `/var/lib/handheld-dock-mode` state directory;
+the user-owned Gamescope config root is not control-state authority. See
+[Durable transition journal](TRANSITION_JOURNAL.md).
 
 The guarded runtime orchestrator uses that journal contract for real mechanism
 ports. It revalidates the exact profile/device/display binding and idle game

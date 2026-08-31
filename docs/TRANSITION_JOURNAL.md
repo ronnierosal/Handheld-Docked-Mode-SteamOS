@@ -28,6 +28,14 @@ The dormant file adapter stores one journal as `active-transition.json` under an
 absolute backend-owned state directory. No frontend path or filename is
 accepted.
 
+The production composition has a separate fixed state-root boundary at
+`/var/lib/handheld-dock-mode`. It creates only that final directory from the
+existing real `/var/lib` parent, requires a POSIX root process, and accepts only
+a real root-owned mode-0700 directory below a real root-owned, non-writable
+parent. Symlinks, alternate leaf names, group/world-writable parents, non-root
+ownership, and permission drift fail closed. The user-owned Gamescope
+launch-config directory is never journal authority.
+
 Save behavior:
 
 1. Validate the existing journal, if any.
