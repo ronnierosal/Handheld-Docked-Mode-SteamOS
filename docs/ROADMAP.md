@@ -43,6 +43,7 @@ No broader label may be inferred from a narrower one.
 | Process-release signal/re-scan simulator, audit, and journal | Implemented and simulated | Production mechanism remains; hardware removal authority is always false. |
 | Narrow POSIX process-signal adapter | Implemented and unit tested, dormant | Decky wiring/RPC and supervised disposable-process proof remain prohibited. |
 | Canonical sleep/disconnect reducer + durable journal projection | Implemented and unit tested, dormant policy only | Game/save/process/display/sleep mechanisms and supervised proof remain. |
+| Independent game compatibility dimensions and review gate | Implemented and unit tested, pure schema only | Collection UI, persistence, intentional hardware tests, and catalog publication remain. |
 
 ## Required architecture corrections
 
@@ -192,6 +193,10 @@ dimensions. Docked-iGPU remains experimental until real proof exists.
 Exit: rollback and disconnect-loss tests pass before certification.
 
 ### R8 — Diagnostics, compatibility, and support expansion
+
+**Status:** PARTIAL POLICY IMPLEMENTED — independent eGPU-handoff and save/sleep
+dimensions, exact-profile evidence, and intentional human-reviewed promotion
+gates are unit tested. No collection, persistence, or publication is enabled.
 
 - Add an opt-in overlay and bounded verbose logging with a maximum TTL that
   cannot survive reboot.

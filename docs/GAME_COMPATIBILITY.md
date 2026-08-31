@@ -1,0 +1,40 @@
+# Game compatibility catalog
+
+HDM records eGPU handoff and save/sleep behavior as two independent dimensions.
+A game may render correctly on an eGPU while its save-on-exit behavior remains
+untested, or the reverse.
+
+## eGPU handoff statuses
+
+- Untested
+- Verified
+- Verified with workaround
+- Falls back to iGPU
+- Known issue
+- Unsupported
+
+## Save and sleep statuses
+
+- Untested
+- Verified triggerable autosave
+- Verified save on graceful exit
+- Graceful exit verified
+- Manual save recommended
+- Manual save required
+- Unsafe or unknown
+
+## Promotion gate
+
+Passive telemetry and simulator results cannot change catalog status. Every
+non-Untested status requires a separately identified intentional hardware test,
+human review, an exact handheld/eGPU profile match, HDM and SteamOS versions,
+and a timestamp. A Verified eGPU result additionally requires an observed
+external rendering GPU; it cannot be inferred from launch success. Save claims
+must match the exact reviewed save outcome.
+
+Evidence is single-use within each dimension; one intentional test report may
+support both independent dimensions when it contains both exact outcomes. The
+bounded promotion history preserves which dimension changed without storing
+process details, account identity, or private paths. The schema is currently
+pure policy: it does not collect tests, write a catalog, publish results, or
+modify launch behavior.
