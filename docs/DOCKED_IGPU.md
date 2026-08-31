@@ -24,6 +24,9 @@ G1 and TV are connected.
 - Lifecycle inspection always requests an unconfirmed supervised preview. It
   exposes only placement/readiness/blocker categories and fails closed if any
   approval token is unexpectedly returned.
+- A dormant async driver serializes lifecycle ticks, quiesces at terminal
+  states, supports an explicit wake after acknowledgement, rejects duplicate
+  runners, and closes the lifecycle when its owner task is cancelled.
 - Support Preview can now run one explicit bounded, read-only comparison of the
   exact game's DRM engine activity on the independently re-resolved Ally
   internal GPU and G1. Only categorical, identity-free results enter the
@@ -51,8 +54,7 @@ short-lived approval token. No Decky RPC constructs either component.
   to observe internal activity and no G1 activity during that supervised
   experiment; either Unknown result is incomplete and proves neither absence
   nor placement
-- construct the lifecycle in the backend and drive its bounded ticks from a
-  reviewed scheduler/task
+- construct the lifecycle and its dormant async driver in the backend
 - wire only its identity-free status and inspection mappings through a reviewed
   Decky delivery path; keep confirmation and execution separate
 - verify Docked-iGPU rollback before enabling any automatic trigger

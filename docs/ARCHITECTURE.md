@@ -230,7 +230,10 @@ and idempotent unload cancellation. Its read-only inspection always calls the
 facade with `user_confirmed=False`, maps only categorical placement/readiness
 and sanitized blockers, and treats any unexpected approval token as Action
 Required. The lifecycle is implemented and simulated but is not yet constructed
-by the backend, scheduled, or exposed through Decky.
+by the backend or exposed through Decky. A delivery-side async driver now
+provides single-run ownership, bounded polling, explicit wake-up from terminal
+states, terminal-state quiescence, and close-on-cancellation. It is also dormant
+and creates no task by itself.
 
 Controller and audio handoff also have pure decision policies only. External
 controller promotion is independent from built-in suppression; suppression is
