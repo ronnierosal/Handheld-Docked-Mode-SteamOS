@@ -60,8 +60,8 @@ class AllyDeployHelperTests(unittest.TestCase):
 
     def test_installer_has_constrained_sudo_command_and_no_session_actions(self):
         installer = (ROOT / "scripts" / "install_ally_deploy_helper.sh").read_text(encoding="utf-8")
+        self.assertIn("mkdir -p /usr/local/libexec /etc/handheld-dock-mode", installer)
         self.assertIn("/usr/local/libexec/hdm-deploy-plugin HDM-update-*.zip HDM-update-*.zip.sig", installer)
         self.assertNotIn("systemctl", installer)
         self.assertNotIn("gamescope", installer.casefold())
         self.assertNotIn("decky", installer.casefold())
-
