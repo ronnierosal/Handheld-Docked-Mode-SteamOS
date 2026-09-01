@@ -30,8 +30,11 @@ The initial health aggregate is pure and categorical. It does not change
 placement or authorize recovery: it assesses placement, Gamescope session,
 active display, applicable eGPU storage, and (for external placements) a
 read-only current PCIe link observation bound to the already verified G1 root
-bridge. Link observation reports only up, down, or unknown; it does not infer
-bandwidth, stability, safe removal, or certification. Controller and audio are
+bridge. Link observation reports up, down, or unknown and, when the kernel
+exposes parseable values, preserves the current GT/s and lane-width evidence.
+Those values are observations only: HDM does not apply a universal performance
+threshold or infer bandwidth, stability, safe removal, or certification.
+Controller and audio are
 intentionally omitted until independently usable-state observations are
 available. Unknown evidence is Attention Required rather than a healthy guess;
 degraded evidence takes precedence over a pending recovery signal.
@@ -429,8 +432,9 @@ adapters observe:
 - exact certified-eGPU DRM/audio resource holders and mounted/swap storage
 - bounded current PCIe link-health evidence for an exact verified eGPU bridge
 
-The current-link collector is read-only and records only categorical up/down/
-unknown state after exact profile resolution. It does not inspect kernel logs,
+The current-link collector is read-only and records categorical up/down/
+unknown state plus parseable current speed and lane width after exact profile
+resolution. It does not inspect kernel logs,
 reset devices, or imply performance quality. The implemented snapshot adapter
 cross-correlates the other sources and emits blockers when any required source is
 missing, conflicting, or ambiguous. Process classification is pure domain

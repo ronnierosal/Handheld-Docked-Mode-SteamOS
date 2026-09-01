@@ -34,6 +34,8 @@ class PcieLinkHealthDiscoveryTests(unittest.TestCase):
             self.assertEqual(observed.state, EgpuLinkState.UP)
             self.assertEqual(observed.confidence, Confidence.OBSERVED)
             self.assertEqual(observed.reason, "egpu.link_observed")
+            self.assertEqual(observed.speed_gtps, 16.0)
+            self.assertEqual(observed.width_lanes, 4)
 
     def test_zero_metric_reports_down_without_claiming_removal_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -46,6 +48,8 @@ class PcieLinkHealthDiscoveryTests(unittest.TestCase):
             ).observe(self.BDF)
             self.assertEqual(observed.state, EgpuLinkState.DOWN)
             self.assertEqual(observed.reason, "egpu.link_down")
+            self.assertEqual(observed.speed_gtps, 0.0)
+            self.assertEqual(observed.width_lanes, 0)
 
     def test_missing_or_unparseable_metrics_fail_closed_as_unknown(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -183,6 +183,8 @@ class EgpuLinkObservation:
     confidence: Confidence
     reason: str = ""
     error: str = ""
+    speed_gtps: float | None = None
+    width_lanes: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

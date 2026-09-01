@@ -386,7 +386,8 @@ hardware-validation gates above are closed. They must extend the existing core;
 they are not authorization for a separate optimizer or launcher.
 
 - Expand the implemented typed health aggregation from placement, session,
-  display, storage, and current exact-bridge PCIe link observation to
+  display, storage, and current exact-bridge PCIe link observation (including
+  read-only current speed/lane evidence where the kernel exposes it) to
   independently verified controller, audio, link-quality, and recovery
   evidence. **Implemented (optional input):** one independently collected
   peripheral observation now contributes controller/audio health only when it

@@ -53,8 +53,12 @@ class PcieLinkHealthDiscovery:
             return EgpuLinkObservation(
                 True, EgpuLinkState.DOWN, Confidence.OBSERVED,
                 reason="egpu.link_down",
+                speed_gtps=float(speed_match.group("speed")),
+                width_lanes=int(width_match.group("width")),
             )
         return EgpuLinkObservation(
             True, EgpuLinkState.UP, Confidence.OBSERVED,
             reason="egpu.link_observed",
+            speed_gtps=float(speed_match.group("speed")),
+            width_lanes=int(width_match.group("width")),
         )

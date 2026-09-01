@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from .models import (
@@ -113,6 +114,8 @@ def snapshot_to_dict(snapshot: ObservedSnapshot) -> dict[str, Any]:
             "confidence": snapshot.egpu_link.confidence.value,
             "reason": snapshot.egpu_link.reason,
             "error": snapshot.egpu_link.error,
+            "speed_gtps": snapshot.egpu_link.speed_gtps,
+            "width_lanes": snapshot.egpu_link.width_lanes,
         },
         "blockers": [
             {"code": blocker.code, "message": blocker.message}
@@ -139,6 +142,25 @@ def _optional_pid(value: Any) -> int | None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ValueError("gamescope.pid must be a positive integer or null")
+    return value
+
+
+def _optional_nonnegative_float(value: Any, field_name: str) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{field_name} must be a non-negative number or null")
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed < 0:
+        raise ValueError(f"{field_name} must be a non-negative number or null")
+    return parsed
+
+
+def _optional_nonnegative_int(value: Any, field_name: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{field_name} must be a non-negative integer or null")
     return value
 
 
@@ -246,6 +268,12 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         confidence=Confidence(link_value.get("confidence", "unknown")),
         reason=str(link_value.get("reason", "")),
         error=str(link_value.get("error", "")),
+        speed_gtps=_optional_nonnegative_float(
+            link_value.get("speed_gtps"), "egpu_link.speed_gtps"
+        ),
+        width_lanes=_optional_nonnegative_int(
+            link_value.get("width_lanes"), "egpu_link.width_lanes"
+        ),
     )
     blockers = tuple(
         Blocker(code=str(blocker["code"]), message=str(blocker["message"]))
