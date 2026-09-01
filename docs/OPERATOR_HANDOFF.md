@@ -20,6 +20,20 @@ Always re-check live state before making a hardware claim.
 The staged candidate, installed version, and local checkout may change. Confirm
 each independently before relying on this snapshot.
 
+## Checkpoint and worker-integration policy
+
+For every meaningful verified checkpoint, update the appropriate tracked
+continuity, product, or roadmap note with the current goal, completed change,
+exact verification, evidence status (**Implemented**, **Simulated**, or
+**Hardware Validated**), blocker, and next safe task. Keep this concise and
+exclude secrets, raw device identities, and transient logs.
+
+Commit only small coherent verified slices. Before integrating completed worker
+work, inspect its diff and relevant tests, confirm clean ancestry and no
+unrelated changes, then fast-forward or make the smallest safe merge promptly.
+Resolve conflicts deliberately. Record the integration and verification here;
+do not leave a growing queue of completed worktree commits unintegrated.
+
 ## Continuity status
 
 - North Star: HDM is a safety-first SteamOS handheld reliability companion, not

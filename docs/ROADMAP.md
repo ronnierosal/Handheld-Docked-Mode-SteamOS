@@ -5,6 +5,11 @@ This roadmap reconciles the product north star with the behavior present on
 Detailed work items remain in [Backlog](BACKLOG.md); completed hardware
 observations remain in the dated validation records.
 
+Meaningful verified checkpoints and worker integrations are recorded concisely
+in [Operator handoff](OPERATOR_HANDOFF.md), with evidence status, blockers,
+verification, and the next safe task. Product intent never upgrades an
+Implemented or Simulated item to Hardware Validated.
+
 ## Evidence vocabulary
 
 HDM uses these labels consistently:
