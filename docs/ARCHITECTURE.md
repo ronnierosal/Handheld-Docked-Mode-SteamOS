@@ -149,6 +149,13 @@ required for the last category; it remains non-authorizing and must be rerun
 immediately before any separately approved physical test. See
 [Safe Undock result presentation](SAFE_UNDOCK_PRESENTATION.md).
 
+Unexpected-removal recovery assessment is a separate pure before/after evidence
+contract. It requires a fresh opaque-bound loss observation and independently
+verified internal display, input, and audio before reporting portable fallback
+evidence. Stale, unknown, and contradictory facts require supervised diagnosis;
+it has no recovery mechanism or game-outcome authority. See
+[Unexpected removal recovery assessment](UNEXPECTED_REMOVAL_RECOVERY.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the

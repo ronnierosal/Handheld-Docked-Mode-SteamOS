@@ -143,6 +143,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
   Eligibility is not a safe-to-unplug claim and creates no action authority;
   rerun Stage 1.5 immediately before any later separately approved physical
   test.
+- **Stage 1.7 checkpoint (pure unexpected-removal assessment):** explicit
+  before/after opaque-bound observations require verified docked bridge/topology
+  followed by fresh matching-binding bridge/topology absence. Only verified
+  internal display, built-in input, and internal audio can add a portable
+  fallback evidence result. Unknown, stale, changed, or contradictory facts
+  require supervised diagnosis. Game reporting is limited to observed
+  stopped/running/unknown state; this neither claims game survival nor performs
+  recovery, relaunch, deployment, or device action.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
