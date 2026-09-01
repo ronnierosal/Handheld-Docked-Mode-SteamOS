@@ -17,28 +17,8 @@ from typing import Any
 import remote_capture
 
 
-MAX_CAPTURE_BYTES = remote_capture.MAX_CAPTURE_BYTES
-
-
-def load_capture(path: Path) -> dict[str, Any]:
-    """Load one saved capture only after its normal identity/privacy validation."""
-    resolved = path.resolve()
-    data = resolved.read_bytes()
-    if len(data) > MAX_CAPTURE_BYTES:
-        raise ValueError("saved capture exceeds its size bound")
-    try:
-        text = data.decode("utf-8")
-        raw = json.loads(text)
-        digest = raw["collector"]["payload_sha256"]
-    except (KeyError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise ValueError("saved capture is malformed") from error
-    if (
-        not isinstance(digest, str)
-        or len(digest) != 64
-        or any(char not in "0123456789abcdef" for char in digest)
-    ):
-        raise ValueError("saved capture payload identity is invalid")
-    return remote_capture.parse_capture(text, digest)
+# Kept as a public alias for callers of the established wake-comparison helper.
+load_capture = remote_capture.load_saved_capture
 
 
 def compare_wake_diagnostics(
@@ -83,7 +63,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         result = compare_wake_diagnostics(
-            load_capture(args.before), load_capture(args.after)
+            load_capture(args.before),
+            load_capture(args.after),
         )
     except (OSError, ValueError) as error:
         print(f"Wake comparison failed: {error}", file=sys.stderr)

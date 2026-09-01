@@ -217,6 +217,27 @@ def save_capture(value: dict[str, Any], output: Path | None = None) -> Path:
     return output
 
 
+def load_saved_capture(path: Path) -> dict[str, Any]:
+    """Load a local capture only after its normal privacy/schema validation."""
+    resolved = path.resolve()
+    data = resolved.read_bytes()
+    if len(data) > MAX_CAPTURE_BYTES:
+        raise ValueError("saved capture exceeds its size bound")
+    try:
+        text = data.decode("utf-8")
+        raw = json.loads(text)
+        payload_hash = raw["collector"]["payload_sha256"]
+    except (KeyError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("saved capture is malformed") from error
+    if (
+        not isinstance(payload_hash, str)
+        or len(payload_hash) != 64
+        or any(char not in "0123456789abcdef" for char in payload_hash)
+    ):
+        raise ValueError("saved capture payload identity is invalid")
+    return parse_capture(text, payload_hash)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", required=True)

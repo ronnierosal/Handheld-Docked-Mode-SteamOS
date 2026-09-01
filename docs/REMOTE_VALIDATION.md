@@ -49,6 +49,17 @@ Existing files are never overwritten. The report includes:
 The report excludes hostnames, usernames, network addresses, PIDs, command
 lines, environment values, raw hardware identifiers, and private paths.
 
+To confirm that a saved capture's installed fixed files match this checkout,
+without opening SSH again or printing hashes, run:
+
+```text
+python scripts/compare_capture_provenance.py out/remote-captures/capture-<timestamp>.json
+```
+
+It reports only `match`, `mismatch`, or `inconclusive`. A match is package
+provenance evidence only; it does not prove the plugin is loaded, healthy, or
+hardware validated.
+
 ## Important limitation
 
 The streamed collector is not the live Decky plugin process. It therefore does
