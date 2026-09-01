@@ -142,6 +142,13 @@ export interface SnapshotPayload {
     code: string;
     poll_after_ms: number;
   };
+  /** Optional future read-only delivery for local journey classifiers. */
+  journey?: {
+    deferred_dock?: { state: string; code: string };
+    prepared_docked_idle?: { state: string; code: string };
+    safe_undock?: { state: string; code: string };
+    unexpected_removal_recovery?: { state: string; code: string };
+  };
   diagnostics: {
     schema_version: number;
     timings_ms: Array<{

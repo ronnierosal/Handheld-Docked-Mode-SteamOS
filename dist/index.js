@@ -406,6 +406,55 @@ function atAGlanceRows(state) {
         ["Game", state.game],
     ];
 }
+const JOURNEY_STATES = {
+    deferred_dock: {
+        deferred: ["Waiting for game to close", "A player request remains evidence only."],
+        eligible: ["Fresh idle evidence", "A future transition owner must revalidate."],
+        cancelled: ["Cancelled", "No dock request remains."],
+        expired: ["Expired", "A new player request is required."],
+        invalidated: ["Needs revalidation", "The prior dock evidence changed or became stale."],
+        rejected: ["Not available", "A direct request needs a verified running game."],
+    },
+    prepared_docked_idle: {
+        not_yet_stable: ["Stabilizing", "Fresh idle evidence has not matured yet."],
+        prepared: ["Prepared evidence", "A future owner must still revalidate."],
+        invalidated: ["Needs revalidation", "Prepared evidence changed or became stale."],
+    },
+    safe_undock: {
+        ready_for_revalidation: ["Needs revalidation", "This is not a physical-unplug approval."],
+        not_ready: ["Not ready", "Current Safe Undock evidence does not meet the gate."],
+        evidence_insufficient: ["Evidence incomplete", "Collect fresh supervised evidence before deciding."],
+        invalidated: ["Needs revalidation", "The Safe Undock evidence changed or became stale."],
+    },
+    unexpected_removal_recovery: {
+        portable_fallback_verified: ["Portable fallback observed", "This does not claim hardware recovery or game survival."],
+        recovery_incomplete: ["Recovery incomplete", "Handheld fallback evidence is incomplete."],
+        needs_supervised_diagnosis: ["Needs supervised diagnosis", "Evidence is unknown, stale, or contradictory."],
+    },
+};
+function journeyStatusRows(journey) {
+    const rows = [
+        ["deferred_dock", "Dock request"],
+        ["prepared_docked_idle", "Prepared state"],
+        ["safe_undock", "Safe Undock evidence"],
+        ["unexpected_removal_recovery", "Recovery"],
+    ];
+    return rows.map(([key, name]) => {
+        const value = journey?.[key];
+        const presentation = value && JOURNEY_STATES[key][value.state];
+        return presentation
+            ? { name, value: presentation[0], detail: presentation[1] }
+            : {
+                name,
+                value: "Not connected",
+                detail: "This local classifier is not yet wired into read-only snapshot delivery.",
+            };
+    });
+}
+/** State reset used before returning controller focus to the compact status. */
+function compactStatusPanels() {
+    return { showDiagnostics: false, showJourneyDetails: false };
+}
 /**
  * Steam can otherwise send controller focus to the QAM Back control after a
  * long panel collapses. Focus a native in-panel control after the owning panel
@@ -941,6 +990,7 @@ function Content({ preflight }) {
     const [supportBusy, setSupportBusy] = SP_REACT.useState(false);
     const [supportMessage, setSupportMessage] = SP_REACT.useState("");
     const [showDiagnostics, setShowDiagnostics] = SP_REACT.useState(false);
+    const [showJourneyDetails, setShowJourneyDetails] = SP_REACT.useState(false);
     const [presentationBusy, setPresentationBusy] = SP_REACT.useState(false);
     const [presentationMessage, setPresentationMessage] = SP_REACT.useState("");
     const [tvSwitchBusy, setTvSwitchBusy] = SP_REACT.useState(false);
@@ -1068,7 +1118,9 @@ function Content({ preflight }) {
         if (quickAccessVisible) {
             return;
         }
-        setShowDiagnostics(false);
+        const compact = compactStatusPanels();
+        setShowDiagnostics(compact.showDiagnostics);
+        setShowJourneyDetails(compact.showJourneyDetails);
         setDockedIgpuStatus(null);
         setDiagnosticLoggingStatus(null);
         setPeripheralStatus(null);
@@ -1112,6 +1164,7 @@ function Content({ preflight }) {
                     : "Blocked";
     const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus, actionHistory);
     const optionalDiagnosticsDeferred = showDiagnostics && snapshot?.game_state !== "idle";
+    const journeyRows = journeyStatusRows(payload?.journey);
     const acknowledgeDockedIgpuWatch = SP_REACT.useCallback(async () => {
         setDockedIgpuMessage("");
         try {
@@ -1495,7 +1548,9 @@ function Content({ preflight }) {
         }
     }, [forceReceiptToken, inspectProcessRelease, processAcknowledgementId]);
     const returnToStatus = SP_REACT.useCallback(() => {
-        setShowDiagnostics(false);
+        const compact = compactStatusPanels();
+        setShowDiagnostics(compact.showDiagnostics);
+        setShowJourneyDetails(compact.showJourneyDetails);
         // Wait for the diagnostics section to collapse, then reset Steam's owning
         // scroll panel and move focus to a native in-panel control. A non-focusable
         // status div leaves controller navigation at Steam's QAM Back control.
@@ -1518,7 +1573,7 @@ function Content({ preflight }) {
                             health: healthStatusLabel(payload?.health, loading),
                             connection: progress.label,
                             game: label(snapshot?.game_state ?? "unknown"),
-                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsx("div", { ref: primaryControlAnchor, children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }) }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsx("div", { ref: primaryControlAnchor, children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }) }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setShowJourneyDetails((visible) => !visible), children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
                                 ? "Checking…"
                                 : sleepGuard?.required
                                     ? sleepGuard.active

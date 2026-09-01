@@ -159,6 +159,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   no-relaunch. Unknown/running game, risks, stale or inconsistent evidence, or
   incomplete recovery explain the block. It cannot persist preference, launch,
   save/close a game, infer a crash/survival outcome, or act on sleep/wake.
+- **Journey status UI checkpoint (read-only local presentation):** Quick Access
+  now shows compact deferred-dock, prepared-idle, Safe Undock, and unexpected-
+  removal-recovery rows with details behind an explicit native control. Current
+  snapshot delivery does not wire these local classifier results, so the UI
+  intentionally shows "Not connected" rather than guessing hardware state.
+  This adds no RPC, collection, timer, action, hardware claim, or deployment.
+  Back-to-top collapses both detail panels and restores focus inside the panel.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

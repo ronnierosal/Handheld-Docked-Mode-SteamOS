@@ -50,7 +50,12 @@ import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { healthStatusLabel } from "./health-ui";
 import { decideLinkHealthNotification } from "./link-health-notification";
-import { atAGlanceRows, restoreQuickAccessFocus } from "./quick-access-ui";
+import {
+  atAGlanceRows,
+  compactStatusPanels,
+  journeyStatusRows,
+  restoreQuickAccessFocus,
+} from "./quick-access-ui";
 import {
   collectOptionalDiagnostics,
   shouldCollectOptionalDiagnostics,
@@ -407,6 +412,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [supportBusy, setSupportBusy] = useState(false);
   const [supportMessage, setSupportMessage] = useState("");
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [showJourneyDetails, setShowJourneyDetails] = useState(false);
   const [presentationBusy, setPresentationBusy] = useState(false);
   const [presentationMessage, setPresentationMessage] = useState("");
   const [tvSwitchBusy, setTvSwitchBusy] = useState(false);
@@ -549,7 +555,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     if (quickAccessVisible) {
       return;
     }
-    setShowDiagnostics(false);
+    const compact = compactStatusPanels();
+    setShowDiagnostics(compact.showDiagnostics);
+    setShowJourneyDetails(compact.showJourneyDetails);
     setDockedIgpuStatus(null);
     setDiagnosticLoggingStatus(null);
     setPeripheralStatus(null);
@@ -608,6 +616,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     actionHistory,
   );
   const optionalDiagnosticsDeferred = showDiagnostics && snapshot?.game_state !== "idle";
+  const journeyRows = journeyStatusRows(payload?.journey);
 
   const acknowledgeDockedIgpuWatch = useCallback(async () => {
     setDockedIgpuMessage("");
@@ -1027,7 +1036,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   }, [forceReceiptToken, inspectProcessRelease, processAcknowledgementId]);
 
   const returnToStatus = useCallback(() => {
-    setShowDiagnostics(false);
+    const compact = compactStatusPanels();
+    setShowDiagnostics(compact.showDiagnostics);
+    setShowJourneyDetails(compact.showJourneyDetails);
     // Wait for the diagnostics section to collapse, then reset Steam's owning
     // scroll panel and move focus to a native in-panel control. A non-focusable
     // status div leaves controller navigation at Steam's QAM Back control.
@@ -1087,6 +1098,28 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </PanelSectionRow>
         )}
       </PanelSection>
+
+      <PanelSection title="Journey status">
+        {journeyRows.map((row) => (
+          <DiagnosticRow key={row.name} name={row.name} value={row.value} />
+        ))}
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setShowJourneyDetails((visible) => !visible)}>
+            {showJourneyDetails ? "Hide journey details" : "Open journey details"}
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
+
+      {showJourneyDetails && (
+        <PanelSection title="Journey details">
+          <PanelSectionRow>
+            Read-only local policy status. It does not perform dock, undock, recovery, or game actions.
+          </PanelSectionRow>
+          {journeyRows.map((row) => (
+            <DiagnosticRow key={row.name} name={row.name} value={row.detail} />
+          ))}
+        </PanelSection>
+      )}
 
       <PanelSection title="Sleep protection">
         <DiagnosticRow
