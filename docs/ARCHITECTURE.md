@@ -51,6 +51,15 @@ gets no fallback. The contract has no display, GPU, audio, controller, power,
 or game-setting mechanism authority. Any future consumer must prove capability,
 perform TRY/VERIFY, and preserve observed placement as independent truth.
 
+The shared telemetry contract is also domain-only. A periodic collector must
+declare a bounded metric set, interval, and measured collection cost, and may
+be admitted only after that cost is benchmarked and stays within one tenth of
+the configured interval. Admission delegates to the existing game-aware runtime
+budget: optional background collection defers during running or unknown game
+state, while player-requested diagnostics use the narrower diagnostic delay.
+Samples contain only typed numeric metrics; this contract has no collector,
+scheduler, optimization, TDP, or mutation authority.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,

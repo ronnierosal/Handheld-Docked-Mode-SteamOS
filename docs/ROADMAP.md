@@ -372,11 +372,13 @@ they are not authorization for a separate optimizer or launcher.
   independently verified controller, audio, link-quality, and recovery
   evidence. Current link up/down is neither throughput proof nor removal
   authority.
-- The implemented pure runtime-budget policy defers nonessential background
-  telemetry during running/unknown game state and throttles optional explicit
-  diagnostics. Add one shared low-overhead telemetry port and scheduler
-  consumer only when its collection cost and game-impact measurements are
-  defined.
+- **Implemented (pure contract):** the shared telemetry admission contract
+  requires a typed bounded metric set, declared collection interval, measured
+  cost, benchmark evidence, and an explicit low-cost budget before a future
+  periodic collector could run. It delegates to the existing game-aware runtime
+  budget and has no collector, scheduler, Auto TDP, or mutation authority.
+  A real collector remains deferred until cost and game-impact measurement are
+  recorded for a supported profile.
 - The implemented pure logical-action router maps Safe Undock, Return to
   Handheld, and Recovery from Decky/controller/device-button surfaces to the
   existing request vocabulary. Add a controller-driven Safe Undock delivery
