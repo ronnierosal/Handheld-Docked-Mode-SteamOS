@@ -34,10 +34,14 @@ bridge. Link observation reports up, down, or unknown and, when the kernel
 exposes parseable values, preserves the current GT/s and lane-width evidence.
 Those values are observations only: HDM does not apply a universal performance
 threshold or infer bandwidth, stability, safe removal, or certification.
-Controller and audio are
-intentionally omitted until independently usable-state observations are
-available. Unknown evidence is Attention Required rather than a healthy guess;
-degraded evidence takes precedence over a pending recovery signal.
+Controller and audio are intentionally omitted until independently usable-state
+observations are available. An authoritative workflow owner may additionally
+project only recovery and terminal Action Required/Failed phases into the
+separate health aggregate: recovery is `Recovering`; a terminal workflow is
+`Attention Required`. Connecting and other requested-transition phases do not
+change health, and none of these projections overwrites observed placement.
+Unknown evidence is Attention Required rather than a healthy guess; degraded
+evidence takes precedence over a pending recovery signal.
 
 The runtime-budget policy is also pure and currently unconsumed by a production
 scheduler. It classifies transition safety, direct player requests, and the

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from .control_plane import PlacementState
+from .control_plane import PlacementState, WorkflowState
 from .models import Confidence, EgpuLinkState, ObservedSnapshot
 from .peripheral_handoff import PeripheralObservation
 
@@ -19,6 +19,7 @@ class HealthState(StrEnum):
 
 class HealthComponent(StrEnum):
     PLACEMENT = "placement"
+    WORKFLOW = "workflow"
     SESSION = "session"
     DISPLAY = "display"
     EGPU_LINK = "egpu_link"
@@ -108,6 +109,7 @@ def assess_snapshot_health(
     snapshot: ObservedSnapshot,
     placement: PlacementState,
     peripheral: PeripheralObservation | None = None,
+    workflow: WorkflowState | None = None,
 ) -> HealthAssessment:
     """Assess only current read-only snapshot evidence.
 
@@ -123,6 +125,9 @@ def assess_snapshot_health(
         _session_component(snapshot),
         _display_component(snapshot),
     ]
+    workflow_component = _workflow_component(workflow)
+    if workflow_component is not None:
+        components.append(workflow_component)
     if placement in {
         PlacementState.BOOSTED_HANDHELD,
         PlacementState.DOCKED_EGPU,
@@ -149,6 +154,31 @@ def _placement_component(placement: PlacementState) -> HealthComponentObservatio
             "placement.unknown",
         )
     return HealthComponentObservation(HealthComponent.PLACEMENT, HealthEvidenceState.READY)
+
+
+def _workflow_component(
+    workflow: WorkflowState | None,
+) -> HealthComponentObservation | None:
+    """Project recovery/action workflow without changing observed placement.
+
+    Most workflow phases express a requested transition, not a fact about
+    usability, so they do not alter health. Only explicit recovery or terminal
+    attention phases are health-relevant, and callers must supply them from the
+    authoritative workflow owner rather than reconstructing them from hardware.
+    """
+    if workflow in {WorkflowState.RECOVERING, WorkflowState.RETURNING_TO_PORTABLE}:
+        return HealthComponentObservation(
+            HealthComponent.WORKFLOW,
+            HealthEvidenceState.RECOVERING,
+            "workflow.recovering",
+        )
+    if workflow in {WorkflowState.ACTION_REQUIRED, WorkflowState.FAILED}:
+        return HealthComponentObservation(
+            HealthComponent.WORKFLOW,
+            HealthEvidenceState.UNKNOWN,
+            "workflow.action_required",
+        )
+    return None
 
 
 def _session_component(snapshot: ObservedSnapshot) -> HealthComponentObservation:

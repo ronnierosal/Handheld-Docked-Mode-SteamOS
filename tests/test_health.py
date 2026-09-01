@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.domain.control_plane import PlacementState  # noqa: E402
+from hdm.domain.control_plane import WorkflowState  # noqa: E402
 from hdm.domain.health import (  # noqa: E402
     HealthComponent,
     HealthComponentObservation,
@@ -130,6 +131,35 @@ class HealthAggregationTests(unittest.TestCase):
         health = assess_snapshot_health(
             snapshot_from_dict(fixture("portable.json")), PlacementState.PORTABLE
         )
+        self.assertEqual(health.state, HealthState.READY)
+
+    def test_authoritative_recovery_workflow_is_visible_without_overwriting_placement(self):
+        snapshot = snapshot_from_dict(fixture("portable.json"))
+
+        recovering = assess_snapshot_health(
+            snapshot,
+            PlacementState.PORTABLE,
+            workflow=WorkflowState.RETURNING_TO_PORTABLE,
+        )
+        attention = assess_snapshot_health(
+            snapshot,
+            PlacementState.PORTABLE,
+            workflow=WorkflowState.ACTION_REQUIRED,
+        )
+
+        self.assertEqual(recovering.state, HealthState.RECOVERING)
+        self.assertEqual(attention.state, HealthState.ATTENTION_REQUIRED)
+        self.assertIn("health.workflow_unknown", attention.blockers)
+
+    def test_non_usability_workflow_phases_do_not_change_snapshot_health(self):
+        snapshot = snapshot_from_dict(fixture("portable.json"))
+
+        health = assess_snapshot_health(
+            snapshot,
+            PlacementState.PORTABLE,
+            workflow=WorkflowState.CONNECTING,
+        )
+
         self.assertEqual(health.state, HealthState.READY)
 
     def test_external_placement_never_claims_link_health_without_collector(self):
