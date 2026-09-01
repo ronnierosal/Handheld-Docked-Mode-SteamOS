@@ -201,6 +201,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   is not an undock or Safe Undock result, and this adds no listener, relay
   invocation, RPC, transition, or hardware action. Input delivery and
   supervised validation remain required.
+- **Recovery explanation checkpoint (pure frontend policy):** public link,
+  interrupted-sleep, and portable-recovery categories now map to one calm
+  explanation per kind/state episode; stable link evidence clears its episode.
+  The policy drops raw codes and identity, never claims link quality, hardware
+  recovery, game survival/crash, safe unplug, or relaunch, and owns no evidence
+  collection or notification transport. No watcher, poller, system/game action,
+  deployment, or hardware claim was added.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

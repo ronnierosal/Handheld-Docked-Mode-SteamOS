@@ -83,6 +83,11 @@ Y hold policy into non-authorizing delivery/input/revalidation states. It has no
 listener, relay invocation, controller ownership, transition, or device-action
 authority. See [Controller Safe Undock presentation](CONTROLLER_SHORTCUT_PRESENTATION.md).
 
+The recovery explanation policy maps public link, interrupted-sleep, and
+portable-recovery categories to deduplicated calm wording only. It owns neither
+evidence collection nor notification delivery, and cannot make a recovery or
+hardware claim. See [Recovery explanation policy](RECOVERY_EXPLANATION_POLICY.md).
+
 Future game configuration is bounded by a pure Game Adapter change contract.
 Only a reviewed adapter can begin a typed, allowlisted setting change. The
 future mechanism must compare the expected opaque revision, create an exact
