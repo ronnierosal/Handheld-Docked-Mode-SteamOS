@@ -74,6 +74,19 @@ python scripts/verify_d2_artifacts.py <candidate-artifact-directory> \
 this record stageable until the maintainer confirms the D2 physical and
 lifecycle preconditions.
 
+After a supervised D2 run has created redacted before/after captures, retain a
+local consistency check alongside the checklist record:
+
+```text
+python scripts/verify_d2_evidence_record.py <candidate-artifact-directory> \
+  <rollback-artifact-directory> <before-capture.json> <after-capture.json> \
+  --rollback-revision-prefix e73d249db568
+```
+
+This checks only the saved evidence record's privacy/schema, package labels,
+boot continuity, and uptime ordering. It is not proof of any D2 human or live
+hardware acceptance criterion.
+
 ## Supervised D2 checklist
 
 1. Obtain or independently verify the rollback archive/provenance matching the

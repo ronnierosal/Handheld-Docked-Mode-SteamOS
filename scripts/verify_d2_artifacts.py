@@ -36,7 +36,9 @@ def verify_d2_artifacts(
     return {
         "state": "verified_for_supervised_review",
         "candidate_revision": candidate["revision"],
+        "candidate_version": candidate["version"],
         "rollback_revision": rollback["revision"],
+        "rollback_version": rollback["version"],
     }
 
 

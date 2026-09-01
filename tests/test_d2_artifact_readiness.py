@@ -56,7 +56,9 @@ class D2ArtifactReadinessTests(unittest.TestCase):
                 {
                     "state": "verified_for_supervised_review",
                     "candidate_revision": "a" * 12,
+                    "candidate_version": "0.2.0",
                     "rollback_revision": "b" * 12,
+                    "rollback_version": "0.2.0",
                 },
             )
 

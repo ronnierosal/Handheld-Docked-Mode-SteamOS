@@ -128,6 +128,21 @@ installed, the G1 is disconnected, a player is present, or D2 is authorized.
 Any invalid directory, archive, checksum, metadata, or rollback-label mismatch
 stops locally without exposing paths or raw archive details.
 
+After a supervised D2 run has produced its redacted before/after captures, the
+local evidence record can be checked without reconnecting to the Ally:
+
+```text
+python scripts/verify_d2_evidence_record.py <candidate-artifact-directory> \
+  <rollback-artifact-directory> <before-capture.json> <after-capture.json> \
+  --rollback-revision-prefix <captured-12-character-revision>
+```
+
+This validates read-only/redacted capture shape, candidate/rollback build-label
+provenance, unchanged hashed boot identity, and non-decreasing uptime. Its only
+success state is `verified_d2_evidence_record`; it cannot establish player
+presence, G1 disconnection, Decky/UI/lease health, installation success, or D2
+acceptance. Those remain the supervised checklist's observed requirements.
+
 ### D2 — Device baseline, G1 disconnected
 
 With the player available for the initial install:

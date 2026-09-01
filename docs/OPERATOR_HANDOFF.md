@@ -239,6 +239,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   `verified_for_supervised_review`; no result proves installation, player
   presence, G1 disconnection, lifecycle health, or D2 authorization. It opens
   no SSH and makes no device/session change.
+- **D2 evidence-record checkpoint (local-only):** before/after saved redacted
+  captures can now be checked against the paired artifacts for read-only shape,
+  build-label provenance, same hashed boot identity, and increasing uptime.
+  `verified_d2_evidence_record` is record consistency only; it does not prove
+  installation, player observation, G1 state, UI/lease health, or D2 success.
+  It opens no SSH and makes no device/session change.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
