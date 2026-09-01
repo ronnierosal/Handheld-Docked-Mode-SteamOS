@@ -58,6 +58,9 @@ from hdm.adapters.transition_runtime import (  # noqa: E402
     SystemMonotonicClock,
     versioned_snapshot_observation,
 )
+from hdm.adapters.presentation_transition import (  # noqa: E402
+    PresentationTransitionMechanism,
+)
 from hdm.application.game_evidence_support import (  # noqa: E402
     SupportGameEvidenceService,
 )
@@ -84,6 +87,13 @@ from hdm.application.presentation_activation import (  # noqa: E402
     PresentationActivationApprovalStore,
     PresentationActivationService,
 )
+from hdm.application.experimental_transition import (  # noqa: E402
+    ExperimentalTransitionApprovalStore,
+)
+from hdm.application.supervised_transition import (  # noqa: E402
+    SupervisedPresentationTransitionService,
+)
+from hdm.application.transition_orchestrator import TransitionOrchestrator  # noqa: E402
 from hdm.application.guarded_process_release import (  # noqa: E402
     GuardedProcessReleaseService,
 )
@@ -105,6 +115,7 @@ from hdm.application.support_bundle import (  # noqa: E402
 )
 from hdm.delivery.support_export import SupportBundleFileWriter  # noqa: E402
 from hdm.delivery.gamescope_integration import GamescopeIntegrationStore  # noqa: E402
+from hdm.delivery.presentation_config import PresentationConfigStore  # noqa: E402
 from hdm.delivery.process_release import (  # noqa: E402
     execution_to_payload,
     preview_to_payload,
@@ -127,6 +138,10 @@ from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
 from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
 from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
+from hdm.domain.control_plane import (  # noqa: E402
+    PlacementState,
+    TransitionOutcomeKind,
+)
 from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
 
 
@@ -157,6 +172,7 @@ class Plugin:
         self._support_previews = SupportBundlePreviewStore()
         self._support_writer = SupportBundleFileWriter()
         self._presentation_approvals = PresentationActivationApprovalStore()
+        self._presentation_transition_approvals = ExperimentalTransitionApprovalStore()
         self._process_approvals = ProcessReleaseApprovalStore()
         self._process_receipts = GracefulReleaseReceiptStore()
         self._process_release: GuardedProcessReleaseService | None = None
@@ -589,6 +605,95 @@ class Plugin:
             "rollback_succeeded": outcome.rollback_succeeded,
         }
 
+    async def preview_supervised_tv_switch(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Inspect one idle-only display switch without issuing authority."""
+        try:
+            preview = await asyncio.to_thread(
+                self._presentation_transition_service().preview,
+                PlacementState.DOCKED_EGPU,
+                user_confirmed=False,
+            )
+            return {
+                "schema_version": 1,
+                "ready": preview.ready,
+                "blockers": list(preview.blockers),
+                "confirmation_required": preview.ready,
+            }
+        except Exception:
+            return {
+                "schema_version": 1,
+                "ready": False,
+                "blockers": ["transition.service_unavailable"],
+                "confirmation_required": False,
+            }
+
+    async def approve_supervised_tv_switch(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Issue one short-lived permit after an on-screen player confirmation."""
+        try:
+            preview = await asyncio.to_thread(
+                self._presentation_transition_service().preview,
+                PlacementState.DOCKED_EGPU,
+                user_confirmed=True,
+            )
+            return {
+                "schema_version": 1,
+                "approval_token": preview.approval_token,
+                "blockers": list(preview.blockers),
+            }
+        except Exception:
+            return {
+                "schema_version": 1,
+                "approval_token": "",
+                "blockers": ["transition.approval_failed"],
+            }
+
+    async def execute_supervised_tv_switch(
+        self, approval_token: str
+    ) -> dict[str, object]:
+        """Execute only one prepared, exact idle TV switch attempt."""
+        try:
+            result = await asyncio.to_thread(
+                self._presentation_transition_service().execute, approval_token
+            )
+        except Exception:
+            return self._presentation_transition_failure("transition.execution_failed")
+        outcome = result.outcome
+        code = result.code
+        self._events.append(
+            severity=(
+                "info"
+                if outcome and outcome.kind is TransitionOutcomeKind.SUCCEEDED
+                else "warning"
+            ),
+            code=code,
+            component="presentation",
+            stage="supervised_transition",
+        )
+        return {
+            "schema_version": 1,
+            "accepted": result.accepted,
+            "code": code,
+            "acknowledgement_id": result.operation_id,
+            "acknowledgement_required": bool(result.operation_id and result.durable),
+        }
+
+    async def acknowledge_supervised_tv_switch(
+        self, acknowledgement_id: str
+    ) -> dict[str, object]:
+        """Clear only the exact terminal transition after player acknowledgement."""
+        try:
+            acknowledged = await asyncio.to_thread(
+                self._presentation_transition_service().acknowledge,
+                acknowledgement_id,
+            )
+        except Exception:
+            acknowledged = False
+        return {"schema_version": 1, "acknowledged": acknowledged}
+
     async def get_process_release_status(self, _request: object = None) -> dict[str, object]:
         """Return only categorical durable release state and acknowledgement ID."""
         try:
@@ -946,6 +1051,50 @@ class Plugin:
             resolve_user=lambda: resolve_gamescope_user(GamescopeDiscovery().scan()),
             approvals=self._presentation_approvals,
         )
+
+    def _presentation_transition_service(self) -> SupervisedPresentationTransitionService:
+        """Compose the exact prepared integration with the one transition engine."""
+        resolution = resolve_gamescope_user(GamescopeDiscovery().scan())
+        if not resolution.ok or resolution.context is None:
+            raise ValueError("Gamescope user is unavailable")
+        integration = GamescopeIntegrationStore(
+            plugin_root=PLUGIN_ROOT,
+            user=resolution.context,
+        )
+        state_root = RootOwnedRuntimeState().ensure()
+        observations = SnapshotTransitionObservationAdapter(self._discovery)
+        journal = FileTransitionJournalStore(state_root)
+        mechanism = PresentationTransitionMechanism(
+            integration=integration,
+            config=PresentationConfigStore(state_root),
+            commands=UserServiceCommandRunner(),
+            resolve_user=lambda: resolve_gamescope_user(GamescopeDiscovery().scan()),
+            read_boot_id=self._boot_session_id,
+        )
+        orchestrator = TransitionOrchestrator(
+            observations=observations,
+            mechanism=mechanism,
+            journal_store=journal,
+            clock=SystemMonotonicClock(),
+            waiter=BoundedDeadlineWaiter(),
+        )
+        return SupervisedPresentationTransitionService(
+            observations=observations,
+            orchestrator=orchestrator,
+            journal_store=journal,
+            integration_ready=lambda: integration.status().ready,
+            approvals=self._presentation_transition_approvals,
+        )
+
+    @staticmethod
+    def _presentation_transition_failure(code: str) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "accepted": False,
+            "code": code,
+            "acknowledgement_id": "",
+            "acknowledgement_required": False,
+        }
 
     def _process_service(self) -> GuardedProcessReleaseService:
         if self._process_release is not None:

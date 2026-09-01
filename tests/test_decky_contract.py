@@ -54,6 +54,10 @@ class DeckyContractTests(unittest.TestCase):
                 "preview_presentation_preparation",
                 "approve_presentation_preparation",
                 "prepare_presentation_integration",
+                "preview_supervised_tv_switch",
+                "approve_supervised_tv_switch",
+                "execute_supervised_tv_switch",
+                "acknowledge_supervised_tv_switch",
                 "get_process_release_status",
                 "preview_process_release",
                 "approve_process_release",
@@ -67,9 +71,9 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("GuardedProcessReleaseService", source)
         self.assertIn("ProcessReleaseRunner", source)
         self.assertIn("RootOwnedRuntimeState", source)
-        self.assertNotIn("PresentationTransitionMechanism", source)
-        self.assertNotIn("SupervisedPresentationTransitionService", source)
-        self.assertNotIn("TransitionOrchestrator", source)
+        self.assertIn("PresentationTransitionMechanism", source)
+        self.assertIn("SupervisedPresentationTransitionService", source)
+        self.assertIn("TransitionOrchestrator", source)
         promotion_source = (
             ROOT / "backend" / "hdm" / "application" / "docked_igpu_promotion.py"
         ).read_text(encoding="utf-8")
@@ -108,6 +112,8 @@ class DeckyContractTests(unittest.TestCase):
             "preview_support_bundle",
             "preview_presentation_preparation",
             "approve_presentation_preparation",
+            "preview_supervised_tv_switch",
+            "approve_supervised_tv_switch",
             "get_process_release_status",
         }
         methods = {
@@ -121,7 +127,7 @@ class DeckyContractTests(unittest.TestCase):
                 self.assertEqual([item.arg for item in arguments.args], ["self", "_request"])
                 self.assertEqual(len(arguments.defaults), 1)
 
-    def test_frontend_has_preparation_but_no_transition_rpc(self):
+    def test_frontend_has_explicit_supervised_transition_rpcs(self):
         source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)
         self.assertIn('"get_docked_igpu_status"', source)
@@ -134,6 +140,10 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"preview_presentation_preparation"', source)
         self.assertIn('"approve_presentation_preparation"', source)
         self.assertIn('"prepare_presentation_integration"', source)
+        self.assertIn('"preview_supervised_tv_switch"', source)
+        self.assertIn('"approve_supervised_tv_switch"', source)
+        self.assertIn('"execute_supervised_tv_switch"', source)
+        self.assertIn('"acknowledge_supervised_tv_switch"', source)
         ui_source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")
         self.assertIn("showPresentationPreparationBlocked", ui_source)
         self.assertIn('title: "Display validation is not ready"', ui_source)
@@ -146,7 +156,6 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"save_support_bundle"', source)
         for forbidden in (
             "apply_transition",
-            "restart_gamescope",
             "switch_display",
             "signal_process",
             "force_close",
@@ -186,8 +195,10 @@ class DeckyContractTests(unittest.TestCase):
         self.assertNotIn("    window,\n    { strTitle", source)
         self.assertEqual(
             source.count('    undefined,\n    { strTitle: "Handheld Dock Mode"'),
-            5,
+            6,
         )
+        self.assertIn('strTitle="Switch to TV for supervised test?"', source)
+        self.assertIn('strOKButtonText="Switch to TV"', source)
         self.assertIn('strOKButtonText={force ? "Force close" : "Close gracefully"}', source)
         self.assertIn("Clearing software clients does not authorize physical eGPU removal", source)
 

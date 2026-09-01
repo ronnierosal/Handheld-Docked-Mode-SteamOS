@@ -37,6 +37,10 @@ const saveSupportBundle = callable("save_support_bundle");
 const previewPresentationPreparation = callable("preview_presentation_preparation");
 const approvePresentationPreparation = callable("approve_presentation_preparation");
 const preparePresentationIntegration = callable("prepare_presentation_integration");
+const previewSupervisedTvSwitch = callable("preview_supervised_tv_switch");
+const approveSupervisedTvSwitch = callable("approve_supervised_tv_switch");
+const executeSupervisedTvSwitch = callable("execute_supervised_tv_switch");
+const acknowledgeSupervisedTvSwitch = callable("acknowledge_supervised_tv_switch");
 const getProcessReleaseStatus = callable("get_process_release_status");
 const previewProcessRelease = callable("preview_process_release");
 const approveProcessRelease = callable("approve_process_release");
@@ -745,6 +749,18 @@ function showPresentationPreparationConfirmation(onConfirm, onClose) {
         }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
+function showSupervisedTvSwitchConfirmation(onConfirm, onClose) {
+    let modal;
+    const close = () => {
+        modal.Close();
+        onClose();
+    };
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Switch to TV for supervised test?", strOKButtonText: "Switch to TV", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
+            close();
+            onConfirm();
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only while watching the handheld screen, with no game running." }), SP_JSX.jsx("p", { children: "HDM will restart Gamescope once to select the verified TV and eGPU. If verification fails, HDM attempts to restore the handheld display. Stop if the screen or controls become unusable." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    return modal;
+}
 function showPresentationPreparationBlocked(blockers) {
     // The preparation result appears below its controller-focused button. Steam's
     // Quick Access navigation can leave that row off-screen, so also surface the
@@ -824,6 +840,9 @@ function Content({ preflight }) {
     const [showDiagnostics, setShowDiagnostics] = SP_REACT.useState(false);
     const [presentationBusy, setPresentationBusy] = SP_REACT.useState(false);
     const [presentationMessage, setPresentationMessage] = SP_REACT.useState("");
+    const [tvSwitchBusy, setTvSwitchBusy] = SP_REACT.useState(false);
+    const [tvSwitchMessage, setTvSwitchMessage] = SP_REACT.useState("");
+    const [tvSwitchAcknowledgementId, setTvSwitchAcknowledgementId] = SP_REACT.useState("");
     const [processBusy, setProcessBusy] = SP_REACT.useState(false);
     const [processMessage, setProcessMessage] = SP_REACT.useState("");
     const [processAcknowledgementId, setProcessAcknowledgementId] = SP_REACT.useState("");
@@ -834,6 +853,7 @@ function Content({ preflight }) {
     const inactiveToastShown = SP_REACT.useRef(false);
     const supportModal = SP_REACT.useRef(null);
     const presentationModal = SP_REACT.useRef(null);
+    const tvSwitchModal = SP_REACT.useRef(null);
     const processModal = SP_REACT.useRef(null);
     const diagnosticLoggingModal = SP_REACT.useRef(null);
     SP_REACT.useEffect(() => () => {
@@ -841,6 +861,8 @@ function Content({ preflight }) {
         supportModal.current = null;
         presentationModal.current?.Close();
         presentationModal.current = null;
+        tvSwitchModal.current?.Close();
+        tvSwitchModal.current = null;
         processModal.current?.Close();
         processModal.current = null;
         diagnosticLoggingModal.current?.Close();
@@ -1173,6 +1195,74 @@ function Content({ preflight }) {
             setPresentationBusy(false);
         }
     }, [preparePresentation]);
+    const executeTvSwitch = SP_REACT.useCallback(async () => {
+        setTvSwitchBusy(true);
+        setTvSwitchMessage("");
+        try {
+            toaster.toast({
+                title: "HDM is switching to the TV",
+                body: "Watch the handheld screen while HDM verifies the transition.",
+                critical: true,
+                duration: 30000,
+            });
+            const approval = await approveSupervisedTvSwitch();
+            if (!approval.approval_token || approval.blockers.length > 0) {
+                setTvSwitchMessage(approval.blockers.length > 0
+                    ? `TV switch blocked: ${approval.blockers.map(label).join(", ")}.`
+                    : "TV switch approval was not issued. Inspect again.");
+                return;
+            }
+            const outcome = await executeSupervisedTvSwitch(approval.approval_token);
+            setTvSwitchAcknowledgementId(outcome.acknowledgement_required ? outcome.acknowledgement_id : "");
+            setTvSwitchMessage(outcome.accepted
+                ? `TV switch result: ${label(outcome.code)}.`
+                : `TV switch was not accepted: ${label(outcome.code)}.`);
+        }
+        catch {
+            setTvSwitchMessage("TV switch did not complete. HDM did not claim success.");
+        }
+        finally {
+            setTvSwitchBusy(false);
+        }
+    }, []);
+    const inspectTvSwitch = SP_REACT.useCallback(async () => {
+        setTvSwitchBusy(true);
+        setTvSwitchMessage("");
+        try {
+            const preview = await previewSupervisedTvSwitch();
+            if (!preview.ready || preview.blockers.length > 0) {
+                setTvSwitchMessage(`TV switch blocked: ${preview.blockers.map(label).join(", ")}.`);
+                return;
+            }
+            tvSwitchModal.current?.Close();
+            tvSwitchModal.current = showSupervisedTvSwitchConfirmation(() => void executeTvSwitch(), () => { tvSwitchModal.current = null; });
+        }
+        catch {
+            setTvSwitchMessage("TV switch inspection is unavailable. No change was made.");
+        }
+        finally {
+            setTvSwitchBusy(false);
+        }
+    }, [executeTvSwitch]);
+    const acknowledgeTvSwitch = SP_REACT.useCallback(async () => {
+        if (!tvSwitchAcknowledgementId)
+            return;
+        setTvSwitchBusy(true);
+        try {
+            const result = await acknowledgeSupervisedTvSwitch(tvSwitchAcknowledgementId);
+            setTvSwitchMessage(result.acknowledged
+                ? "TV switch result acknowledged."
+                : "TV switch result could not be acknowledged.");
+            if (result.acknowledged)
+                setTvSwitchAcknowledgementId("");
+        }
+        catch {
+            setTvSwitchMessage("TV switch acknowledgement is unavailable.");
+        }
+        finally {
+            setTvSwitchBusy(false);
+        }
+    }, [tvSwitchAcknowledgementId]);
     const runProcessRelease = SP_REACT.useCallback(async (phase, receiptToken) => {
         setProcessBusy(true);
         setProcessMessage("");
@@ -1314,7 +1404,7 @@ function Content({ preflight }) {
                                     ? () => void stopDiagnosticLogging()
                                     : requestDiagnosticLogging, disabled: diagnosticLoggingBusy, children: diagnosticLoggingStatus?.enabled
                                     ? "Disable verbose diagnostics"
-                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
+                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectTvSwitch(), disabled: tvSwitchBusy || Boolean(tvSwitchAcknowledgementId), children: tvSwitchBusy ? "Checking…" : "Switch to TV for supervised test" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Idle only. This is an experimental, player-watched test and may restart Gamescope once." }), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge TV switch result" }) })), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
 }
 function showBlockedAttempt(warning, onClose) {
     let modal;

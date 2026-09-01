@@ -298,6 +298,49 @@ export const preparePresentationIntegration = callable<
   PresentationPreparationOutcomePayload
 >("prepare_presentation_integration");
 
+export interface SupervisedTvSwitchPreviewPayload {
+  schema_version: number;
+  ready: boolean;
+  blockers: string[];
+  confirmation_required: boolean;
+}
+
+export interface SupervisedTvSwitchApprovalPayload {
+  schema_version: number;
+  approval_token: string;
+  blockers: string[];
+}
+
+export interface SupervisedTvSwitchOutcomePayload {
+  schema_version: number;
+  accepted: boolean;
+  code: string;
+  acknowledgement_id: string;
+  acknowledgement_required: boolean;
+}
+
+export interface SupervisedTvSwitchAcknowledgementPayload {
+  schema_version: number;
+  acknowledged: boolean;
+}
+
+export const previewSupervisedTvSwitch = callable<
+  [],
+  SupervisedTvSwitchPreviewPayload
+>("preview_supervised_tv_switch");
+export const approveSupervisedTvSwitch = callable<
+  [],
+  SupervisedTvSwitchApprovalPayload
+>("approve_supervised_tv_switch");
+export const executeSupervisedTvSwitch = callable<
+  [string],
+  SupervisedTvSwitchOutcomePayload
+>("execute_supervised_tv_switch");
+export const acknowledgeSupervisedTvSwitch = callable<
+  [string],
+  SupervisedTvSwitchAcknowledgementPayload
+>("acknowledge_supervised_tv_switch");
+
 export type ProcessReleasePhase = "graceful" | "force";
 
 export interface ProcessReleaseTargetPayload {

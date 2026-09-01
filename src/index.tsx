@@ -19,6 +19,9 @@ import {
   acknowledgeProcessRelease,
   approveProcessRelease,
   approvePresentationPreparation,
+  approveSupervisedTvSwitch,
+  acknowledgeSupervisedTvSwitch,
+  executeSupervisedTvSwitch,
   executeProcessRelease,
   getProcessReleaseStatus,
   getDockedIgpuStatus,
@@ -27,6 +30,7 @@ import {
   disableDiagnosticLogging,
   preparePresentationIntegration,
   previewPresentationPreparation,
+  previewSupervisedTvSwitch,
   previewProcessRelease,
   previewSupportBundle,
   saveSupportBundle,
@@ -190,6 +194,44 @@ function showPresentationPreparationConfirmation(
         <p>
           This installs HDM&apos;s reversible Gamescope startup integration and reloads the user
           service configuration. It does not restart Gamescope, switch displays, or select a GPU.
+        </p>
+      </div>
+    </ConfirmModal>,
+    undefined,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
+function showSupervisedTvSwitchConfirmation(
+  onConfirm: () => void,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle="Switch to TV for supervised test?"
+      strOKButtonText="Switch to TV"
+      strCancelButtonText="Cancel"
+      bDestructiveWarning={true}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={() => {
+        close();
+        onConfirm();
+      }}
+      onCancel={close}
+    >
+      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
+        <p>Continue only while watching the handheld screen, with no game running.</p>
+        <p>
+          HDM will restart Gamescope once to select the verified TV and eGPU. If verification
+          fails, HDM attempts to restore the handheld display. Stop if the screen or controls
+          become unusable.
         </p>
       </div>
     </ConfirmModal>,
@@ -363,6 +405,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [presentationBusy, setPresentationBusy] = useState(false);
   const [presentationMessage, setPresentationMessage] = useState("");
+  const [tvSwitchBusy, setTvSwitchBusy] = useState(false);
+  const [tvSwitchMessage, setTvSwitchMessage] = useState("");
+  const [tvSwitchAcknowledgementId, setTvSwitchAcknowledgementId] = useState("");
   const [processBusy, setProcessBusy] = useState(false);
   const [processMessage, setProcessMessage] = useState("");
   const [processAcknowledgementId, setProcessAcknowledgementId] = useState("");
@@ -373,6 +418,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const inactiveToastShown = useRef(false);
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
+  const tvSwitchModal = useRef<ReturnType<typeof showModal> | null>(null);
   const processModal = useRef<ReturnType<typeof showModal> | null>(null);
   const diagnosticLoggingModal = useRef<ReturnType<typeof showModal> | null>(null);
 
@@ -381,6 +427,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     supportModal.current = null;
     presentationModal.current?.Close();
     presentationModal.current = null;
+    tvSwitchModal.current?.Close();
+    tvSwitchModal.current = null;
     processModal.current?.Close();
     processModal.current = null;
     diagnosticLoggingModal.current?.Close();
@@ -758,6 +806,80 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setPresentationBusy(false);
     }
   }, [preparePresentation]);
+
+  const executeTvSwitch = useCallback(async () => {
+    setTvSwitchBusy(true);
+    setTvSwitchMessage("");
+    try {
+      toaster.toast({
+        title: "HDM is switching to the TV",
+        body: "Watch the handheld screen while HDM verifies the transition.",
+        critical: true,
+        duration: 30000,
+      });
+      const approval = await approveSupervisedTvSwitch();
+      if (!approval.approval_token || approval.blockers.length > 0) {
+        setTvSwitchMessage(
+          approval.blockers.length > 0
+            ? `TV switch blocked: ${approval.blockers.map(label).join(", ")}.`
+            : "TV switch approval was not issued. Inspect again.",
+        );
+        return;
+      }
+      const outcome = await executeSupervisedTvSwitch(approval.approval_token);
+      setTvSwitchAcknowledgementId(
+        outcome.acknowledgement_required ? outcome.acknowledgement_id : "",
+      );
+      setTvSwitchMessage(
+        outcome.accepted
+          ? `TV switch result: ${label(outcome.code)}.`
+          : `TV switch was not accepted: ${label(outcome.code)}.`,
+      );
+    } catch {
+      setTvSwitchMessage("TV switch did not complete. HDM did not claim success.");
+    } finally {
+      setTvSwitchBusy(false);
+    }
+  }, []);
+
+  const inspectTvSwitch = useCallback(async () => {
+    setTvSwitchBusy(true);
+    setTvSwitchMessage("");
+    try {
+      const preview = await previewSupervisedTvSwitch();
+      if (!preview.ready || preview.blockers.length > 0) {
+        setTvSwitchMessage(
+          `TV switch blocked: ${preview.blockers.map(label).join(", ")}.`,
+        );
+        return;
+      }
+      tvSwitchModal.current?.Close();
+      tvSwitchModal.current = showSupervisedTvSwitchConfirmation(
+        () => void executeTvSwitch(),
+        () => { tvSwitchModal.current = null; },
+      );
+    } catch {
+      setTvSwitchMessage("TV switch inspection is unavailable. No change was made.");
+    } finally {
+      setTvSwitchBusy(false);
+    }
+  }, [executeTvSwitch]);
+
+  const acknowledgeTvSwitch = useCallback(async () => {
+    if (!tvSwitchAcknowledgementId) return;
+    setTvSwitchBusy(true);
+    try {
+      const result = await acknowledgeSupervisedTvSwitch(tvSwitchAcknowledgementId);
+      setTvSwitchMessage(result.acknowledged
+        ? "TV switch result acknowledged."
+        : "TV switch result could not be acknowledged.");
+      if (result.acknowledged) setTvSwitchAcknowledgementId("");
+    } catch {
+      setTvSwitchMessage("TV switch acknowledgement is unavailable.");
+    } finally {
+      setTvSwitchBusy(false);
+    }
+  }, [tvSwitchAcknowledgementId]);
 
   const runProcessRelease = useCallback(async (
     phase: ProcessReleasePhase,
@@ -1149,6 +1271,26 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             Preparation only. This control cannot restart Gamescope or switch displays.
           </PanelSectionRow>
           {presentationMessage && <PanelSectionRow>{presentationMessage}</PanelSectionRow>}
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void inspectTvSwitch()}
+              disabled={tvSwitchBusy || Boolean(tvSwitchAcknowledgementId)}
+            >
+              {tvSwitchBusy ? "Checking…" : "Switch to TV for supervised test"}
+            </ButtonItem>
+          </PanelSectionRow>
+          <PanelSectionRow>
+            Idle only. This is an experimental, player-watched test and may restart Gamescope once.
+          </PanelSectionRow>
+          {tvSwitchAcknowledgementId && (
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={() => void acknowledgeTvSwitch()} disabled={tvSwitchBusy}>
+                Acknowledge TV switch result
+              </ButtonItem>
+            </PanelSectionRow>
+          )}
+          {tvSwitchMessage && <PanelSectionRow>{tvSwitchMessage}</PanelSectionRow>}
         </PanelSection>
       )}
 

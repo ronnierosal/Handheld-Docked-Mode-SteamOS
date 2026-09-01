@@ -124,14 +124,19 @@ Required. Decky exposes this preparation through a controller-first
 preview/confirm flow under troubleshooting details. Actual transition controls
 and automatic attach remain absent.
 
-The actual transition has a separate, currently unwired supervised facade.
-Preview uses a synthetic in-memory permit only to evaluate all planner blockers;
-it does not grant authority. Controller confirmation would issue the real
-short-lived permit. Execution consumes it, requires the same semantic snapshot
-and ready integration, rebuilds the exact plan, and enters the durable
-orchestrator. Pending recovery or unacknowledged terminal evidence blocks new
-approval. The facade supports exact terminal acknowledgement and interrupted
-recovery, but no public RPC or automatic event path can call it.
+The actual transition is exposed only as one explicitly named, controller-first
+**supervised idle TV-switch test**. Its preview issues no authority; the player
+must confirm a second time for the backend to issue a real short-lived permit.
+Execution consumes that permit, requires the same semantic snapshot and ready
+integration, rebuilds the exact plan, and enters the durable orchestrator.
+Pending recovery or unacknowledged terminal evidence blocks another attempt.
+The player must acknowledge the exact terminal result before a later test.
+
+This is not an automatic attach path: it is unavailable when a game is running
+or unknown, and it does not authorize a Docked-iGPU handoff, live removal, or
+any sleep action. The player must watch the handheld screen for the one
+Gamescope restart and stop the test on a black display, lost controls, or lost
+network access.
 
 ## Certification boundary
 
