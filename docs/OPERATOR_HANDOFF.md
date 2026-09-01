@@ -188,6 +188,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   It does not diagnose cable/link quality, performance, removal, recovery, or
   certification and has no collector, scheduler, notification, or action path.
   Hardware link-quality validation remains required.
+- **Link evidence UI checkpoint (read-only local presentation):** Journey status
+  can map only optional public stable/changed/incomplete link evidence and never
+  renders the raw code or identity. Absent or unknown delivery says “Not
+  connected”; observed state is not a cable-quality, performance, recovery, or
+  removal conclusion. No watcher, poller, notification path, or hardware action
+  was added.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

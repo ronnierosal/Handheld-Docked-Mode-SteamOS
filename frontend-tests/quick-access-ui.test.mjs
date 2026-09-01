@@ -31,6 +31,12 @@ test("journey status is glanceable, fail-closed, and keeps detail on demand", ()
     prepared_docked_idle: { state: "prepared", code: "private.code" },
     safe_undock: { state: "ready_for_revalidation", code: "private.code" },
     unexpected_removal_recovery: { state: "recovery_incomplete", code: "private.code" },
+    link_instability: {
+      schema_version: 1,
+      status: "instability_observed",
+      code: "private.code",
+      current_state: "down",
+    },
     offline_readiness: {
       schema_version: 1,
       status: "ready_to_try_offline",
@@ -42,11 +48,13 @@ test("journey status is glanceable, fail-closed, and keeps detail on demand", ()
     ["Prepared state", "Prepared evidence"],
     ["Safe Undock evidence", "Needs revalidation"],
     ["Recovery", "Recovery incomplete"],
+    ["Link evidence", "State change observed"],
     ["Offline readiness", "Ready to try offline"],
   ]);
   assert.doesNotMatch(JSON.stringify(rows), /private\.code/);
   assert.match(rows[2].detail, /not a physical-unplug approval/i);
-  assert.match(rows[4].detail, /not guaranteed/i);
+  assert.match(rows[4].detail, /does not diagnose cable quality/i);
+  assert.match(rows[5].detail, /not guaranteed/i);
 });
 
 test("unwired or unknown journey states never resemble a hardware result", () => {

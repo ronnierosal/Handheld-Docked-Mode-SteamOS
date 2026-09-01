@@ -25,6 +25,12 @@ export interface JourneyStatusPayload {
   prepared_docked_idle?: { state: string; code: string };
   safe_undock?: { state: string; code: string };
   unexpected_removal_recovery?: { state: string; code: string };
+  link_instability?: {
+    schema_version: number;
+    status: string;
+    code: string;
+    current_state: "up" | "down" | null;
+  };
   offline_readiness?: {
     schema_version: number;
     status: string;
@@ -63,6 +69,11 @@ const JOURNEY_STATES: Record<string, Record<string, [string, string]>> = {
     recovery_incomplete: ["Recovery incomplete", "Handheld fallback evidence is incomplete."],
     needs_supervised_diagnosis: ["Needs supervised diagnosis", "Evidence is unknown, stale, or contradictory."],
   },
+  link_instability: {
+    stable_observed: ["Stable state observed", "Two observed samples matched; this is not a performance or link-quality rating."],
+    instability_observed: ["State change observed", "Review the current link observation; HDM does not diagnose cable quality."],
+    evidence_insufficient: ["Evidence incomplete", "Fresh observed link evidence is unavailable."],
+  },
   offline_readiness: {
     ready_to_try_offline: ["Ready to try offline", "Current local evidence is encouraging, but offline play is not guaranteed."],
     needs_attention: ["Needs attention", "Resolve local readiness concerns before relying on offline play."],
@@ -79,6 +90,7 @@ export function journeyStatusRows(
     ["prepared_docked_idle", "Prepared state"],
     ["safe_undock", "Safe Undock evidence"],
     ["unexpected_removal_recovery", "Recovery"],
+    ["link_instability", "Link evidence"],
     ["offline_readiness", "Offline readiness"],
   ];
   return rows.map(([key, name]) => {
