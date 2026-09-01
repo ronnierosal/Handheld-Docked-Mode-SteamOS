@@ -36,6 +36,14 @@ each independently before relying on this snapshot.
   safe undock was not ready because the client scan was incomplete and protected
   session clients remained. Standalone capture cannot observe the Decky sleep
   lease. These are observations, not transition or sleep validation.
+- A fresh unprivileged, no-write capture on 2026-09-01 again observed the exact
+  supported profile, idle game, one active internal panel, and one connected
+  inactive external display. Render selection remained Unknown; the client scan
+  was incomplete with protected session clients, so Safe Undock was not ready.
+  Snapshot collection took about 25 ms. The installed 0.2.0 capture lacks the
+  current link-health schema and its fixed-file provenance does not match this
+  checkout. Unchanged wake aggregates remain capability observation only, not
+  suspend or wake-cause proof.
 - Root read-only capture currently requires a maintainer-installed noninteractive
   rule. Its absence is a diagnostic limitation, not a reason to broaden sudo.
 - The two saved wake-diagnostic aggregates were unchanged. That does not identify

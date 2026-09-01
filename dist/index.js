@@ -484,6 +484,15 @@ function connectionProgress(payload) {
             settling: true,
         };
     }
+    if (snapshot.egpu_link.applicable && snapshot.egpu_link.state !== "up") {
+        return {
+            label: snapshot.egpu_link.state === "down"
+                ? "eGPU link needs attention"
+                : "eGPU link needs verification",
+            detail: "HDM is preserving the current setup. Verify the display and controls before changing it.",
+            settling: true,
+        };
+    }
     const external = snapshot.displays.filter((display) => display.kind === "external" && display.connected === true);
     if (external.length === 0) {
         return {

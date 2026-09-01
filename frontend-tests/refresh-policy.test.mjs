@@ -20,6 +20,8 @@ function payload({
   support = "certified",
   displays = [],
   scanComplete = true,
+  linkApplicable = false,
+  linkState = "unknown",
   mode = "portable",
   blockers = [],
   gameState = "idle",
@@ -31,6 +33,7 @@ function payload({
       displays,
       disconnect_readiness: { scan_complete: scanComplete },
       sleep_guard: { required, active, confidence },
+      egpu_link: { applicable: linkApplicable, state: linkState },
       blockers,
     },
     inference: { mode },
@@ -90,6 +93,31 @@ test("verified eGPU and TV states expose progressive labels", () => {
   assert.equal(connectionProgress(inconsistent).label, "Dock verification blocked");
   assert.match(connectionProgress(inconsistent).detail, /render gpu/i);
   assert.equal(refreshDelayForSnapshot(inconsistent), SETTLING_REFRESH_MS);
+});
+
+test("link Down or Unknown cannot present a docked connection as ready", () => {
+  const display = { kind: "external", connected: true, active: true, edid_ready: true };
+  const down = payload({
+    required: true,
+    active: true,
+    displays: [display],
+    mode: "tv_docked",
+    linkApplicable: true,
+    linkState: "down",
+  });
+  assert.equal(connectionProgress(down).label, "eGPU link needs attention");
+  assert.equal(refreshDelayForSnapshot(down), SETTLING_REFRESH_MS);
+
+  const unknown = payload({
+    required: true,
+    active: true,
+    displays: [display],
+    mode: "tv_docked",
+    linkApplicable: true,
+    linkState: "unknown",
+  });
+  assert.equal(connectionProgress(unknown).label, "eGPU link needs verification");
+  assert.doesNotMatch(connectionProgress(unknown).detail.toLowerCase(), /safe|fault|cable/);
 });
 
 test("unknown guard and incomplete client scans stay fast and fail closed while idle", () => {

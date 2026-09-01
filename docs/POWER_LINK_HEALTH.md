@@ -23,6 +23,11 @@ They never diagnose a cable fault, claim recovery, or execute an action. They
 remain non-blocking during a game. A player-requested unsafe action retains its
 own explicit confirmation and fail-closed checks.
 
+The compact Quick Access Connection row also fails closed: a current applicable
+Down or Unknown link sample cannot be presented as `TV Docked` or `Ready to
+dock`. It asks for attention or verification using the existing read-only
+snapshot cadence; it adds no collector or transition authority.
+
 ## Status vocabulary
 
 The intended Power and Link Health vocabulary is **Healthy**, **Degraded**,
