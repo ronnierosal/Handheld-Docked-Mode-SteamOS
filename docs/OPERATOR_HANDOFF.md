@@ -40,6 +40,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
   only a dock-mode controller. It must prevent or soften player-visible PC
   paper cuts, explain state clearly, and use only validated, reversible recovery
   authority. Docking/eGPU work remains the initial, tightly gated domain.
+- **Repository-health audit (2026-09-01):** `main` is clean and passed
+  architecture, compile, 659 Python tests (5 skipped), 47 frontend tests,
+  typecheck, build, package, and diff checks. The completed read-only-profile
+  and unexpected-undock worker commits are patch-equivalent to `46e69dd` and
+  `77e518f` already on main; no duplicate merge was made. The canonical-sleep
+  replay worktree predates later guarded-save/journal work and must not be
+  merged. One detached worktree has an uncommitted offline-readiness draft;
+  preserve it for its owner. No hardware status changed.
 - The optional workflow/peripheral health inputs are deliberately not constructed
   by the production snapshot path yet. A future owner must be authoritative and
   event-driven or measured/cached; do not add continuous peripheral scans to
