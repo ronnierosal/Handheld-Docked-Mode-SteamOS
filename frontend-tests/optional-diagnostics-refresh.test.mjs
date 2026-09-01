@@ -40,3 +40,14 @@ test("visible troubleshooting requests each optional status once", async () => {
   assert.equal(result.peripheralStatus.name, "peripheral");
   assert.equal(result.actionHistory.name, "history");
 });
+
+test("an optional synchronous failure cannot interrupt the remaining diagnostics", async () => {
+  const fixture = sources();
+  fixture.values.getPeripheralStatus = () => {
+    throw new Error("unavailable");
+  };
+  const result = await collectOptionalDiagnostics(true, fixture.values);
+  assert.equal(result.peripheralStatus, null);
+  assert.equal(result.dockedIgpuStatus.name, "docked");
+  assert.equal(result.actionHistory.name, "history");
+});

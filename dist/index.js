@@ -323,15 +323,18 @@ const EMPTY_VALUES = {
     peripheralStatus: null,
     actionHistory: null,
 };
+function optionalCall(source) {
+    return Promise.resolve().then(source).catch(() => null);
+}
 async function collectOptionalDiagnostics(visible, sources) {
     if (!visible) {
         return EMPTY_VALUES;
     }
     const [dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus, actionHistory] = await Promise.all([
-        sources.getDockedIgpuStatus().catch(() => null),
-        sources.getDiagnosticLoggingStatus().catch(() => null),
-        sources.getPeripheralStatus().catch(() => null),
-        sources.getActionHistory().catch(() => null),
+        optionalCall(sources.getDockedIgpuStatus),
+        optionalCall(sources.getDiagnosticLoggingStatus),
+        optionalCall(sources.getPeripheralStatus),
+        optionalCall(sources.getActionHistory),
     ]);
     return {
         dockedIgpuStatus,

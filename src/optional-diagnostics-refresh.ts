@@ -27,6 +27,10 @@ const EMPTY_VALUES: OptionalDiagnosticValues = {
   actionHistory: null,
 };
 
+function optionalCall<T>(source: () => Promise<T>): Promise<T | null> {
+  return Promise.resolve().then(source).catch(() => null);
+}
+
 export async function collectOptionalDiagnostics(
   visible: boolean,
   sources: OptionalDiagnosticSources,
@@ -35,10 +39,10 @@ export async function collectOptionalDiagnostics(
     return EMPTY_VALUES;
   }
   const [dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus, actionHistory] = await Promise.all([
-    sources.getDockedIgpuStatus().catch(() => null),
-    sources.getDiagnosticLoggingStatus().catch(() => null),
-    sources.getPeripheralStatus().catch(() => null),
-    sources.getActionHistory().catch(() => null),
+    optionalCall(sources.getDockedIgpuStatus),
+    optionalCall(sources.getDiagnosticLoggingStatus),
+    optionalCall(sources.getPeripheralStatus),
+    optionalCall(sources.getActionHistory),
   ]);
   return {
     dockedIgpuStatus,
