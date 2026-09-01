@@ -15,6 +15,10 @@ from hdm.application.compatibility_test_lifecycle import (  # noqa: E402
 from hdm.application.compatibility_baseline import (  # noqa: E402
     CompatibilityBaselineCapture,
 )
+from hdm.application.compatibility_save_exit import (  # noqa: E402
+    CompatibilitySaveExitCapture,
+    CompatibilitySaveExitWatch,
+)
 from hdm.application.diagnostic_logging import (  # noqa: E402
     DiagnosticLoggingController,
 )
@@ -31,6 +35,7 @@ from hdm.domain.game_compatibility import (  # noqa: E402
     ObservedRenderGpu,
     SaveTestOutcome,
 )
+from hdm.domain.game_session import ActiveGameIdentity  # noqa: E402
 from hdm.domain.models import GameState  # noqa: E402
 
 
@@ -90,6 +95,24 @@ class ExternalCollector:
         return self.value(session, now_ms) if callable(self.value) else self.value
 
 
+class SaveExitCollector:
+    def __init__(self, watch=None, result=None):
+        self.watch = watch
+        self.result = result
+        self.armed_session = None
+        self.captured_watch = None
+
+    def arm(self, session):
+        self.armed_session = session
+        return self.watch
+
+    def capture(self, session, watch):
+        self.captured_watch = watch
+        if isinstance(self.result, Exception):
+            raise self.result
+        return self.result
+
+
 def start_request(kind=CompatibilityEvidenceKind.SIMULATION):
     return CompatibilityTestStart(
         CompatibilityTestOptions(),
@@ -114,7 +137,12 @@ def baseline():
 
 class CompatibilityTestLifecycleTests(unittest.TestCase):
     def lifecycle(
-        self, *, authorized=False, baseline_collector=None, external_collector=None
+        self,
+        *,
+        authorized=False,
+        baseline_collector=None,
+        external_collector=None,
+        save_exit_collector=None,
     ):
         clock = Clock()
         events = BoundedEventLog()
@@ -130,6 +158,7 @@ class CompatibilityTestLifecycleTests(unittest.TestCase):
                 hardware_authorization=authorization,
                 baseline_collector=baseline_collector,
                 external_handoff_collector=external_collector,
+                save_exit_collector=save_exit_collector,
                 user_context=(
                     UserContext()
                     if baseline_collector is not None or external_collector is not None
@@ -272,6 +301,45 @@ class CompatibilityTestLifecycleTests(unittest.TestCase):
             stopped.reason_code, "compatibility.external_observer_unavailable"
         )
         self.assertFalse(diagnostics.status().enabled)
+
+    def test_observed_save_exit_requires_a_prior_exact_read_only_watch(self):
+        watch = CompatibilitySaveExitWatch(
+            ActiveGameIdentity("1234", ("app-steam-app1234-test.scope",)),
+            "running-generation",
+            "running-sample",
+        )
+        collector = SaveExitCollector(
+            watch,
+            CompatibilitySaveExitCapture(
+                True,
+                "compatibility.save_exit_observed",
+                SaveTestOutcome.GRACEFUL_EXIT_VERIFIED,
+                "save-exit-generation",
+            ),
+        )
+        lifecycle, _clock, diagnostics, _authorization = self.lifecycle(
+            save_exit_collector=collector
+        )
+        lifecycle.start(start_request(), user_confirmed=True)
+        lifecycle.record_baseline(baseline())
+
+        armed = lifecycle.arm_observed_save_exit()
+        observed = lifecycle.capture_observed_save_exit()
+
+        self.assertEqual(armed.stage, CompatibilityTestStage.ACTIVE)
+        self.assertEqual(observed.save_outcome, SaveTestOutcome.GRACEFUL_EXIT_VERIFIED)
+        self.assertIs(collector.captured_watch, watch)
+        self.assertTrue(diagnostics.status().enabled)
+
+        unavailable, _clock, unavailable_diagnostics, _authorization = self.lifecycle()
+        unavailable.start(start_request(), user_confirmed=True)
+        unavailable.record_baseline(baseline())
+        stopped = unavailable.capture_observed_save_exit()
+        self.assertEqual(stopped.stage, CompatibilityTestStage.ACTION_REQUIRED)
+        self.assertEqual(
+            stopped.reason_code, "compatibility.save_exit_observer_unavailable"
+        )
+        self.assertFalse(unavailable_diagnostics.status().enabled)
 
 
 if __name__ == "__main__":

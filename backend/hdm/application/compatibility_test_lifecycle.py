@@ -36,6 +36,10 @@ from .diagnostic_logging import (
     DiagnosticLoggingDuration,
 )
 from .compatibility_baseline import CompatibilityBaselineCapture
+from .compatibility_save_exit import (
+    CompatibilitySaveExitCapture,
+    CompatibilitySaveExitWatch,
+)
 
 
 class CompatibilityHardwareAuthorizationPort(Protocol):
@@ -66,6 +70,20 @@ class CompatibilityExternalHandoffPort(Protocol):
     ) -> CompatibilityTestSession: ...
 
 
+class CompatibilitySaveExitPort(Protocol):
+    """Read-only observer for a player-initiated game exit."""
+
+    def arm(
+        self, session: CompatibilityTestSession
+    ) -> CompatibilitySaveExitWatch | None: ...
+
+    def capture(
+        self,
+        session: CompatibilityTestSession,
+        watch: CompatibilitySaveExitWatch,
+    ) -> CompatibilitySaveExitCapture: ...
+
+
 @dataclass(frozen=True, slots=True)
 class CompatibilityTestStart:
     options: CompatibilityTestOptions
@@ -89,6 +107,7 @@ class CompatibilityTestLifecycle:
         hardware_authorization: CompatibilityHardwareAuthorizationPort,
         baseline_collector: CompatibilityBaselinePort | None = None,
         external_handoff_collector: CompatibilityExternalHandoffPort | None = None,
+        save_exit_collector: CompatibilitySaveExitPort | None = None,
         user_context: CompatibilityUserContextPort | None = None,
     ) -> None:
         self._diagnostics = diagnostics
@@ -97,8 +116,10 @@ class CompatibilityTestLifecycle:
         self._hardware_authorization = hardware_authorization
         self._baseline_collector = baseline_collector
         self._external_handoff_collector = external_handoff_collector
+        self._save_exit_collector = save_exit_collector
         self._user_context = user_context
         self._session: CompatibilityTestSession | None = None
+        self._save_exit_watch: CompatibilitySaveExitWatch | None = None
         self._lock = threading.Lock()
 
     def status(self) -> CompatibilityTestSession | None:
@@ -127,6 +148,7 @@ class CompatibilityTestLifecycle:
                 hardware_test_authorized=authorized,
                 now_ms=self._now_locked(),
             )
+            self._save_exit_watch = None
             self._apply_logging_directives_locked()
             return self._session
 
@@ -208,6 +230,83 @@ class CompatibilityTestLifecycle:
             observation_generation=observation_generation,
             now_ms=now,
         ))
+
+    def arm_observed_save_exit(self) -> CompatibilityTestSession | None:
+        """Arm a read-only watch; this method never signals or saves a game."""
+        with self._lock:
+            self._reconcile_locked()
+            if self._session is None:
+                return None
+            if (
+                self._session.stage is not CompatibilityTestStage.ACTIVE
+                or not self._session.options.test_save_exit
+            ):
+                return self._session
+            if self._save_exit_collector is None:
+                self._session = require_compatibility_action(
+                    self._session,
+                    "compatibility.save_exit_observer_unavailable",
+                    now_ms=self._now_locked(),
+                )
+            else:
+                try:
+                    self._save_exit_watch = self._save_exit_collector.arm(self._session)
+                except Exception:
+                    self._save_exit_watch = None
+                if self._save_exit_watch is None:
+                    self._session = require_compatibility_action(
+                        self._session,
+                        "compatibility.save_exit_arm_unverified",
+                        now_ms=self._now_locked(),
+                    )
+            self._apply_logging_directives_locked()
+            return self._session
+
+    def capture_observed_save_exit(self) -> CompatibilityTestSession | None:
+        """Record only a fresh observed idle result from a prior read-only watch."""
+        with self._lock:
+            self._reconcile_locked()
+            if self._session is None:
+                return None
+            if (
+                self._session.stage is not CompatibilityTestStage.ACTIVE
+                or not self._session.options.test_save_exit
+            ):
+                return self._session
+            if self._save_exit_collector is None or self._save_exit_watch is None:
+                self._session = require_compatibility_action(
+                    self._session,
+                    "compatibility.save_exit_observer_unavailable",
+                    now_ms=self._now_locked(),
+                )
+            else:
+                try:
+                    result = self._save_exit_collector.capture(
+                        self._session, self._save_exit_watch
+                    )
+                except Exception:
+                    result = None
+                self._save_exit_watch = None
+                self._session = (
+                    record_save_result(
+                        self._session,
+                        outcome=result.outcome,
+                        observation_generation=result.observation_generation,
+                        now_ms=self._now_locked(),
+                    )
+                    if isinstance(result, CompatibilitySaveExitCapture) and result.accepted
+                    else require_compatibility_action(
+                        self._session,
+                        (
+                            result.code
+                            if isinstance(result, CompatibilitySaveExitCapture)
+                            else "compatibility.save_exit_observer_unavailable"
+                        ),
+                        now_ms=self._now_locked(),
+                    )
+                )
+            self._apply_logging_directives_locked()
+            return self._session
 
     def finish(self) -> CompatibilityTestSession | None:
         return self._advance(
