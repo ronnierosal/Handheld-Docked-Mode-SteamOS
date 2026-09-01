@@ -15,8 +15,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 if (-not $ConfirmDeploy) { throw "Deployment changes HDM on the Ally. Re-run with -ConfirmDeploy." }
-foreach ($tool in @("ssh", "scp", "pnpm", "python")) {
+foreach ($tool in @("ssh", "scp", "python")) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool was not found." }
+}
+$UseCorepackPnpm = -not (Get-Command "pnpm" -ErrorAction SilentlyContinue)
+if ($UseCorepackPnpm -and -not (Get-Command "corepack" -ErrorAction SilentlyContinue)) {
+    throw "pnpm was not found and Corepack is unavailable. Install Node.js with Corepack enabled."
 }
 
 $RepositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
@@ -33,6 +37,13 @@ if (-not [string]::IsNullOrWhiteSpace($IdentityFile)) {
 function Invoke-Checked([string]$Program, [string[]]$Arguments, [string]$Failure) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw $Failure }
+}
+function Invoke-Pnpm([string[]]$Arguments, [string]$Failure) {
+    if ($UseCorepackPnpm) {
+        Invoke-Checked "corepack" (@("pnpm") + $Arguments) $Failure
+        return
+    }
+    Invoke-Checked "pnpm" $Arguments $Failure
 }
 function Invoke-RootScript([string]$Script) {
     $normalized = $Script.Replace("`r`n", "`n").Replace("`r", "`n")
@@ -51,9 +62,9 @@ Write-Host "Running mandatory local verification..."
 Invoke-Checked "python" @("scripts/check_architecture.py") "Architecture check failed."
 Invoke-Checked "python" @("-m", "unittest", "discover", "-s", "tests", "-v") "Python tests failed."
 Invoke-Checked "python" @("-m", "compileall", "-q", "backend", "tests", "scripts") "Python compilation failed."
-Invoke-Checked "pnpm" @("typecheck") "Frontend typecheck failed."
-Invoke-Checked "pnpm" @("test:frontend") "Frontend tests failed."
-Invoke-Checked "pnpm" @("build") "Frontend build failed."
+Invoke-Pnpm @("typecheck") "Frontend typecheck failed."
+Invoke-Pnpm @("test:frontend") "Frontend tests failed."
+Invoke-Pnpm @("build") "Frontend build failed."
 Invoke-Checked "python" @("scripts/check_plugin_package.py", ".") "Plugin package check failed."
 Invoke-Checked "python" @("scripts/build_plugin.py") "Plugin package build failed."
 

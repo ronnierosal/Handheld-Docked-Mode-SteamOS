@@ -16,6 +16,8 @@ class DirectDeployScriptTests(unittest.TestCase):
         self.assertIn("[switch]$ConfirmDeploy", source)
         self.assertIn("[switch]$InteractiveSudo", source)
         self.assertIn("if (-not $ConfirmDeploy)", source)
+        self.assertIn('$UseCorepackPnpm = -not (Get-Command "pnpm"', source)
+        self.assertIn('Invoke-Checked "corepack" (@("pnpm") + $Arguments)', source)
 
     def test_backups_replacement_exec_bit_restart_and_provenance_are_ordered(self):
         source = self.source()
