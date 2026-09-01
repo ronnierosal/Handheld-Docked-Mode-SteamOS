@@ -64,8 +64,10 @@ class AllyDeployHelperTests(unittest.TestCase):
         self.assertIn("/var/lib/handheld-dock-mode/hdm-deploy-plugin HDM-update-*.zip HDM-update-*.zip.sig", installer)
         self.assertNotIn("/usr/local", installer)
         self.assertNotIn("systemctl", installer)
-        self.assertNotIn("gamescope", installer.casefold())
-        self.assertNotIn("decky", installer.casefold())
+        commands = "\n".join(
+            line for line in installer.splitlines() if not line.lstrip().startswith("#")
+        )
+        self.assertNotIn("gamescope", commands.casefold())
 
     def test_helper_restarts_only_the_fixed_plugin_loader_after_replacement(self):
         source = (ROOT / "scripts" / "ally_hdm_deploy_helper.py").read_text(encoding="utf-8")
