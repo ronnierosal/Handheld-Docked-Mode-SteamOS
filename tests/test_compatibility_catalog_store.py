@@ -194,7 +194,10 @@ class CompatibilityCatalogStoreTests(unittest.TestCase):
             except OSError:
                 self.skipTest("directory symlinks are unavailable on this host")
             with self.assertRaisesRegex(ValueError, "real directory"):
-                self.store(link.absolute()).load_games()
+                # Do not use self.store here: its normal fixture setup resolves
+                # roots, which would turn this deliberately symlinked input into
+                # the target directory before the store can reject it.
+                FileCompatibilityCatalogStore(link.absolute()).load_games()
 
 
 if __name__ == "__main__":
