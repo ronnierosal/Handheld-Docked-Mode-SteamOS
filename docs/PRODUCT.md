@@ -85,6 +85,12 @@ and known online-check evidence. Its strongest positive result is **ready to
 try offline**, never a launch guarantee. It has no Steam collector, account or
 game-title delivery, persistence, UI, or automation.
 
+**Implemented admission contract only:** a future source may supply evidence
+only after a reviewed, local-only, identity-minimized, benchmarked declaration
+passes its bounded-cost gate. Results must be fresh; stale, unreviewed, or
+cost-unverified evidence is **Unknown**, never offline-ready. No collector is
+implemented or authorized.
+
 ## Interrupted docked-sleep recovery policy
 
 **Product intent; not current hardware behavior:** if an eGPU is removed while

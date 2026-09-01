@@ -111,8 +111,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   blocker, and known online-check evidence as ready-to-try, attention needed,
   online check needed, or Unknown. It exposes no game/account/path/time data,
   never promises offline launch, and has no Steam collector, UI, persistence,
-  or hardware evidence. Next safe work is an evidence-source design with
-  privacy, freshness, and game-impact gates.
+  or hardware evidence. A future source now requires a reviewed, local-only,
+  identity-minimized, benchmarked, bounded-cost declaration before its fresh
+  categorical evidence can be classified; game-active or unknown collection is
+  deferred, and stale or unadmitted evidence remains Unknown. There is still no
+  Steam collector, delivery integration, or collection authority. Next gate is
+  a separately reviewed local Steam/launcher source design, including privacy
+  handling, measured game-impact/freshness behavior, and explicit authority.
 
 ## SSH access
 

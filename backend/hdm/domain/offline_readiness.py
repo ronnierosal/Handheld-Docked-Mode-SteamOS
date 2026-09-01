@@ -11,8 +11,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from .models import GameState
 
 MAX_BLOCKERS = 16
+MAX_EVIDENCE_AGE_MS = 24 * 60 * 60 * 1000
 PUBLIC_REASON_CODES = frozenset(
     {
         "local_readiness_confirmed",
@@ -32,6 +34,13 @@ PUBLIC_REASON_CODES = frozenset(
         "download_state_unknown",
         "steam_entitlement_unknown",
         "cloud_save_unknown",
+        "offline_evidence_source_unreviewed",
+        "offline_evidence_privacy_unreviewed",
+        "offline_evidence_cost_unbenchmarked",
+        "offline_evidence_cost_exceeds_budget",
+        "offline_evidence_stale",
+        "offline_evidence_game_active",
+        "offline_evidence_game_unknown",
     }
 )
 
@@ -80,6 +89,66 @@ class LocalOfflineBlocker(StrEnum):
     MISSING_LOCAL_CONTENT = "missing_local_content"
     LOCAL_STORAGE_UNAVAILABLE = "local_storage_unavailable"
     INSTALL_INTEGRITY_UNCONFIRMED = "install_integrity_unconfirmed"
+
+
+class OfflineEvidenceAdmissionKind(StrEnum):
+    ADMIT = "admit"
+    DEFER = "defer"
+    REJECT = "reject"
+
+
+@dataclass(frozen=True, slots=True)
+class OfflineEvidenceCollectionContract:
+    """Review and cost declaration for a future local evidence source.
+
+    This is not a Steam integration. It carries no account, AppID, title, path,
+    or source command; a delivery owner must retain those private details and
+    supply only categorical ``OfflineReadinessEvidence`` after admission.
+    """
+
+    reviewed: bool
+    local_only: bool
+    identity_minimized: bool
+    interval_ms: int
+    measured_collection_cost_ms: int
+    benchmarked: bool
+    max_evidence_age_ms: int
+
+    def __post_init__(self) -> None:
+        if self.interval_ms < 1_000:
+            raise ValueError("offline evidence interval must be at least one second")
+        if self.measured_collection_cost_ms <= 0:
+            raise ValueError("offline evidence cost must be positive")
+        if not 1_000 <= self.max_evidence_age_ms <= MAX_EVIDENCE_AGE_MS:
+            raise ValueError("offline evidence freshness bound is invalid")
+
+
+@dataclass(frozen=True, slots=True)
+class OfflineEvidenceAdmission:
+    kind: OfflineEvidenceAdmissionKind
+    reason_code: str
+    defer_for_ms: int = 0
+
+    def __post_init__(self) -> None:
+        if self.reason_code not in PUBLIC_REASON_CODES:
+            raise ValueError("offline evidence admission reason is not public")
+        if self.kind is OfflineEvidenceAdmissionKind.DEFER:
+            if self.defer_for_ms <= 0:
+                raise ValueError("deferred offline evidence needs a delay")
+        elif self.defer_for_ms:
+            raise ValueError("non-deferred offline evidence cannot have a delay")
+
+
+@dataclass(frozen=True, slots=True)
+class OfflineReadinessObservation:
+    """One private-time categorical result from an already admitted source."""
+
+    observed_at_monotonic_ms: int
+    evidence: "OfflineReadinessEvidence"
+
+    def __post_init__(self) -> None:
+        if self.observed_at_monotonic_ms < 0:
+            raise ValueError("offline readiness observation time is invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +215,69 @@ def classify_offline_readiness(
         OfflineReadinessStatus.READY_TO_TRY_OFFLINE,
         ("local_readiness_confirmed",),
     )
+
+
+def admit_offline_evidence_collection(
+    contract: OfflineEvidenceCollectionContract,
+    game_state: GameState,
+) -> OfflineEvidenceAdmission:
+    """Gate a future local collector without starting it or reading Steam data."""
+    if not contract.reviewed:
+        return OfflineEvidenceAdmission(
+            OfflineEvidenceAdmissionKind.REJECT,
+            "offline_evidence_source_unreviewed",
+        )
+    if not contract.local_only or not contract.identity_minimized:
+        return OfflineEvidenceAdmission(
+            OfflineEvidenceAdmissionKind.REJECT,
+            "offline_evidence_privacy_unreviewed",
+        )
+    if not contract.benchmarked:
+        return OfflineEvidenceAdmission(
+            OfflineEvidenceAdmissionKind.REJECT,
+            "offline_evidence_cost_unbenchmarked",
+        )
+    if contract.measured_collection_cost_ms * 10 > contract.interval_ms:
+        return OfflineEvidenceAdmission(
+            OfflineEvidenceAdmissionKind.REJECT,
+            "offline_evidence_cost_exceeds_budget",
+        )
+    if game_state is GameState.RUNNING:
+        return OfflineEvidenceAdmission(
+            OfflineEvidenceAdmissionKind.DEFER,
+            "offline_evidence_game_active",
+            defer_for_ms=30_000,
+        )
+    if game_state is GameState.UNKNOWN:
+        return OfflineEvidenceAdmission(
+            OfflineEvidenceAdmissionKind.DEFER,
+            "offline_evidence_game_unknown",
+            defer_for_ms=15_000,
+        )
+    return OfflineEvidenceAdmission(
+        OfflineEvidenceAdmissionKind.ADMIT,
+        "local_readiness_confirmed",
+    )
+
+
+def classify_fresh_offline_readiness(
+    observation: OfflineReadinessObservation,
+    contract: OfflineEvidenceCollectionContract,
+    *,
+    now_monotonic_ms: int,
+) -> OfflineReadinessAssessment:
+    """Fail closed when a supplied categorical result is stale or from no gate."""
+    admission = admit_offline_evidence_collection(contract, GameState.IDLE)
+    if admission.kind is not OfflineEvidenceAdmissionKind.ADMIT:
+        return OfflineReadinessAssessment(
+            OfflineReadinessStatus.UNKNOWN, (admission.reason_code,)
+        )
+    age_ms = now_monotonic_ms - observation.observed_at_monotonic_ms
+    if age_ms < 0 or age_ms > contract.max_evidence_age_ms:
+        return OfflineReadinessAssessment(
+            OfflineReadinessStatus.UNKNOWN, ("offline_evidence_stale",)
+        )
+    return classify_offline_readiness(observation.evidence)
 
 
 def offline_readiness_to_public_dict(

@@ -15,13 +15,19 @@ from hdm.domain.offline_readiness import (  # noqa: E402
     InstallState,
     LocalOfflineBlocker,
     OfflineReadinessEvidence,
+    OfflineReadinessObservation,
+    OfflineEvidenceAdmissionKind,
+    OfflineEvidenceCollectionContract,
     OfflineReadinessAssessment,
     OfflineReadinessStatus,
     OnlineCheckRequirement,
     SteamEntitlementState,
+    admit_offline_evidence_collection,
+    classify_fresh_offline_readiness,
     classify_offline_readiness,
     offline_readiness_to_public_dict,
 )
+from hdm.domain.models import GameState  # noqa: E402
 
 
 def ready_evidence(**changes) -> OfflineReadinessEvidence:
@@ -30,6 +36,19 @@ def ready_evidence(**changes) -> OfflineReadinessEvidence:
         download=DownloadState.CURRENT,
         steam_entitlement=SteamEntitlementState.RECENT_SIGN_IN_AND_LICENSE,
         cloud_save=CloudSaveState.SYNCED,
+    )
+    return replace(value, **changes)
+
+
+def contract(**changes) -> OfflineEvidenceCollectionContract:
+    value = OfflineEvidenceCollectionContract(
+        reviewed=True,
+        local_only=True,
+        identity_minimized=True,
+        interval_ms=60_000,
+        measured_collection_cost_ms=20,
+        benchmarked=True,
+        max_evidence_age_ms=10 * 60_000,
     )
     return replace(value, **changes)
 
@@ -109,6 +128,51 @@ class OfflineReadinessTests(unittest.TestCase):
                 OfflineReadinessStatus.UNKNOWN,
                 ("account-name-or-private-path",),
             )
+
+    def test_reviewed_local_benchmarked_fresh_evidence_can_be_classified(self):
+        admission = admit_offline_evidence_collection(contract(), GameState.IDLE)
+        self.assertEqual(admission.kind, OfflineEvidenceAdmissionKind.ADMIT)
+        assessment = classify_fresh_offline_readiness(
+            OfflineReadinessObservation(100, ready_evidence()),
+            contract(),
+            now_monotonic_ms=101,
+        )
+        self.assertEqual(assessment.status, OfflineReadinessStatus.READY_TO_TRY_OFFLINE)
+
+    def test_unreviewed_privacy_or_cost_failure_stays_unknown(self):
+        for changes, reason in (
+            ({"reviewed": False}, "offline_evidence_source_unreviewed"),
+            ({"local_only": False}, "offline_evidence_privacy_unreviewed"),
+            ({"identity_minimized": False}, "offline_evidence_privacy_unreviewed"),
+            ({"benchmarked": False}, "offline_evidence_cost_unbenchmarked"),
+            ({"interval_ms": 1_000, "measured_collection_cost_ms": 101}, "offline_evidence_cost_exceeds_budget"),
+        ):
+            with self.subTest(reason=reason):
+                assessment = classify_fresh_offline_readiness(
+                    OfflineReadinessObservation(100, ready_evidence()),
+                    contract(**changes),
+                    now_monotonic_ms=101,
+                )
+                self.assertEqual(assessment.status, OfflineReadinessStatus.UNKNOWN)
+                self.assertEqual(assessment.reason_codes, (reason,))
+
+    def test_game_active_or_unknown_defers_optional_evidence_collection(self):
+        for game_state, delay in ((GameState.RUNNING, 30_000), (GameState.UNKNOWN, 15_000)):
+            with self.subTest(game_state=game_state):
+                admission = admit_offline_evidence_collection(contract(), game_state)
+                self.assertEqual(admission.kind, OfflineEvidenceAdmissionKind.DEFER)
+                self.assertEqual(admission.defer_for_ms, delay)
+
+    def test_stale_or_future_observation_never_appears_ready(self):
+        for now in (99, 100 + contract().max_evidence_age_ms + 1):
+            with self.subTest(now=now):
+                assessment = classify_fresh_offline_readiness(
+                    OfflineReadinessObservation(100, ready_evidence()),
+                    contract(),
+                    now_monotonic_ms=now,
+                )
+                self.assertEqual(assessment.status, OfflineReadinessStatus.UNKNOWN)
+                self.assertEqual(assessment.reason_codes, ("offline_evidence_stale",))
 
 
 if __name__ == "__main__":

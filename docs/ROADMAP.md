@@ -452,7 +452,9 @@ they are not authorization for a separate optimizer or launcher.
   local install/download/entitlement/cloud-save and online-check evidence to
   ready-to-try, attention, online-check, or Unknown. It has no Steam collector,
   storage scan, account/game identity, UI, persistence, or launch authority.
-  Any future source needs privacy, freshness, cost, and game-impact gates.
+  A future source must first pass the reviewed, local-only, identity-minimized,
+  benchmarked, bounded-cost admission contract; stale or unadmitted evidence
+  remains Unknown. It still has no collector or delivery integration.
 - **Implemented (pure contract):** a reviewed Game Adapter must use typed
   allowlisted settings and exact opaque revisions. Its future mechanism is
   constrained to compare-before-write, backup, atomic staging, validation,
