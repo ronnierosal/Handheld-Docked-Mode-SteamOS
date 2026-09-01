@@ -138,7 +138,7 @@ export interface SnapshotPayload {
   };
   attach_readiness?: {
     schema_version: number;
-    stage: "idle" | "settling" | "waiting_for_external_display" | "ready_idle" | "game_running" | "action_required";
+    stage: "idle" | "settling" | "waiting_for_external_display" | "waiting_for_link_health" | "ready_idle" | "game_running" | "action_required";
     code: string;
     poll_after_ms: number;
   };

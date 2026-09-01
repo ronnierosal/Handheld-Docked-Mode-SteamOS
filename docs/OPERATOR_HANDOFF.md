@@ -104,6 +104,11 @@ do not leave a growing queue of completed worktree commits unintegrated.
   Up observation are shown, while flapping is suppressed. Power, battery, thermal, throttle,
   budget, and sustained-churn inference remain unimplemented/Unknown. No health
   display enables a transition or Safe Undock. See [Power and Link Health](POWER_LINK_HEALTH.md).
+- **Stage 1.1 checkpoint (local-only):** attach readiness now withholds
+  `ready_idle` unless the exact bridge reports an observed Up link; a Down or
+  unavailable link is delivered as a categorical waiting state. This is neither
+  TV activity nor render-GPU, bandwidth, controller/audio, or Safe Undock proof.
+  It adds no event source, RPC, polling loop, deployment, or transition authority.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

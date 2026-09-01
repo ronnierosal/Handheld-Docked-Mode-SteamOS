@@ -36,7 +36,7 @@ is permitted.
 
 | Priority | Bounded sub-item and owner | Status | Acceptance evidence |
 | --- | --- | --- | --- |
-| 1.1 | Attach detection and health. Owner: mode/link worker. | **Implemented** read-only foundation; end-to-end behavior is **Hardware Validation Required**. | Exact attach/health replay tests and redacted read-only supported-profile evidence. |
+| 1.1 | Attach detection and health. Owner: mode/link worker. | **Implemented (local, link-gated):** `ready_idle` now also requires an observed Up exact bridge link; Down/unknown remains waiting. End-to-end behavior is **Hardware Validation Required**. | Exact attach/health replay tests and redacted read-only supported-profile evidence. |
 | 1.2 | Game-open deferred dock intent. Owner: transition worker. | **Proposed**; no dock intent or automatic transition authority exists. | Deterministic game-running/unknown deferral tests; later supervised proof only after a reviewed mechanism. |
 | 1.3 | Game-closed verified TV, audio, and controller handoff. Owner: transition/peripheral worker. | Policies are **Implemented/Simulated**; handoff is **Hardware Validation Required**. | Exact idle, display, audio, controller, and rollback evidence in a supervised test. |
 | 1.4 | Five-second post-game prepared-docked-idle state. Owner: transition worker. | **Proposed**; no timer or prepared-dock authority exists. | Deterministic expiry/revalidation tests, then supervised observation without a running game. |

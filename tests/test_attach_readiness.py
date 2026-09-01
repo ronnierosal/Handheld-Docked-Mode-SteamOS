@@ -17,7 +17,13 @@ from hdm.application.attach_readiness import (  # noqa: E402
     observe_attach_readiness,
 )
 from hdm.application.topology_event_detection import detect_topology_event  # noqa: E402
-from hdm.domain.models import DisplayKind, GameState  # noqa: E402
+from hdm.domain.models import (  # noqa: E402
+    Confidence,
+    DisplayKind,
+    EgpuLinkObservation,
+    EgpuLinkState,
+    GameState,
+)
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.ports.transition import VersionedObservation  # noqa: E402
 
@@ -31,6 +37,15 @@ def snapshot(name: str):
 
 def observed(generation: str, sample: str, value):
     return VersionedObservation(generation, value, sample)
+
+
+def link_up(value):
+    return replace(
+        value,
+        egpu_link=EgpuLinkObservation(
+            True, EgpuLinkState.UP, Confidence.OBSERVED, "egpu.link_observed"
+        ),
+    )
 
 
 class AttachReadinessTests(unittest.TestCase):
@@ -47,7 +62,7 @@ class AttachReadinessTests(unittest.TestCase):
 
         result = observe_attach_readiness(
             watch,
-            observed(attached.generation, "sample-c", attached.snapshot),
+            observed(attached.generation, "sample-c", link_up(attached.snapshot)),
         )
 
         self.assertEqual(result.stage, AttachReadinessStage.READY_IDLE)
@@ -92,9 +107,31 @@ class AttachReadinessTests(unittest.TestCase):
         self.assertEqual(result.stage, AttachReadinessStage.ACTION_REQUIRED)
         self.assertEqual(result.code, "attach.game_state_unknown")
 
+    def test_down_or_missing_link_never_appears_ready_idle(self):
+        watch, attached = self._watch()
+        down = replace(
+            attached.snapshot,
+            egpu_link=EgpuLinkObservation(
+                True, EgpuLinkState.DOWN, Confidence.OBSERVED, "egpu.link_down"
+            ),
+        )
+        result = observe_attach_readiness(watch, observed("down", "sample-c", down))
+        self.assertEqual(result.stage, AttachReadinessStage.WAITING_FOR_LINK_HEALTH)
+        self.assertEqual(result.code, "attach.link_down")
+
+        unverified = replace(
+            attached.snapshot,
+            egpu_link=EgpuLinkObservation(False, EgpuLinkState.UNKNOWN, Confidence.UNKNOWN),
+        )
+        result = observe_attach_readiness(
+            watch, observed("unknown-link", "sample-d", unverified)
+        )
+        self.assertEqual(result.stage, AttachReadinessStage.WAITING_FOR_LINK_HEALTH)
+        self.assertEqual(result.code, "attach.link_unverified")
+
     def test_running_game_never_becomes_idle_transition_ready(self):
         watch, attached = self._watch()
-        running = replace(attached.snapshot, game_state=GameState.RUNNING)
+        running = replace(link_up(attached.snapshot), game_state=GameState.RUNNING)
 
         result = observe_attach_readiness(watch, observed("running", "sample-c", running))
 
@@ -108,8 +145,10 @@ class AttachReadinessTests(unittest.TestCase):
 
         armed = lifecycle.update(detect_topology_event(before, attached), attached)
         ready = lifecycle.update(
-            detect_topology_event(attached, observed("attached", "sample-c", attached.snapshot)),
-            observed("attached", "sample-c", attached.snapshot),
+            detect_topology_event(
+                attached, observed("attached", "sample-c", link_up(attached.snapshot))
+            ),
+            observed("attached", "sample-c", link_up(attached.snapshot)),
         )
 
         self.assertEqual(armed.stage, AttachReadinessStage.SETTLING)

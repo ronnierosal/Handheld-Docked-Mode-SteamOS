@@ -37,7 +37,13 @@ from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.domain.game_gpu_client import GameEgpuClientStatus  # noqa: E402
 from hdm.domain.game_render_activity import GameRenderActivityStatus  # noqa: E402
 from hdm.domain.game_runtime import GameRuntimeKind  # noqa: E402
-from hdm.domain.models import EgpuResourceKind, GameState  # noqa: E402
+from hdm.domain.models import (  # noqa: E402
+    Confidence,
+    EgpuLinkObservation,
+    EgpuLinkState,
+    EgpuResourceKind,
+    GameState,
+)
 from hdm.domain.process_release import (  # noqa: E402
     ProcessReleasePreview,
     ProcessReleasePreviewRow,
@@ -248,7 +254,6 @@ class MainProcessDeliveryTests(unittest.TestCase):
         docked = snapshot_from_dict(
             json.loads((ROOT / "tests" / "fixtures" / "tv-docked.json").read_text())
         )
-
         plugin._record_topology_observation(portable)
         plugin._record_topology_observation(docked)
         history = asyncio.run(plugin.get_action_history())
@@ -266,6 +271,12 @@ class MainProcessDeliveryTests(unittest.TestCase):
         )
         docked = snapshot_from_dict(
             json.loads((ROOT / "tests" / "fixtures" / "tv-docked.json").read_text())
+        )
+        docked = replace(
+            docked,
+            egpu_link=EgpuLinkObservation(
+                True, EgpuLinkState.UP, Confidence.OBSERVED, "egpu.link_observed"
+            ),
         )
         fresh_docked = replace(docked, observed_at="2026-08-30T19:02:25-07:00")
         api = SnapshotApi(portable, docked, fresh_docked)

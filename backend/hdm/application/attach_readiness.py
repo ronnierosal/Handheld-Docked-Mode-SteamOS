@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from ..domain.event_policy import TopologyEvent
-from ..domain.models import Confidence, DisplayKind, GameState
+from ..domain.models import Confidence, DisplayKind, EgpuLinkState, GameState
 from ..ports.transition import VersionedObservation
 from ..profiles.registry import resolve_runtime_profiles
 from .topology_event_detection import TopologyDetectionStatus, TopologyEventDetection
@@ -23,6 +23,7 @@ class AttachReadinessStage(StrEnum):
     IDLE = "idle"
     SETTLING = "settling"
     WAITING_FOR_EXTERNAL_DISPLAY = "waiting_for_external_display"
+    WAITING_FOR_LINK_HEALTH = "waiting_for_link_health"
     READY_IDLE = "ready_idle"
     GAME_RUNNING = "game_running"
     ACTION_REQUIRED = "action_required"
@@ -105,6 +106,14 @@ def observe_attach_readiness(
         return _status(
             AttachReadinessStage.WAITING_FOR_EXTERNAL_DISPLAY,
             "attach.external_display_unready",
+        )
+    link = current.snapshot.egpu_link
+    if not link.applicable or link.state is not EgpuLinkState.UP:
+        return _status(
+            AttachReadinessStage.WAITING_FOR_LINK_HEALTH,
+            "attach.link_down"
+            if link.applicable and link.state is EgpuLinkState.DOWN
+            else "attach.link_unverified",
         )
     if current.snapshot.game_state is GameState.RUNNING:
         return _status(AttachReadinessStage.GAME_RUNNING, "attach.game_running")
