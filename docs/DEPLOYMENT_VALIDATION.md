@@ -319,7 +319,7 @@ a root-owned rollback directory. It does not reload Decky, restart Gamescope,
 or alter displays, sleep, hardware, or the active session.
 
 The public verification key is installed once at
-`/etc/handheld-dock-mode/deploy-public-key.pem`; the corresponding private key
+`/var/lib/handheld-dock-mode/deploy-public-key.pem`; the corresponding private key
 must remain off the Ally and outside the repository. A package that is merely
 copied to Downloads is rejected unless its signature validates against that
 key. The helper therefore avoids turning a passwordless `sudo` rule into an
@@ -337,13 +337,34 @@ with `scripts/sign_hdm_deploy_package.py`, then staged with
 `scripts/stage_signed_hdm_deploy.py`. The automated, narrow install command is:
 
 ```text
-sudo /usr/local/libexec/hdm-deploy-plugin HDM-update-<version>-<revision>.zip \
+sudo /var/lib/handheld-dock-mode/hdm-deploy-plugin HDM-update-<version>-<revision>.zip \
   HDM-update-<version>-<revision>.zip.sig
 ```
 
 Successful replacement alone is not a runtime validation and the helper does
 not invent a plugin reload. Inspect the installed build after Decky naturally
 reloads it or use a watched, explicitly approved plugin reload workflow later.
+
+### Direct developer deploy (maintainer-owned SSH)
+
+For the maintainer's own Ally, `scripts/deploy_hdm_to_ally.ps1` implements the
+explicit direct-deploy workflow after `-ConfirmDeploy` is supplied. It runs the
+complete local check/build matrix, uploads one temporary complete ZIP, validates
+the archive and provenance on the Ally, atomically replaces only the fixed HDM
+plugin directory, retains a timestamped rollback directory, restores the
+packaged shim executable bit, then restarts `plugin_loader.service` and prints
+the installed `build_info` revision. HDM state and presentation configuration
+are outside the replaced plugin tree and remain untouched.
+
+It requires either existing narrow passwordless root access or a visible
+terminal with `-InteractiveSudo`; it never sends a password. It does not call
+Gamescope, suspend/reboot, change display/input/audio/GPU state, or manipulate
+eGPU hardware. Example:
+
+```text
+powershell -ExecutionPolicy Bypass -File scripts/deploy_hdm_to_ally.ps1 \
+  -HostName <handheld-ip> -IdentityFile <ssh-key> -ConfirmDeploy -InteractiveSudo
+```
 
 ## Stop conditions
 
