@@ -240,6 +240,14 @@ removal and Portable verification. Unknown pre-event placement fails closed;
 after a verified loss invalidates the composite placement, every individual
 recovery-critical identity and state must still be known before an attempt.
 
+A pure topology-event detector can now bind two distinct, complete snapshots
+into an attach, eGPU-removal, or external-display-loss candidate. It requires
+an exact host profile on both snapshots and exact resource continuity; an
+unproven disappearance is explicitly Unverified rather than treated as a
+removal. The detector is not a watcher, scheduler, RPC, or recovery trigger.
+Future event sources must still route candidates through the shared policy and
+transition authority.
+
 A dormant application-level unexpected-undock coordinator now binds one raw
 eGPU/display-loss event to an exact semantic generation and independent sample,
 re-observes exact loss and internal recovery readiness, makes one injected

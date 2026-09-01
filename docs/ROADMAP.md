@@ -248,6 +248,12 @@ Decky, journal/facade, and startup-recovery wiring remain gated. Physical G1
 removal remains unsupported. See
 [Unexpected-undock recovery coordinator](UNEXPECTED_UNDOCK_RECOVERY.md).
 
+A pure snapshot-delta detector now supplies only exact attach, eGPU-removal,
+or external-display-loss candidates. It has no event source or execution
+authority: a future watcher must still feed its result into the shared policy
+and transition authority. Missing, reused, ambiguous, or unproven loss evidence
+is explicitly unverified.
+
 - Distinguish unsolicited loss from an expected SleepPendingDisconnect event.
 - Restore internal display, audio, and controls; verify Portable; never sleep
   after an unsolicited unplug.
