@@ -141,6 +141,14 @@ states across client scan, topology, game, Portable fallback, and external
 display facts. The positive state is never a physical-unplug claim and has no
 action authority. See [Safe Undock readiness](SAFE_UNDOCK_READINESS.md).
 
+The separate Safe Undock presentation contract consumes only that
+revalidation-bound result. It can present insufficient, not-ready,
+revalidate-required, or eligible-for-supervised-physical-validation categories.
+An acknowledgement and an exact current binding/generation/sample match are
+required for the last category; it remains non-authorizing and must be rerun
+immediately before any separately approved physical test. See
+[Safe Undock result presentation](SAFE_UNDOCK_PRESENTATION.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the

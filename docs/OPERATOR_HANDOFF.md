@@ -135,6 +135,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
   Protected/incomplete scans, activity, fallback gaps, contradictions, stale
   evidence, and binding changes fail closed. This never claims physical unplug
   safety and has no process/helper/device action or transition authority.
+- **Stage 1.6 checkpoint (pure result presentation):** a human-facing result
+  consumes only the Stage 1.5 revalidation-bound result. It can say only
+  evidence-insufficient, not-ready, revalidate-required, or eligible to begin
+  supervised physical validation. Missing acknowledgement or a changed/missing
+  attachment binding, generation, or sample invalidates the presentation.
+  Eligibility is not a safe-to-unplug claim and creates no action authority;
+  rerun Stage 1.5 immediately before any later separately approved physical
+  test.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
