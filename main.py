@@ -121,6 +121,9 @@ from hdm.delivery.process_release import (  # noqa: E402
     preview_to_payload,
     status_to_payload,
 )
+from hdm.delivery.presentation_transition import (  # noqa: E402
+    status_to_payload as presentation_transition_status_to_payload,
+)
 from hdm.delivery.game_evidence_support import (  # noqa: E402
     game_evidence_to_event_details,
 )
@@ -693,6 +696,25 @@ class Plugin:
         except Exception:
             acknowledged = False
         return {"schema_version": 1, "acknowledged": acknowledged}
+
+    async def get_supervised_tv_switch_status(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Return the durable supervised-TV result after a Gamescope restart."""
+        try:
+            status = await asyncio.to_thread(
+                self._presentation_transition_service().status
+            )
+            return presentation_transition_status_to_payload(status)
+        except Exception:
+            return {
+                "schema_version": 1,
+                "code": "transition.service_unavailable",
+                "acknowledgement_required": False,
+                "action_required": True,
+                "acknowledgement_id": "",
+                "durable": False,
+            }
 
     async def get_process_release_status(self, _request: object = None) -> dict[str, object]:
         """Return only categorical durable release state and acknowledgement ID."""

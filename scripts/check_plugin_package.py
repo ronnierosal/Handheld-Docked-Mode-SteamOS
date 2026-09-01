@@ -102,6 +102,7 @@ def main() -> int:
             "approve_supervised_tv_switch",
             "execute_supervised_tv_switch",
             "acknowledge_supervised_tv_switch",
+            "get_supervised_tv_switch_status",
             "get_process_release_status",
             "preview_process_release",
             "approve_process_release",

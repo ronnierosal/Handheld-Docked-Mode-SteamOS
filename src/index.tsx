@@ -22,6 +22,7 @@ import {
   approveSupervisedTvSwitch,
   acknowledgeSupervisedTvSwitch,
   executeSupervisedTvSwitch,
+  getSupervisedTvSwitchStatus,
   executeProcessRelease,
   getProcessReleaseStatus,
   getDockedIgpuStatus,
@@ -452,6 +453,30 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }).catch(() => {
       if (!disposed) {
         setProcessMessage("Process-release safety state is unavailable. Do not disconnect the eGPU.");
+      }
+    });
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    void getSupervisedTvSwitchStatus().then((status) => {
+      if (disposed || status.code === "transition.idle") {
+        return;
+      }
+      if (status.acknowledgement_required && status.acknowledgement_id) {
+        setTvSwitchAcknowledgementId(status.acknowledgement_id);
+      }
+      setTvSwitchMessage(
+        status.action_required
+          ? "A prior TV transition needs acknowledgement. HDM did not claim the TV is active."
+          : `Previous TV switch result: ${label(status.code)}.`,
+      );
+    }).catch(() => {
+      if (!disposed) {
+        setTvSwitchMessage("TV transition safety state is unavailable. HDM did not claim success.");
       }
     });
     return () => {

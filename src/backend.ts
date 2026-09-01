@@ -324,6 +324,15 @@ export interface SupervisedTvSwitchAcknowledgementPayload {
   acknowledged: boolean;
 }
 
+export interface SupervisedTvSwitchStatusPayload {
+  schema_version: number;
+  code: string;
+  acknowledgement_required: boolean;
+  action_required: boolean;
+  acknowledgement_id: string;
+  durable: boolean;
+}
+
 export const previewSupervisedTvSwitch = callable<
   [],
   SupervisedTvSwitchPreviewPayload
@@ -340,6 +349,10 @@ export const acknowledgeSupervisedTvSwitch = callable<
   [string],
   SupervisedTvSwitchAcknowledgementPayload
 >("acknowledge_supervised_tv_switch");
+export const getSupervisedTvSwitchStatus = callable<
+  [],
+  SupervisedTvSwitchStatusPayload
+>("get_supervised_tv_switch_status");
 
 export type ProcessReleasePhase = "graceful" | "force";
 
