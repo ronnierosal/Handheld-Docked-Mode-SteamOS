@@ -178,6 +178,12 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
                 : "not observed",
         },
         {
+            name: "eGPU link",
+            value: snapshot.egpu_link.applicable
+                ? `${humanize(snapshot.egpu_link.state)} · ${humanize(snapshot.egpu_link.confidence)}`
+                : "not applicable",
+        },
+        {
             name: "External display",
             value: externalDisplay
                 ? `connected ${yesNoUnknown(externalDisplay.connected)} · active ${yesNoUnknown(externalDisplay.active)} · ${humanize(externalDisplay.confidence)}`
