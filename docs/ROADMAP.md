@@ -350,6 +350,12 @@ output usability.
   audio output.
 - Treat controller power-off as optional per-controller capability.
 
+**Implemented (simulated execution foundation):** a peripheral plan runner now
+requires fresh same-generation revalidation and a separate post-step verifier,
+then performs bounded reverse-order rollback of already verified work. It has no
+SteamOS mechanism, Decky RPC, journal construction, or production wiring. Live
+controller/audio handoff remains Hardware Validation Required.
+
 Exit: rollback and disconnect-loss tests pass before certification.
 
 ### R8 — Diagnostics, compatibility, and support expansion

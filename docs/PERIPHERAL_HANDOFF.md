@@ -100,6 +100,20 @@ audio node identity.
    Undock path.
 3. Re-plan from the same semantic generation and a new sample immediately
    before each step.
+
+## Deterministic execution foundation
+
+The planning layer now has a dormant injected runner for a future unified
+transition child. It accepts only a complete `Ready` plan, revalidates the same
+plan with a new sample before every step, requires a separate fresh verification
+after every apply, and reverses only already verified steps in reverse order on
+failure. Changed plans, stale samples, mechanism rejection, unavailable ports,
+or unverified rollback end in Action Required rather than claiming recovery.
+
+The runner has no SteamOS controller/audio mechanism, listener, Decky RPC,
+journal construction, or production wiring. It is simulated only. A future
+live integration must add durable parent-transition journal composition and
+supervised controller/audio recovery validation before it can change a device.
 4. Execute one typed step through the shared transition journal.
 5. Observe and verify the exact target.
 6. On failure, restore the exact rollback binding and verify recovery.
