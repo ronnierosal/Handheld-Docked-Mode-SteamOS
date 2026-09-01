@@ -259,6 +259,11 @@ do not leave a growing queue of completed worktree commits unintegrated.
   now reveals the new section while retaining controller focus on its existing
   toggle for an immediate close. It changes no snapshot cadence, collection,
   action, deployment, or hardware claim.
+- **Profile diagnostic completeness checkpoint (local-only):** runtime profile
+  diagnostics now require every capability axis exactly once. Duplicate or
+  missing axes fail at construction, preventing an incomplete matrix from being
+  presented as complete. This adds no collector, action, deployment, or
+  hardware claim.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

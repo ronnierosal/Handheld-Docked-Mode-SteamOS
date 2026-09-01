@@ -12,13 +12,18 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.domain.control_plane import CapabilitySupport, PlacementState  # noqa: E402
+from hdm.domain.models import Confidence  # noqa: E402
 from hdm.domain.manual_transition import evidence_from_snapshot  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.profiles.registry import (  # noqa: E402
+    CapabilityAxis,
+    CapabilityDiagnostic,
+    CapabilityEvidenceBasis,
     EgpuProfileDefinition,
     HostProfileDefinition,
     ProfileResolutionStatus,
     RuntimeProfileCatalog,
+    RuntimeProfileDiagnostics,
     resolve_runtime_profiles,
     runtime_profile_diagnostics_to_dict,
 )
@@ -41,6 +46,22 @@ def observed(name: str, **changes):
 
 
 class RuntimeProfileTests(unittest.TestCase):
+    def test_diagnostics_require_each_capability_axis_exactly_once(self):
+        item = CapabilityDiagnostic(
+            CapabilityAxis.EGPU_SUPPORT,
+            "verified",
+            Confidence.VERIFIED,
+            CapabilityEvidenceBasis.EXACT_HOST_PROFILE,
+        )
+        with self.assertRaisesRegex(ValueError, "each capability axis once"):
+            RuntimeProfileDiagnostics(
+                ProfileResolutionStatus.EXACT,
+                "host",
+                ProfileResolutionStatus.EXACT,
+                "egpu",
+                (item,),
+            )
+
     def test_exact_snapshot_resolves_ally_g1_without_promoting_experimental(self):
         snapshot = observed("connected-internal.json")
         resolved = resolve_runtime_profiles(snapshot)

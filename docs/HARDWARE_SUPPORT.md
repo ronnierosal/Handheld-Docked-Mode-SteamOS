@@ -84,6 +84,10 @@ Experimental, controller capabilities remain Unknown, sleep requires the
 verified disconnect-first workflow, and removal remains
 `shutdown_before_disconnect`.
 
+The diagnostic matrix is structurally complete: local construction rejects any
+duplicate or omitted capability axis. This guards later profile edits and does
+not promote a capability or add hardware observation.
+
 ## eGPUBridge reference evidence
 
 - Internal and G1-connected TV discovery

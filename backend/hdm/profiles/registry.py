@@ -132,6 +132,11 @@ class RuntimeProfileDiagnostics:
     egpu_profile_id: str
     capabilities: tuple[CapabilityDiagnostic, ...]
 
+    def __post_init__(self) -> None:
+        axes = tuple(item.axis for item in self.capabilities)
+        if len(axes) != len(set(axes)) or set(axes) != set(CapabilityAxis):
+            raise ValueError("runtime profile diagnostics must cover each capability axis once")
+
 
 @dataclass(frozen=True, slots=True)
 class ResolvedRuntimeProfiles:
