@@ -14,6 +14,7 @@ project; eGPUBridge is reference evidence, not the architecture to reproduce.
 - Diagnostics contract: `docs/DIAGNOSTICS.md`
 - Ordered status and dependencies: `docs/ROADMAP.md`
 - Hardware deployment gates: `docs/DEPLOYMENT_VALIDATION.md`
+- Maintainer/agent SSH and current deployment handoff: `docs/OPERATOR_HANDOFF.md`
 - Current executable behavior: code plus tests; docs and memory never override it
 
 ## Required rules
