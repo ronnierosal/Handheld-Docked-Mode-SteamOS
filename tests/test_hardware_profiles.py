@@ -90,7 +90,7 @@ class HardwareProfileTests(unittest.TestCase):
         similar = HostRecord("ASUS Compatible", "ROG Ally X Pro RC72LA", "RC72LA")
         incomplete = HostRecord("ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "")
         self.assertFalse(matches_ally_x(similar))
-        self.assertIn("exact", match_ally_x(similar).reason)
+        self.assertIn("certified profile", match_ally_x(similar).reason)
         self.assertFalse(matches_ally_x(incomplete))
         self.assertIn("incomplete", match_ally_x(incomplete).reason)
 
