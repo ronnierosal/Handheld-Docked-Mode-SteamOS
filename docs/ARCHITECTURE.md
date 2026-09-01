@@ -107,6 +107,12 @@ progress. The typed split, durable journal, deterministic replay, and guarded
 runtime orchestrator are implemented; mechanism wiring remains experimental and
 uninstalled. See [Authoritative roadmap](ROADMAP.md).
 
+An exact attach candidate can also enter a small read-only readiness watch. It
+binds the private exact eGPU identity and accepts only a newer sample before
+classifying external-display readiness and known game state. This preserves
+`Connecting` as a workflow phase without treating eGPU presence as an automatic
+dock request; see [eGPU attach readiness](ATTACH_READINESS.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the
