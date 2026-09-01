@@ -43,6 +43,11 @@ game, stale sample, unknown state, missing observer, or missing prior watch
 stops the test in Action Required. This collector is simulated only until a
 supervised procedure proves it on the certified hardware profile.
 
+The entry criteria, pass/fail conditions, retained evidence, and recovery rules
+for that future supervised proof are in [Compatibility hardware
+validation](COMPATIBILITY_HARDWARE_VALIDATION.md). It must not be run from the
+remote harness.
+
 ## Session flow
 
 1. Require explicit player confirmation and select at least one test dimension.
