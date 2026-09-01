@@ -20,6 +20,13 @@ _CERTIFIED_DMI_IDENTITIES = frozenset(
             "rog ally x rc72la",
             "rc72la",
         ),
+        # Current SteamOS firmware reports the product and board identifiers
+        # together. This is an exact observed DMI tuple, not a fuzzy match.
+        (
+            "asustek computer inc.",
+            "rog ally x rc72la_rc72la",
+            "rc72la",
+        ),
     }
 )
 CAPABILITIES = HostCapabilities(

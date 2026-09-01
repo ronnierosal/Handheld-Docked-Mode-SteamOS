@@ -84,6 +84,15 @@ class HardwareProfileTests(unittest.TestCase):
                 )
             )
         )
+        self.assertTrue(
+            matches_ally_x(
+                HostRecord(
+                    "ASUSTeK COMPUTER INC.",
+                    "ROG Ally X RC72LA_RC72LA",
+                    "RC72LA",
+                )
+            )
+        )
         self.assertFalse(matches_ally_x(HostRecord("Valve", "Jupiter", "Steam Deck")))
 
     def test_rejects_similar_or_incomplete_ally_identity(self):
