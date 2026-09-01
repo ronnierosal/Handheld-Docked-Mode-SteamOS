@@ -245,6 +245,11 @@ do not leave a growing queue of completed worktree commits unintegrated.
   `verified_d2_evidence_record` is record consistency only; it does not prove
   installation, player observation, G1 state, UI/lease health, or D2 success.
   It opens no SSH and makes no device/session change.
+- **Health attention UI checkpoint (read-only):** Quick Access now maps only
+  allowlisted public health blockers into at most three controller-readable
+  attention messages. Unknown or future codes collapse to one generic review
+  message; raw codes are not rendered. This reuses the existing snapshot and
+  adds no polling, action, deployment, or hardware claim.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

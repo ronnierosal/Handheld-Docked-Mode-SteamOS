@@ -48,7 +48,7 @@ import {
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
-import { healthStatusLabel } from "./health-ui";
+import { healthAttentionMessages, healthStatusLabel } from "./health-ui";
 import { decideLinkHealthNotification } from "./link-health-notification";
 import { sanitizeJourneyStatus } from "./journey-status-delivery";
 import {
@@ -622,6 +622,10 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   );
   const optionalDiagnosticsDeferred = showDiagnostics && snapshot?.game_state !== "idle";
   const journeyRows = journeyStatusRows(payload?.journey);
+  const healthAttention = healthAttentionMessages(payload?.health);
+  const needsAttention = Boolean(error)
+    || (snapshot?.blockers.length ?? 0) > 0
+    || healthAttention.length > 0;
 
   const acknowledgeDockedIgpuWatch = useCallback(async () => {
     setDockedIgpuMessage("");
@@ -1089,9 +1093,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             </ButtonItem>
           </PanelSectionRow>
         </div>
-        {(error || (snapshot?.blockers.length ?? 0) > 0) && (
+        {needsAttention && (
           <PanelSectionRow>
-            {error || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.`}
+            {error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.`}
           </PanelSectionRow>
         )}
         <PanelSectionRow>Read-only status refreshes while this panel is open.</PanelSectionRow>
@@ -1236,9 +1240,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         </PanelSectionRow>
       </PanelSection>
 
-      {(error || (snapshot?.blockers.length ?? 0) > 0) && (
+      {needsAttention && (
         <PanelSection title="Needs attention">
           {error && <PanelSectionRow>{error}</PanelSectionRow>}
+          {healthAttention.map((message) => (
+            <PanelSectionRow key={message}>{message}</PanelSectionRow>
+          ))}
           {snapshot?.blockers.map((blocker) => (
             <PanelSectionRow key={blocker.code}>{blocker.message}</PanelSectionRow>
           ))}

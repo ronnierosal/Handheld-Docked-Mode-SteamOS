@@ -98,9 +98,11 @@ installed package, not hardware-validation or certification evidence.
 
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
-health blockers. It does not add a collection loop, infer a workflow, change
-placement, or authorize any action. Older payloads show health as unavailable
-rather than guessing.
+health blockers. The controller-facing attention section maps only recognized
+health blockers to short messages, collapses unknown codes to one generic
+review message, and never renders raw codes. It does not add a collection loop,
+infer a workflow, change placement, or authorize any action. Older payloads
+show health as unavailable rather than guessing.
 
 The same snapshot may include a categorical eGPU attach-readiness status. It
 uses the already collected topology delta and next snapshot only; it does not
