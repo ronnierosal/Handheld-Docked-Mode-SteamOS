@@ -55,6 +55,11 @@ observation state (mapped or unmapped plus evidence codes). It never exposes
 input paths, sound-card paths, device names, addresses, or private bindings,
 and it grants no controller or audio handoff authority.
 
+Support Preview includes the same bounded categorical peripheral state when the
+read-only observer is available. It includes only complete/exact flags and
+evidence codes; no private binding, inventory path, name, address, or sample
+identity is exported.
+
 ## Evidence sources
 
 - `/sys/class/dmi/id`: host profile

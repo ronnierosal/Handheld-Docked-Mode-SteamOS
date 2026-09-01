@@ -86,6 +86,7 @@ from hdm.application.process_release_replay import (  # noqa: E402
 from hdm.application.support_bundle import (  # noqa: E402
     BoundedEventLog,
     SupportBundle,
+    SupportBundleContext,
     SupportBundlePreviewStore,
     SupportBundleService,
 )
@@ -103,6 +104,7 @@ from hdm.delivery.diagnostic_logging import (  # noqa: E402
     diagnostic_logging_status_to_payload,
 )
 from hdm.delivery.docked_igpu_lifecycle import lifecycle_status_to_payload  # noqa: E402
+from hdm.delivery.peripheral_support import peripheral_support_status  # noqa: E402
 from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
     DockedIgpuLifecycleScheduler,
 )
@@ -308,6 +310,11 @@ class Plugin:
     async def preview_support_bundle(self) -> dict[str, object]:
         """Return a redacted preview and one-time approval token."""
         report = await self.get_snapshot()
+        try:
+            peripheral = await asyncio.to_thread(self._peripherals.observe)
+            context = SupportBundleContext(peripheral_status=peripheral_support_status(peripheral))
+        except Exception:
+            context = SupportBundleContext()
         await asyncio.to_thread(self._record_support_game_evidence)
         self._events.append(
             severity="info",
@@ -321,6 +328,7 @@ class Plugin:
             self._events.snapshot(),
             self._support_versions(),
             self._sensitive_values(),
+            context,
         )
         preview = self._support_previews.issue(bundle)
         return {

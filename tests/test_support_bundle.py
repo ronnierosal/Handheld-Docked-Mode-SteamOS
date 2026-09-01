@@ -16,6 +16,7 @@ from hdm.application.support_bundle import (  # noqa: E402
     SupportBundlePreviewStore,
     SupportBundleService,
     SupportBundleContext,
+    PeripheralSupportStatus,
 )
 from hdm.domain.control_plane import PlacementState, WorkflowState  # noqa: E402
 from hdm.domain.game_compatibility import GameCompatibilityRecord  # noqa: E402
@@ -304,6 +305,25 @@ class SupportBundleTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "game compatibility"):
             SupportBundleContext(game_compatibility=(record,) * 9)
+
+    def test_peripheral_support_context_is_categorical_and_omits_bindings(self):
+        bundle = SupportBundleService().build(
+            adversarial_report(), (), {},
+            context=SupportBundleContext(
+                peripheral_status=PeripheralSupportStatus(
+                    True, False, "controller.identity_unmapped",
+                    True, False, "audio.default_output_unobserved",
+                )
+            ),
+        )
+        self.assertEqual(
+            bundle.payload["peripheral_status"]["controller"]["code"],
+            "controller.identity_unmapped",
+        )
+        self.assertEqual(
+            bundle.payload["peripheral_status"]["audio"]["exact"], False)
+        for private in ("controller-private", "audio-private", "binding", "event1", "card0"):
+            self.assertNotIn(private, bundle.json_text)
 
 
 class SteamOsVersionDiscoveryTests(unittest.TestCase):

@@ -182,10 +182,25 @@ class SupportBundlePreview:
 
 
 @dataclass(frozen=True, slots=True)
+class PeripheralSupportStatus:
+    controller_complete: bool
+    controller_exact: bool
+    controller_code: str
+    audio_complete: bool
+    audio_exact: bool
+    audio_code: str
+
+    def __post_init__(self) -> None:
+        if not _CODE_RE.fullmatch(self.controller_code) or not _CODE_RE.fullmatch(self.audio_code):
+            raise ValueError("peripheral support status code is invalid")
+
+
+@dataclass(frozen=True, slots=True)
 class SupportBundleContext:
     transition_journals: tuple[TransitionJournal, ...] = field(default_factory=tuple)
     game_compatibility: tuple[GameCompatibilityRecord, ...] = field(default_factory=tuple)
     hardware_compatibility: tuple[HardwareCompatibilityRecord, ...] = field(default_factory=tuple)
+    peripheral_status: PeripheralSupportStatus | None = None
 
     def __post_init__(self) -> None:
         if len(self.transition_journals) > 4:
@@ -413,6 +428,13 @@ def _support_context(context: SupportBundleContext) -> dict[str, Any]:
         "transition_history": transition_rows,
         "game_compatibility": game_rows,
         "hardware_compatibility": hardware_rows,
+        "peripheral_status": (
+            {
+                "controller": {"complete": context.peripheral_status.controller_complete, "exact": context.peripheral_status.controller_exact, "code": context.peripheral_status.controller_code},
+                "audio": {"complete": context.peripheral_status.audio_complete, "exact": context.peripheral_status.audio_exact, "code": context.peripheral_status.audio_code},
+            }
+            if context.peripheral_status is not None else None
+        ),
     }
 
 
@@ -458,6 +480,7 @@ class SupportBundleService:
                     "transition_history",
                     "game_compatibility",
                     "hardware_compatibility",
+                    "peripheral_status",
                 ],
             },
             "versions": sanitize_value(
