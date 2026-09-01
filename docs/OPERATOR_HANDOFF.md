@@ -115,6 +115,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   game evidence terminalize it; a fresh idle result yields only a non-authorizing
   eligibility handoff. No persistence, scheduler, Decky route, game-close action,
   or display/GPU/audio/controller transition is wired.
+- **Stage 1.3 checkpoint (pure eligibility/rollback contract):** combined
+  handoff can be eligible only from one fresh opaque-bound observation with
+  verified Idle game, active external display/render/audio/controller, and
+  verified Portable display/audio/built-in-controller rollback facts. Missing,
+  stale, contradictory, inactive, or game-active facts fail closed; a partial
+  future attempt is rollback-required. No mechanism, plan, permit, RPC, or
+  hardware proof is added.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

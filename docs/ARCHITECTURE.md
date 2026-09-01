@@ -122,6 +122,13 @@ handoff; it creates no transition plan, permit, scheduler, persistence, or
 delivery authority. Any future owner must revalidate and route through the
 unified engine. See [Deferred dock intent](DEFERRED_DOCK_INTENT.md).
 
+The combined handoff-eligibility contract similarly consumes only one fresh,
+opaque-bound set of verified TV/render/audio/controller and Portable rollback
+facts. It reports ineligible or rollback-required on missing, stale,
+contradictory, inactive, or game-active evidence; eligibility is still only
+evidence for a future unified engine. It has no device mechanism or delivery
+authority. See [Combined handoff eligibility](COMBINED_HANDOFF_ELIGIBILITY.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the
