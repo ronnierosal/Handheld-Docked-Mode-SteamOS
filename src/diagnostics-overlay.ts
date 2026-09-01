@@ -1,6 +1,7 @@
 import type {
   DockedIgpuStatusPayload,
   DiagnosticLoggingStatusPayload,
+  ActionHistoryPayload,
   HardwareCapabilityAxis,
   PeripheralStatusPayload,
   SnapshotPayload,
@@ -25,6 +26,7 @@ export function diagnosticOverlayRows(
   dockedIgpuStatus: DockedIgpuStatusPayload | null = null,
   loggingStatus: DiagnosticLoggingStatusPayload | null = null,
   peripheralStatus: PeripheralStatusPayload | null = null,
+  actionHistory: ActionHistoryPayload | null = null,
 ): DiagnosticOverlayRow[] {
   if (!payload) {
     return [];
@@ -160,6 +162,12 @@ export function diagnosticOverlayRows(
     rows.push({
       name: `Client ${index + 1}`,
       value: `${client.name} · ${humanize(client.kind)} · ${client.resources.map(humanize).join(", ")}`,
+    });
+  });
+  actionHistory?.entries.slice(0, 3).forEach((entry, index) => {
+    rows.push({
+      name: `Recent action ${index + 1}`,
+      value: `${humanize(entry.kind)} · ${humanize(entry.outcome)} · ${humanize(entry.code)}`,
     });
   });
   return rows;

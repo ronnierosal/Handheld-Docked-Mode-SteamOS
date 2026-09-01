@@ -42,6 +42,7 @@ class DeckyContractTests(unittest.TestCase):
             {
                 "get_snapshot",
                 "get_peripheral_status",
+                "get_action_history",
                 "get_docked_igpu_status",
                 "acknowledge_docked_igpu_status",
                 "get_diagnostic_logging_status",
@@ -96,6 +97,7 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"get_docked_igpu_status"', source)
         self.assertIn('"acknowledge_docked_igpu_status"', source)
         self.assertIn('"get_diagnostic_logging_status"', source)
+        self.assertIn('"get_action_history"', source)
         self.assertIn('"enable_diagnostic_logging"', source)
         self.assertIn('"disable_diagnostic_logging"', source)
         self.assertIn('"preview_support_bundle"', source)

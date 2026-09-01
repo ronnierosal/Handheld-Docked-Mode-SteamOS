@@ -25,6 +25,7 @@ const definePlugin = (fn) => {
 
 const getSnapshot = callable("get_snapshot");
 const getPeripheralStatus = callable("get_peripheral_status");
+const getActionHistory = callable("get_action_history");
 const getDockedIgpuStatus = callable("get_docked_igpu_status");
 const acknowledgeDockedIgpuStatus = callable("acknowledge_docked_igpu_status");
 const getDiagnosticLoggingStatus = callable("get_diagnostic_logging_status");
@@ -122,7 +123,7 @@ function humanize(value) {
 function yesNoUnknown(value) {
     return value === true ? "yes" : value === false ? "no" : "unknown";
 }
-function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus = null, peripheralStatus = null) {
+function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus = null, peripheralStatus = null, actionHistory = null) {
     if (!payload) {
         return [];
     }
@@ -253,6 +254,12 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
         rows.push({
             name: `Client ${index + 1}`,
             value: `${client.name} · ${humanize(client.kind)} · ${client.resources.map(humanize).join(", ")}`,
+        });
+    });
+    actionHistory?.entries.slice(0, 3).forEach((entry, index) => {
+        rows.push({
+            name: `Recent action ${index + 1}`,
+            value: `${humanize(entry.kind)} · ${humanize(entry.outcome)} · ${humanize(entry.code)}`,
         });
     });
     return rows;
@@ -671,6 +678,7 @@ function preflightObservation(payload) {
 function Content({ preflight }) {
     const [payload, setPayload] = SP_REACT.useState(null);
     const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
+    const [actionHistory, setActionHistory] = SP_REACT.useState(null);
     const [dockedIgpuStatus, setDockedIgpuStatus] = SP_REACT.useState(null);
     const [dockedIgpuMessage, setDockedIgpuMessage] = SP_REACT.useState("");
     const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = SP_REACT.useState(null);
@@ -740,16 +748,18 @@ function Content({ preflight }) {
             setError("");
         }
         try {
-            const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus] = await Promise.all([
+            const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus, nextActionHistory] = await Promise.all([
                 getSnapshot(),
                 getDockedIgpuStatus().catch(() => null),
                 getDiagnosticLoggingStatus().catch(() => null),
                 getPeripheralStatus().catch(() => null),
+                getActionHistory().catch(() => null),
             ]);
             setPayload(nextPayload);
             setDockedIgpuStatus(nextDockedIgpuStatus);
             setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
             setPeripheralStatus(nextPeripheralStatus);
+            setActionHistory(nextActionHistory);
             setError("");
             lastSnapshotAt.current = Date.now();
             setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -806,7 +816,7 @@ function Content({ preflight }) {
                 : disconnect.ready
                     ? "Ready"
                     : "Blocked";
-    const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus);
+    const overlayRows = diagnosticOverlayRows(payload, dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus, actionHistory);
     const acknowledgeDockedIgpuWatch = SP_REACT.useCallback(async () => {
         setDockedIgpuMessage("");
         try {

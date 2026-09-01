@@ -15,6 +15,7 @@ import {
   acknowledgeDockedIgpuStatus,
   getSnapshot,
   getPeripheralStatus,
+  getActionHistory,
   acknowledgeProcessRelease,
   approveProcessRelease,
   approvePresentationPreparation,
@@ -34,6 +35,7 @@ import {
   type DiagnosticLoggingDuration,
   type DiagnosticLoggingStatusPayload,
   type PeripheralStatusPayload,
+  type ActionHistoryPayload,
   type ProcessReleasePhase,
   type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
@@ -294,6 +296,7 @@ function preflightObservation(payload: SnapshotPayload): PreflightObservation {
 function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
+  const [actionHistory, setActionHistory] = useState<ActionHistoryPayload | null>(null);
   const [dockedIgpuStatus, setDockedIgpuStatus] = useState<DockedIgpuStatusPayload | null>(null);
   const [dockedIgpuMessage, setDockedIgpuMessage] = useState("");
   const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = useState<DiagnosticLoggingStatusPayload | null>(null);
@@ -370,16 +373,18 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
     }
     try {
-      const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus] = await Promise.all([
+      const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus, nextActionHistory] = await Promise.all([
         getSnapshot(),
         getDockedIgpuStatus().catch(() => null),
         getDiagnosticLoggingStatus().catch(() => null),
         getPeripheralStatus().catch(() => null),
+        getActionHistory().catch(() => null),
       ]);
       setPayload(nextPayload);
       setDockedIgpuStatus(nextDockedIgpuStatus);
       setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
       setPeripheralStatus(nextPeripheralStatus);
+      setActionHistory(nextActionHistory);
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -450,6 +455,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     dockedIgpuStatus,
     diagnosticLoggingStatus,
     peripheralStatus,
+    actionHistory,
   );
 
   const acknowledgeDockedIgpuWatch = useCallback(async () => {

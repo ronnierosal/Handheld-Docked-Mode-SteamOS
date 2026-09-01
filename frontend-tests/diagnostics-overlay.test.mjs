@@ -185,6 +185,43 @@ test("peripheral diagnostics remain categorical when an observation is mapped", 
   assert.doesNotMatch(text, /binding|\/sys\/class|event[0-9]|card[0-9]/i);
 });
 
+test("action history is bounded in the optional overlay and remains categorical", () => {
+  const rows = diagnosticOverlayRows(payload(), null, null, null, {
+    schema_version: 1,
+    entries: [
+      {
+        occurred_at: "2026-08-31T12:00:00Z",
+        kind: "recovery",
+        outcome: "recovered",
+        code: "recovery.portable_restored",
+      },
+      {
+        occurred_at: "2026-08-31T11:59:00Z",
+        kind: "sleep",
+        outcome: "blocked",
+        code: "sleep.egpu_attached_blocked",
+      },
+      {
+        occurred_at: "2026-08-31T11:58:00Z",
+        kind: "transition",
+        outcome: "succeeded",
+        code: "transition.portable_ready",
+      },
+      {
+        occurred_at: "2026-08-31T11:57:00Z",
+        kind: "peripheral",
+        outcome: "failed",
+        code: "peripheral.controller_unavailable",
+      },
+    ],
+  });
+
+  const actionRows = rows.filter((row) => row.name.startsWith("Recent action"));
+  assert.equal(actionRows.length, 3);
+  assert.match(JSON.stringify(actionRows), /recovery.*recovered.*portable restored/);
+  assert.doesNotMatch(JSON.stringify(actionRows), /2026-08-31|private-gpu-id|HDMI-A-9/);
+});
+
 test("verbose logging status exposes a bounded countdown without private state", () => {
   assert.equal(diagnosticLoggingLabel(null), "unavailable");
   assert.equal(diagnosticLoggingLabel({

@@ -65,6 +65,7 @@ from hdm.application.diagnostic_logging import (  # noqa: E402
     DiagnosticLoggingDuration,
     DiagnosticVerbosity,
 )
+from hdm.application.action_history import project_action_history  # noqa: E402
 from hdm.application.docked_igpu_exit import DockedIgpuGameExitWatcher  # noqa: E402
 from hdm.application.docked_igpu_lifecycle import DockedIgpuWatchLifecycle  # noqa: E402
 from hdm.application.docked_igpu_promotion import DockedIgpuPromotionFacade  # noqa: E402
@@ -103,6 +104,7 @@ from hdm.delivery.game_evidence_support import (  # noqa: E402
 from hdm.delivery.diagnostic_logging import (  # noqa: E402
     diagnostic_logging_status_to_payload,
 )
+from hdm.delivery.action_history import action_history_to_payload  # noqa: E402
 from hdm.delivery.docked_igpu_lifecycle import lifecycle_status_to_payload  # noqa: E402
 from hdm.delivery.peripheral_support import peripheral_support_status  # noqa: E402
 from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
@@ -159,6 +161,17 @@ class Plugin:
                 "controller": {"complete": False, "exact": False, "builtin_available": None, "external_connected": None, "code": "controller.observation_unavailable"},
                 "audio": {"complete": False, "exact": False, "external_available": None, "portable_available": None, "code": "audio.observation_unavailable"},
             }
+
+    async def get_action_history(self) -> dict[str, object]:
+        """Return the bounded, identity-free projection of existing HDM events."""
+        try:
+            return await asyncio.to_thread(
+                lambda: action_history_to_payload(
+                    project_action_history(self._events.snapshot())
+                )
+            )
+        except Exception:
+            return {"schema_version": 1, "entries": []}
 
     async def get_diagnostic_logging_status(self) -> dict[str, object]:
         """Return bounded, identity-free status for the opt-in verbose session."""

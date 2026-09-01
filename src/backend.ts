@@ -145,6 +145,20 @@ export interface PeripheralStatusPayload {
 
 export const getPeripheralStatus = callable<[], PeripheralStatusPayload>("get_peripheral_status");
 
+export interface ActionHistoryEntryPayload {
+  occurred_at: string;
+  kind: "transition" | "recovery" | "sleep" | "process_release" | "peripheral" | "presentation";
+  outcome: "started" | "succeeded" | "recovered" | "blocked" | "failed" | "attention_required";
+  code: string;
+}
+
+export interface ActionHistoryPayload {
+  schema_version: number;
+  entries: ActionHistoryEntryPayload[];
+}
+
+export const getActionHistory = callable<[], ActionHistoryPayload>("get_action_history");
+
 export type DockedIgpuLifecycleStage =
   | "idle"
   | "watching"

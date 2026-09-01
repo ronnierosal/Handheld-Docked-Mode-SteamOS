@@ -412,8 +412,9 @@ they are not authorization for a separate optimizer or launcher.
 - **Implemented (projection only):** transparent action history derives a
   short controller-friendly timeline from the existing bounded HDM event log.
   It stores nothing new and exports only action kind, outcome, code, and time;
-  detail fields and correlation IDs stay private. Decky presentation wiring is
-  intentionally deferred.
+  detail fields and correlation IDs stay private. The optional Decky
+  troubleshooting view renders at most three entries through a read-only RPC;
+  controller-visible acceptance remains.
 
 ## Smallest safe next milestone
 

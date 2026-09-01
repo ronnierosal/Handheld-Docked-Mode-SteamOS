@@ -55,6 +55,11 @@ observation state (mapped or unmapped plus evidence codes). It never exposes
 input paths, sound-card paths, device names, addresses, or private bindings,
 and it grants no controller or audio handoff authority.
 
+The same optional section may show up to three recent actions from the existing
+bounded in-memory event log. Each row contains only time, a categorical action
+kind, outcome, and event code. It persists nothing new and never exposes event
+details, correlation IDs, hardware identity, or process identity.
+
 Support Preview includes the same bounded categorical peripheral state when the
 read-only observer is available. It includes only complete/exact flags and
 evidence codes; no private binding, inventory path, name, address, or sample
