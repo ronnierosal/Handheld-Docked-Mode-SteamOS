@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -13,6 +15,8 @@ PACKAGE_VERSION = str(
 )
 OUTPUT = ROOT / "out" / f"HandheldDockMode-{PACKAGE_VERSION}.zip"
 PLUGIN_DIRECTORY = "HandheldDockMode"
+BUILD_INFO_FILENAME = "build_info.json"
+REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 TOP_LEVEL_FILES = (
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -44,11 +48,51 @@ def archive_mode(path: Path) -> int:
     return 0o100755 if path == ROOT / "bin" / "gamescope" else 0o100644
 
 
+def _git_status(*args: str) -> subprocess.CompletedProcess[str] | None:
+    try:
+        return subprocess.run(
+            ("git", *args),
+            cwd=ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    except OSError:
+        return None
+
+
+def source_revision() -> str:
+    """Return a commit only when tracked package inputs have no pending diff."""
+    unstaged = _git_status("diff", "--quiet")
+    staged = _git_status("diff", "--cached", "--quiet")
+    if unstaged is None or staged is None:
+        return "unavailable"
+    if unstaged.returncode == 1 or staged.returncode == 1:
+        return "uncommitted"
+    if unstaged.returncode != 0 or staged.returncode != 0:
+        return "unavailable"
+    revision = _git_status("rev-parse", "HEAD")
+    value = revision.stdout.strip() if revision is not None and revision.returncode == 0 else ""
+    return value if REVISION_RE.fullmatch(value) else "unavailable"
+
+
+def build_info_bytes(revision: str) -> bytes:
+    """Encode deterministic archive-local provenance with no workstation data."""
+    if revision not in {"uncommitted", "unavailable"} and not REVISION_RE.fullmatch(revision):
+        raise ValueError("build revision is invalid")
+    return json.dumps(
+        {"schema_version": 1, "version": PACKAGE_VERSION, "revision": revision},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
 def main() -> int:
     manifest = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
     if manifest.get("flags") != ["root"]:
         raise SystemExit("Refusing to package a manifest without the root delivery flag")
     files = included_files()
+    build_info = build_info_bytes(source_revision())
     missing = [str(path.relative_to(ROOT)) for path in files if not path.is_file()]
     if missing:
         raise SystemExit("Missing package inputs: " + ", ".join(missing))
@@ -59,6 +103,10 @@ def main() -> int:
             info.date_time = (2026, 1, 1, 0, 0, 0)
             info.external_attr = archive_mode(path) << 16
             archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED)
+        info = zipfile.ZipInfo(f"{PLUGIN_DIRECTORY}/{BUILD_INFO_FILENAME}")
+        info.date_time = (2026, 1, 1, 0, 0, 0)
+        info.external_attr = 0o100644 << 16
+        archive.writestr(info, build_info, compress_type=zipfile.ZIP_DEFLATED)
     with zipfile.ZipFile(OUTPUT) as archive:
         names = archive.namelist()
         top_levels = {name.split("/", 1)[0] for name in names}
@@ -66,6 +114,8 @@ def main() -> int:
             raise SystemExit("Decky archive must contain one top-level plugin directory")
         if f"{PLUGIN_DIRECTORY}/plugin.json" not in names:
             raise SystemExit("Decky archive is missing its nested plugin.json")
+        if archive.read(f"{PLUGIN_DIRECTORY}/{BUILD_INFO_FILENAME}") != build_info:
+            raise SystemExit("Decky archive build metadata did not round-trip")
         wrapper = archive.getinfo(f"{PLUGIN_DIRECTORY}/bin/gamescope")
         if (wrapper.external_attr >> 16) & 0o777 != 0o755:
             raise SystemExit("Gamescope shim must be executable in the archive")

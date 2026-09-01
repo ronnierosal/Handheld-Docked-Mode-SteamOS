@@ -815,6 +815,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         <DiagnosticRow name="Connection" value={progress.label} />
         <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
         <DiagnosticRow name="System health" value={healthStatusLabel(payload?.health, loading)} />
+        <DiagnosticRow
+          name="HDM build"
+          value={payload?.diagnostics.build
+            ? `${payload.diagnostics.build.version} · ${payload.diagnostics.build.revision}`
+            : "Unavailable"}
+        />
         <DiagnosticRow name="Game" value={label(snapshot?.game_state ?? "unknown")} />
         <DiagnosticRow name="Render GPU" value={renderer ? label(renderer.role) : "Unknown"} />
         <DiagnosticRow name="Active display" value={display ? label(display.kind) : "Unknown"} />

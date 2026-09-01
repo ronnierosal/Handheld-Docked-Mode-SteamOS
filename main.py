@@ -116,6 +116,7 @@ from hdm.delivery.game_evidence_support import (  # noqa: E402
 from hdm.delivery.diagnostic_logging import (  # noqa: E402
     diagnostic_logging_status_to_payload,
 )
+from hdm.delivery.build_info import load_public_build_info  # noqa: E402
 from hdm.delivery.action_history import action_history_to_payload  # noqa: E402
 from hdm.delivery.attach_readiness import attach_readiness_to_payload  # noqa: E402
 from hdm.delivery.docked_igpu_lifecycle import lifecycle_status_to_payload  # noqa: E402
@@ -160,11 +161,13 @@ class Plugin:
         self._process_receipts = GracefulReleaseReceiptStore()
         self._process_release: GuardedProcessReleaseService | None = None
         self._version_info = SteamOsVersionDiscovery().scan()
+        self._build_info = load_public_build_info(PLUGIN_ROOT)
 
     async def get_snapshot(self) -> dict[str, object]:
         """Return the existing privacy-safe, read-only diagnostics payload."""
         report = await asyncio.to_thread(self._api.get_snapshot_report)
         payload = report_to_public_dict(report)
+        payload["diagnostics"]["build"] = self._build_info
         attach_status = await asyncio.to_thread(
             self._record_topology_observation, report.snapshot
         )

@@ -282,6 +282,7 @@ class MainProcessDeliveryTests(unittest.TestCase):
             ["topology.egpu_attached"],
         )
         self.assertEqual(delivered["attach_readiness"]["stage"], "ready_idle")
+        self.assertEqual(delivered["diagnostics"]["build"], plugin._build_info)
 
     def test_preview_and_approval_use_enum_and_opaque_receipt_only(self):
         plugin, service = self.plugin()

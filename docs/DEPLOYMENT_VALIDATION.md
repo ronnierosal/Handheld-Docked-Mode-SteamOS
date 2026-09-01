@@ -95,8 +95,10 @@ Run this only after D2 passes, with the G1 still disconnected and the player
 watching the internal display. It validates the installed panel's game-aware
 observation behavior; it is not an eGPU, sleep, or performance certification.
 
-1. Record the installed package commit and SHA-256, then start one ordinary
-   Steam game on the internal display.
+1. Record the installed package commit and SHA-256, then confirm the Quick
+   Access **HDM build** row shows the expected short revision before starting
+   one ordinary Steam game on the internal display. `uncommitted` or
+   `unavailable` is not sufficient provenance for this stage.
 2. Open Quick Access → Handheld Dock Mode. Confirm the panel is controller
    usable and reports a running game without changing the display, audio,
    controller assignment, or game session.

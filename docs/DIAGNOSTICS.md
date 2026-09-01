@@ -80,6 +80,12 @@ into rapid polling. While a game is running it refreshes the essential snapshot
 at most every five seconds; unknown game state uses the normal three-second
 stable cadence. The player can still request an immediate read-only refresh.
 
+Every packaged Decky archive includes static build metadata. The observed-state
+view shows the HDM version and the first twelve characters of the source commit
+only when the archive was built from a clean committed checkout. It shows
+`uncommitted` or `unavailable` instead of guessing. This is provenance for the
+installed package, not hardware-validation or certification evidence.
+
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
 health blockers. It does not add a collection loop, infer a workflow, change

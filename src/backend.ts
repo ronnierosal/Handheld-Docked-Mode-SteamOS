@@ -147,6 +147,11 @@ export interface SnapshotPayload {
       duration_ms: number;
     }>;
     hardware_profiles: HardwareProfileDiagnostics;
+    build?: {
+      schema_version: number;
+      version: string;
+      revision: string;
+    };
   };
 }
 

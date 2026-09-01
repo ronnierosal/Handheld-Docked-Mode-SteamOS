@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 from scripts.build_plugin import (  # noqa: E402
+    BUILD_INFO_FILENAME,
     OUTPUT,
     PLUGIN_DIRECTORY,
     archive_mode,
@@ -167,6 +168,9 @@ class DeckyContractTests(unittest.TestCase):
                 top_levels = {name.split("/", 1)[0] for name in archive.namelist()}
                 self.assertEqual(top_levels, {PLUGIN_DIRECTORY})
                 self.assertIn(f"{PLUGIN_DIRECTORY}/plugin.json", archive.namelist())
+                self.assertIn(
+                    f"{PLUGIN_DIRECTORY}/{BUILD_INFO_FILENAME}", archive.namelist()
+                )
 
     def test_gamescope_shim_is_packaged_as_executable(self):
         wrapper = ROOT / "bin" / "gamescope"
