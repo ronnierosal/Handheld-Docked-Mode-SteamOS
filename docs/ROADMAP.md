@@ -404,11 +404,14 @@ they are not authorization for a separate optimizer or launcher.
   budget and has no collector, scheduler, Auto TDP, or mutation authority.
   A real collector remains deferred until cost and game-impact measurement are
   recorded for a supported profile.
-- **Implemented (pure shortcut policy):** the default verified held **Guide +
+- **Implemented (policy + dormant relay):** the default verified held **Guide +
   Y** chord maps to the existing controller Safe Undock logical request, which
-  remains routed through the ordinary `UNDOCK` transition vocabulary. Add a
-  controller-driven delivery adapter only after it can debounce input and call
-  the canonical request facade without parallel execution logic.
+  remains routed through the ordinary `UNDOCK` transition vocabulary. Its
+  bounded relay consumes each opaque verified event once and invokes only an
+  injected logical-action sink; it has no listener, Decky RPC, canonical-facade
+  construction, or transition authority. A platform adapter must still verify
+  and debounce physical input before connecting that sink to the canonical
+  request facade.
 - **Implemented (pure contract):** mode-profile data keeps display preference
   (including HDR/VRR) separate from game render targets and player experience
   goals. It resolves only exact stable observed modes and has no display,

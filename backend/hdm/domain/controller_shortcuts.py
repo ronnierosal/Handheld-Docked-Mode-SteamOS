@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -14,6 +15,7 @@ class ControllerButton(StrEnum):
 
 
 DEFAULT_SAFE_UNDOCK_HOLD_MS = 1_200
+EVENT_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{8,96}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,9 +48,15 @@ class ControllerInputEvidence:
     held_ms: int
     occurred_at: str
     expected_generation: str
+    event_id: str
 
     def __post_init__(self) -> None:
-        if self.held_ms < 0 or not self.occurred_at or not self.expected_generation:
+        if (
+            self.held_ms < 0
+            or not self.occurred_at
+            or not self.expected_generation
+            or not EVENT_ID_RE.fullmatch(self.event_id)
+        ):
             raise ValueError("controller shortcut evidence is invalid")
 
 

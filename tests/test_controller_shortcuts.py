@@ -32,6 +32,7 @@ def evidence(
         held_ms,
         "2026-08-31T12:00:00Z",
         "generation-1",
+        "controller-event-0001",
     )
 
 
@@ -58,7 +59,7 @@ class ControllerShortcutTests(unittest.TestCase):
 
     def test_invalid_evidence_and_ambiguous_policy_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "evidence"):
-            ControllerInputEvidence(True, frozenset(), -1, "", "")
+            ControllerInputEvidence(True, frozenset(), -1, "", "", "")
 
 
 if __name__ == "__main__":

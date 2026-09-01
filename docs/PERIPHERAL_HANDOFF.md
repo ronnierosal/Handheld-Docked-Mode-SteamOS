@@ -42,9 +42,13 @@ explicitly unavailable rather than being misrouted into an undock request.
 The pure shortcut policy now defines the default Safe Undock chord as holding
 **Guide + Y** for 1.2 seconds. It accepts only delivery-provided verified input
 evidence and an exact chord, then emits the same logical action routed above.
-It has no input listener, device binding, debounce state, Decky RPC, or detach
-authority. A future delivery adapter must debounce physical events and call the
-canonical request facade; this policy cannot create a parallel undock path.
+It has no input listener, device binding, Decky RPC, or detach authority. The
+implemented dormant delivery relay accepts only an already verified opaque event
+ID, remembers a bounded set of matched events, and calls one injected logical-
+action sink at most once. It cannot listen for input, bind a controller, create
+a transition, or retry an uncertain dispatch. A future platform adapter must
+still verify/debounce physical events and bind that sink to the canonical request
+facade; this relay cannot create a parallel Safe Undock path.
 
 The optional troubleshooting overlay can request a separate identity-free
 status payload. It displays only mapped/unmapped state and categorical evidence
