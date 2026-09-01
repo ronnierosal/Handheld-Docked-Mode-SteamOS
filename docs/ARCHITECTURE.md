@@ -135,6 +135,12 @@ invalidated, or a five-second fresh idle evidence result; it owns no timer,
 scheduler, state persistence, permit, or mechanism. See
 [Prepared docked idle eligibility](PREPARED_DOCKED_IDLE.md).
 
+Safe Undock readiness is also a pure, opaque-bound current-evidence contract.
+It distinguishes insufficient, not-ready, invalidated, and ready-for-revalidation
+states across client scan, topology, game, Portable fallback, and external
+display facts. The positive state is never a physical-unplug claim and has no
+action authority. See [Safe Undock readiness](SAFE_UNDOCK_READINESS.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the

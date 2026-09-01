@@ -128,6 +128,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   Activity, uncertainty, stale/inconsistent facts, binding/generation changes,
   or reused samples never mature. The contract has no timer, scheduler,
   persistence, action, permit, RPC, or Safe Undock authority.
+- **Stage 1.5 checkpoint (pure read-only readiness):** exact attachment/topology,
+  complete clear-client scan, Idle game, verified Portable display/render/audio/
+  built-in-controller fallback, and inactive external display must share one
+  fresh opaque observation before HDM can say only `ready_for_revalidation`.
+  Protected/incomplete scans, activity, fallback gaps, contradictions, stale
+  evidence, and binding changes fail closed. This never claims physical unplug
+  safety and has no process/helper/device action or transition authority.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
