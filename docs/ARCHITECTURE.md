@@ -84,6 +84,14 @@ Degraded. The normal snapshot path remains unchanged until a future owner
 supplies that separate observation, so sysfs inventory alone cannot improve
 health or authorize handoff.
 
+Runtime host/eGPU resolution is catalog-driven. Each explicit entry contains
+only a profile ID, conservative capability metadata, and—in the eGPU case—a
+strict stable-ID matcher. The registry never recognizes hardware by a fuzzy
+name or profile similarity; absent or ambiguous catalog matches retain Unknown
+capabilities. The initial catalog still contains only the certified Ally X and
+GPD G1 definitions, but adding a future profile no longer requires branching
+the central resolver.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,

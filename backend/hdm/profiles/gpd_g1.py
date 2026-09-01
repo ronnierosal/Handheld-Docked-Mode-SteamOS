@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 
 from ..adapters.steamos.drm import DrmCardRecord
 from ..adapters.steamos.pci import PciDeviceRecord, Usb4DeviceRecord
@@ -15,6 +16,7 @@ from ..domain.control_plane import (
 
 
 PROFILE_ID = "gpd-g1-rx7600mxt-titan-ridge"
+STABLE_ID_PATTERN = re.compile(r"gpd-g1:[0-9a-f]{16}")
 GPU_ID = ("0x1002", "0x7480")
 ROOT_ID = ("0x8086", "0x15ef")
 AUDIO_ID = ("0x1002", "0xab30")

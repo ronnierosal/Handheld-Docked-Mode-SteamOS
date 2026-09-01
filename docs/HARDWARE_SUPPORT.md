@@ -59,6 +59,13 @@ from the validated Ally X: `ASUSTeK COMPUTER INC.` / `ROG Ally X RC72LA` /
 Unknown. A firmware update that changes this tuple requires review and new
 read-only evidence before the profile matcher is expanded.
 
+Runtime resolution uses an explicit profile catalog. A catalog entry pairs one
+profile ID with its conservative capability record; eGPU entries also require a
+strict opaque stable-ID matcher. No fuzzy product-name fallback exists, and
+ambiguous or absent catalog matches retain Unknown capability values. The
+catalog currently contains only the Ally X and GPD G1 profiles described here;
+adding an entry is not a certification claim and needs its own evidence.
+
 The complete topology and privacy-preserving USB4 identity must be verified; the
 GPU PCI ID alone does not prove that the device is the certified G1. The live G1
 topology contains one top-level removable Titan Ridge bridge and multiple

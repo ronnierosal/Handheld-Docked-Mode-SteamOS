@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 
@@ -13,10 +15,15 @@ from hdm.domain.control_plane import CapabilitySupport, PlacementState  # noqa: 
 from hdm.domain.manual_transition import evidence_from_snapshot  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.profiles.registry import (  # noqa: E402
+    EgpuProfileDefinition,
+    HostProfileDefinition,
     ProfileResolutionStatus,
+    RuntimeProfileCatalog,
     resolve_runtime_profiles,
     runtime_profile_diagnostics_to_dict,
 )
+from hdm.profiles.ally_x import CAPABILITIES as ALLY_X_CAPABILITIES  # noqa: E402
+from hdm.profiles.gpd_g1 import CAPABILITIES as GPD_G1_CAPABILITIES  # noqa: E402
 
 
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -157,6 +164,70 @@ class RuntimeProfileTests(unittest.TestCase):
         )
         self.assertFalse(evidence.source_recovery_ready_verified)
         self.assertIsNone(evidence.binding())
+
+    def test_explicit_catalog_allows_new_profiles_without_registry_conditionals(self):
+        host = replace(ALLY_X_CAPABILITIES, profile_id="test-handheld")
+        egpu = replace(GPD_G1_CAPABILITIES, profile_id="test-egpu")
+        catalog = RuntimeProfileCatalog(
+            hosts=(HostProfileDefinition("test-handheld", host),),
+            egpus=(
+                EgpuProfileDefinition(
+                    "test-egpu", re.compile(r"test-egpu:[0-9a-f]{16}"), egpu
+                ),
+            ),
+        )
+        current = observed("connected-internal.json")
+        external = tuple(
+            replace(gpu, stable_id="test-egpu:0123456789abcdef")
+            if gpu.role.value == "external"
+            else gpu
+            for gpu in current.gpus
+        )
+        snapshot = replace(
+            current,
+            host_profile="test-handheld",
+            gpus=external,
+            disconnect_readiness=replace(
+                current.disconnect_readiness,
+                egpu_stable_id="test-egpu:0123456789abcdef",
+            ),
+        )
+        resolved = resolve_runtime_profiles(snapshot, catalog)
+        self.assertTrue(resolved.exact_host)
+        self.assertTrue(resolved.exact_egpu)
+        self.assertEqual(resolved.capabilities.host_profile_id, "test-handheld")
+        self.assertEqual(resolved.capabilities.egpu_profile_id, "test-egpu")
+
+    def test_ambiguous_catalog_match_fails_closed(self):
+        host = replace(ALLY_X_CAPABILITIES, profile_id="test-handheld")
+        first = replace(GPD_G1_CAPABILITIES, profile_id="test-egpu-one")
+        second = replace(GPD_G1_CAPABILITIES, profile_id="test-egpu-two")
+        catalog = RuntimeProfileCatalog(
+            hosts=(HostProfileDefinition("test-handheld", host),),
+            egpus=(
+                EgpuProfileDefinition("test-egpu-one", re.compile(r"test:[0-9a-f]{16}"), first),
+                EgpuProfileDefinition("test-egpu-two", re.compile(r"test:[0-9a-f]{16}"), second),
+            ),
+        )
+        current = observed("connected-internal.json")
+        external = tuple(
+            replace(gpu, stable_id="test:0123456789abcdef")
+            if gpu.role.value == "external"
+            else gpu
+            for gpu in current.gpus
+        )
+        snapshot = replace(
+            current,
+            host_profile="test-handheld",
+            gpus=external,
+            disconnect_readiness=replace(
+                current.disconnect_readiness, egpu_stable_id="test:0123456789abcdef"
+            ),
+        )
+        resolved = resolve_runtime_profiles(snapshot, catalog)
+        self.assertTrue(resolved.exact_host)
+        self.assertFalse(resolved.exact_egpu)
+        self.assertEqual(resolved.capabilities.display_handoff, CapabilitySupport.UNKNOWN)
 
 
 if __name__ == "__main__":

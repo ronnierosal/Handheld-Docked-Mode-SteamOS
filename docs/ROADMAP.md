@@ -363,6 +363,10 @@ Exit: privacy/security tests pass; no client credentials or silent upload.
 
 ### R9 — Broader hardware support
 
+- **Implemented (catalog boundary):** runtime resolution accepts explicit
+  host/eGPU profile definitions rather than central model-specific conditionals.
+  Absent or ambiguous catalog matches remain Unknown. The catalog contains only
+  the existing Ally X/G1 entries, and new definitions are not certification.
 - Add profiles one combination at a time.
 - Make non-eGPU display, controller, and audio features independently useful.
 - Never promote unknown hardware through similarity alone.

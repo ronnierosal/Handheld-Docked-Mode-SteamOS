@@ -8,7 +8,9 @@ from enum import StrEnum
 
 from ..domain.control_plane import (
     CapabilitySupport,
+    EgpuCapabilities,
     EffectiveCapabilities,
+    HostCapabilities,
     UNKNOWN_EGPU_CAPABILITIES,
     UNKNOWN_HOST_CAPABILITIES,
     compose_capabilities,
@@ -17,9 +19,8 @@ from ..domain.models import Confidence, GpuRole, ObservedSnapshot, SupportTier
 from .ally_x import CAPABILITIES as ALLY_X_CAPABILITIES
 from .ally_x import PROFILE_ID as ALLY_X_PROFILE_ID
 from .gpd_g1 import CAPABILITIES as GPD_G1_CAPABILITIES
-
-
-_GPD_G1_STABLE_ID = re.compile(r"gpd-g1:[0-9a-f]{16}")
+from .gpd_g1 import PROFILE_ID as GPD_G1_PROFILE_ID
+from .gpd_g1 import STABLE_ID_PATTERN
 
 
 class ProfileResolutionStatus(StrEnum):
@@ -52,6 +53,70 @@ class CapabilityEvidenceBasis(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class HostProfileDefinition:
+    """A profile already established by independent host discovery."""
+
+    profile_id: str
+    capabilities: HostCapabilities
+
+    def __post_init__(self) -> None:
+        if not self.profile_id:
+            raise ValueError("host profile definition is incomplete")
+        if self.capabilities.profile_id != self.profile_id:
+            raise ValueError("host profile capability identity does not match")
+
+
+@dataclass(frozen=True, slots=True)
+class EgpuProfileDefinition:
+    """A stable-ID matcher plus capability metadata for one explicit eGPU."""
+
+    profile_id: str
+    stable_id_pattern: re.Pattern[str]
+    capabilities: EgpuCapabilities
+
+    def __post_init__(self) -> None:
+        if not self.profile_id:
+            raise ValueError("eGPU profile definition is incomplete")
+        if self.capabilities.profile_id != self.profile_id:
+            raise ValueError("eGPU profile capability identity does not match")
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeProfileCatalog:
+    """Explicit hardware entries only; unknown profiles never inherit a match."""
+
+    hosts: tuple[HostProfileDefinition, ...]
+    egpus: tuple[EgpuProfileDefinition, ...]
+
+    def __post_init__(self) -> None:
+        host_ids = tuple(item.profile_id for item in self.hosts)
+        egpu_ids = tuple(item.profile_id for item in self.egpus)
+        if len(host_ids) != len(set(host_ids)) or len(egpu_ids) != len(set(egpu_ids)):
+            raise ValueError("runtime profile IDs must be unique")
+
+    def host(self, profile_id: str) -> HostProfileDefinition | None:
+        return next((item for item in self.hosts if item.profile_id == profile_id), None)
+
+    def egpu(self, stable_id: str) -> EgpuProfileDefinition | None:
+        matches = tuple(
+            item for item in self.egpus if item.stable_id_pattern.fullmatch(stable_id)
+        )
+        return matches[0] if len(matches) == 1 else None
+
+
+DEFAULT_RUNTIME_PROFILE_CATALOG = RuntimeProfileCatalog(
+    hosts=(HostProfileDefinition(ALLY_X_PROFILE_ID, ALLY_X_CAPABILITIES),),
+    egpus=(
+        EgpuProfileDefinition(
+            GPD_G1_PROFILE_ID,
+            STABLE_ID_PATTERN,
+            GPD_G1_CAPABILITIES,
+        ),
+    ),
+)
+
+
+@dataclass(frozen=True, slots=True)
 class CapabilityDiagnostic:
     axis: CapabilityAxis
     value: str
@@ -76,6 +141,7 @@ class ResolvedRuntimeProfiles:
     host_status: ProfileResolutionStatus
     egpu_status: ProfileResolutionStatus
     egpu_stable_id: str = ""
+    egpu_profile_capabilities: EgpuCapabilities = UNKNOWN_EGPU_CAPABILITIES
 
     def diagnostics(self) -> RuntimeProfileDiagnostics:
         host_basis = (
@@ -93,7 +159,7 @@ class ResolvedRuntimeProfiles:
             if self.exact_host and self.exact_egpu
             else CapabilityEvidenceBasis.INCOMPLETE_PROFILE_SET
         )
-        egpu = GPD_G1_CAPABILITIES if self.exact_egpu else UNKNOWN_EGPU_CAPABILITIES
+        egpu = self.egpu_profile_capabilities
         effective = self.capabilities
         return RuntimeProfileDiagnostics(
             host_status=self.host_status,
@@ -225,24 +291,29 @@ def _egpu_status(snapshot: ObservedSnapshot, *, exact: bool) -> ProfileResolutio
     )
 
 
-def resolve_runtime_profiles(snapshot: ObservedSnapshot) -> ResolvedRuntimeProfiles:
+def resolve_runtime_profiles(
+    snapshot: ObservedSnapshot,
+    catalog: RuntimeProfileCatalog = DEFAULT_RUNTIME_PROFILE_CATALOG,
+) -> ResolvedRuntimeProfiles:
+    host_definition = catalog.host(snapshot.host_profile)
     exact_host = (
-        snapshot.host_profile == ALLY_X_PROFILE_ID
+        host_definition is not None
         and not any(
             blocker.code == "host_profile_unknown" for blocker in snapshot.blockers
         )
     )
-    host = ALLY_X_CAPABILITIES if exact_host else UNKNOWN_HOST_CAPABILITIES
+    host = host_definition.capabilities if exact_host else UNKNOWN_HOST_CAPABILITIES
     external = tuple(
         gpu
         for gpu in snapshot.gpus
         if gpu.role is GpuRole.EXTERNAL
         and gpu.present
         and gpu.confidence is Confidence.VERIFIED
-        and _GPD_G1_STABLE_ID.fullmatch(gpu.stable_id)
     )
+    egpu_definition = catalog.egpu(external[0].stable_id) if len(external) == 1 else None
     exact_egpu = (
         len(external) == 1
+        and egpu_definition is not None
         and snapshot.support_tier is SupportTier.CERTIFIED
         and snapshot.disconnect_readiness.applicable
         and snapshot.disconnect_readiness.egpu_stable_id == external[0].stable_id
@@ -250,7 +321,11 @@ def resolve_runtime_profiles(snapshot: ObservedSnapshot) -> ResolvedRuntimeProfi
             blocker.code == "egpu_identity_unverified" for blocker in snapshot.blockers
         )
     )
-    egpu = GPD_G1_CAPABILITIES if exact_egpu else UNKNOWN_EGPU_CAPABILITIES
+    egpu = (
+        egpu_definition.capabilities
+        if exact_egpu and egpu_definition is not None
+        else UNKNOWN_EGPU_CAPABILITIES
+    )
     return ResolvedRuntimeProfiles(
         capabilities=compose_capabilities(host, egpu),
         exact_host=exact_host,
@@ -262,6 +337,7 @@ def resolve_runtime_profiles(snapshot: ObservedSnapshot) -> ResolvedRuntimeProfi
         ),
         egpu_status=_egpu_status(snapshot, exact=exact_egpu),
         egpu_stable_id=external[0].stable_id if exact_egpu else "",
+        egpu_profile_capabilities=egpu,
     )
 
 
