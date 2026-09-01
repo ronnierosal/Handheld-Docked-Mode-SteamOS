@@ -350,6 +350,7 @@ async function collectOptionalDiagnostics(visible, sources) {
 const DISCOVERY_REFRESH_MS = 1_000;
 const SETTLING_REFRESH_MS = 750;
 const STABLE_REFRESH_MS = 3_000;
+const ACTIVE_GAME_REFRESH_MS = 5_000;
 function firstHardwareBlocker(payload) {
     const blocker = payload.snapshot.blockers.find((item) => (item.code === "egpu_identity_unverified"
         || item.code === "drm_inventory_unavailable"
@@ -421,6 +422,12 @@ function refreshDelayForSnapshot(payload) {
         return SETTLING_REFRESH_MS;
     }
     const { snapshot } = payload;
+    if (snapshot.game_state === "running") {
+        return ACTIVE_GAME_REFRESH_MS;
+    }
+    if (snapshot.game_state === "unknown") {
+        return STABLE_REFRESH_MS;
+    }
     const progress = connectionProgress(payload);
     if (progress.settling
         || !snapshot.disconnect_readiness.scan_complete

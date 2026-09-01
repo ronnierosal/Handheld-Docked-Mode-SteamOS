@@ -75,6 +75,11 @@ readiness stays explicitly incomplete and unsafe in that interval; it never
 uses the deferred scan to imply that removal is safe. The scan resumes only
 after an exact idle observation.
 
+The Quick Access panel does not convert that intentional incomplete readiness
+into rapid polling. While a game is running it refreshes the essential snapshot
+at most every five seconds; unknown game state uses the normal three-second
+stable cadence. The player can still request an immediate read-only refresh.
+
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
 health blockers. It does not add a collection loop, infer a workflow, change

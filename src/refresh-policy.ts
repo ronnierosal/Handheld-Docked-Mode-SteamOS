@@ -1,6 +1,7 @@
 export const DISCOVERY_REFRESH_MS = 1_000;
 export const SETTLING_REFRESH_MS = 750;
 export const STABLE_REFRESH_MS = 3_000;
+export const ACTIVE_GAME_REFRESH_MS = 5_000;
 
 export interface RefreshPolicyPayload {
   snapshot: {
@@ -118,6 +119,12 @@ export function refreshDelayForSnapshot(
     return SETTLING_REFRESH_MS;
   }
   const { snapshot } = payload;
+  if (snapshot.game_state === "running") {
+    return ACTIVE_GAME_REFRESH_MS;
+  }
+  if (snapshot.game_state === "unknown") {
+    return STABLE_REFRESH_MS;
+  }
   const progress = connectionProgress(payload);
   if (
     progress.settling

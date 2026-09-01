@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   connectionProgress,
+  ACTIVE_GAME_REFRESH_MS,
   DISCOVERY_REFRESH_MS,
   refreshDelayForSnapshot,
   SETTLING_REFRESH_MS,
@@ -19,11 +20,12 @@ function payload({
   scanComplete = true,
   mode = "portable",
   blockers = [],
+  gameState = "idle",
 } = {}) {
   return {
     snapshot: {
       support_tier: support,
-      game_state: "idle",
+      game_state: gameState,
       displays,
       disconnect_readiness: { scan_complete: scanComplete },
       sleep_guard: { required, active, confidence },
@@ -88,7 +90,26 @@ test("verified G1 and TV states expose progressive labels", () => {
   assert.equal(refreshDelayForSnapshot(inconsistent), SETTLING_REFRESH_MS);
 });
 
-test("unknown guard and incomplete client scans stay fast and fail closed", () => {
+test("unknown guard and incomplete client scans stay fast and fail closed while idle", () => {
   assert.equal(refreshDelayForSnapshot(payload({ confidence: "unknown" })), SETTLING_REFRESH_MS);
   assert.equal(refreshDelayForSnapshot(payload({ scanComplete: false })), SETTLING_REFRESH_MS);
+});
+
+test("running or unknown game evidence never turns deferred diagnostics into rapid polling", () => {
+  assert.equal(
+    refreshDelayForSnapshot(payload({
+      required: true,
+      scanComplete: false,
+      gameState: "running",
+    })),
+    ACTIVE_GAME_REFRESH_MS,
+  );
+  assert.equal(
+    refreshDelayForSnapshot(payload({
+      required: true,
+      scanComplete: false,
+      gameState: "unknown",
+    })),
+    STABLE_REFRESH_MS,
+  );
 });

@@ -116,7 +116,8 @@ Implemented read-only slice:
 
 - Privacy-safe per-stage and total snapshot timings.
 - Non-overlapping adaptive refresh: 1 s while discovering or ready, 750 ms while
-  evidence settles, and 3 s only in verified TV Docked state.
+  idle evidence settles, 3 s for unknown game state or verified TV Docked state,
+  and 5 s while a game is running. Explicit player refresh remains immediate.
 - Progressive **Waiting for G1**, **G1 detected**, **TV initializing**, **Ready
   to dock**, **TV Docked**, and exact verification-blocked UI states.
 - Five live end-to-end snapshot RPC samples on the attached certified profile
