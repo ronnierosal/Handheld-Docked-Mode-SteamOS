@@ -92,6 +92,35 @@ class DeckyContractTests(unittest.TestCase):
             )
         )
 
+    def test_no_argument_rpcs_accept_deckys_request_placeholder(self):
+        tree = ast.parse((ROOT / "main.py").read_text(encoding="utf-8"))
+        plugin = next(
+            node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "Plugin"
+        )
+        no_argument_rpcs = {
+            "get_snapshot",
+            "get_peripheral_status",
+            "get_action_history",
+            "get_diagnostic_logging_status",
+            "disable_diagnostic_logging",
+            "get_docked_igpu_status",
+            "acknowledge_docked_igpu_status",
+            "preview_support_bundle",
+            "preview_presentation_preparation",
+            "approve_presentation_preparation",
+            "get_process_release_status",
+        }
+        methods = {
+            node.name: node
+            for node in plugin.body
+            if isinstance(node, ast.AsyncFunctionDef)
+        }
+        for name in no_argument_rpcs:
+            with self.subTest(name=name):
+                arguments = methods[name].args
+                self.assertEqual([item.arg for item in arguments.args], ["self", "_request"])
+                self.assertEqual(len(arguments.defaults), 1)
+
     def test_frontend_has_preparation_but_no_transition_rpc(self):
         source = (ROOT / "src" / "backend.ts").read_text(encoding="utf-8")
         self.assertIn('callable<[], SnapshotPayload>("get_snapshot")', source)

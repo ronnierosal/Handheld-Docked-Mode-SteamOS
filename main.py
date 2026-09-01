@@ -163,7 +163,7 @@ class Plugin:
         self._version_info = SteamOsVersionDiscovery().scan()
         self._build_info = load_public_build_info(PLUGIN_ROOT)
 
-    async def get_snapshot(self) -> dict[str, object]:
+    async def get_snapshot(self, _request: object = None) -> dict[str, object]:
         """Return the existing privacy-safe, read-only diagnostics payload."""
         report = await asyncio.to_thread(self._api.get_snapshot_report)
         payload = report_to_public_dict(report)
@@ -193,7 +193,7 @@ class Plugin:
         )
         return status
 
-    async def get_peripheral_status(self) -> dict[str, object]:
+    async def get_peripheral_status(self, _request: object = None) -> dict[str, object]:
         """Read identity-free controller/audio evidence without any handoff action."""
         try:
             observed = await asyncio.to_thread(self._peripherals.observe)
@@ -205,7 +205,7 @@ class Plugin:
                 "audio": {"complete": False, "exact": False, "external_available": None, "portable_available": None, "code": "audio.observation_unavailable"},
             }
 
-    async def get_action_history(self) -> dict[str, object]:
+    async def get_action_history(self, _request: object = None) -> dict[str, object]:
         """Return the bounded, identity-free projection of existing HDM events."""
         try:
             return await asyncio.to_thread(
@@ -216,7 +216,7 @@ class Plugin:
         except Exception:
             return {"schema_version": 1, "entries": []}
 
-    async def get_diagnostic_logging_status(self) -> dict[str, object]:
+    async def get_diagnostic_logging_status(self, _request: object = None) -> dict[str, object]:
         """Return bounded, identity-free status for the opt-in verbose session."""
 
         try:
@@ -254,7 +254,7 @@ class Plugin:
                 "diagnostics.verbose_enable_rejected"
             )
 
-    async def disable_diagnostic_logging(self) -> dict[str, object]:
+    async def disable_diagnostic_logging(self, _request: object = None) -> dict[str, object]:
         """Disable verbose collection immediately without deleting normal events."""
 
         try:
@@ -332,7 +332,7 @@ class Plugin:
             encoding="ascii"
         ).strip()
 
-    async def get_docked_igpu_status(self) -> dict[str, object]:
+    async def get_docked_igpu_status(self, _request: object = None) -> dict[str, object]:
         """Return only categorical state from the read-only natural-exit watch."""
 
         scheduler = self._docked_igpu_scheduler
@@ -347,7 +347,7 @@ class Plugin:
             }
         return lifecycle_status_to_payload(scheduler.status())
 
-    async def acknowledge_docked_igpu_status(self) -> dict[str, object]:
+    async def acknowledge_docked_igpu_status(self, _request: object = None) -> dict[str, object]:
         """Acknowledge only a terminal read-only watch; never approve a transition."""
 
         scheduler = self._docked_igpu_scheduler
@@ -363,7 +363,7 @@ class Plugin:
             scheduler.wake()
         return {"schema_version": 1, "acknowledged": acknowledged}
 
-    async def preview_support_bundle(self) -> dict[str, object]:
+    async def preview_support_bundle(self, _request: object = None) -> dict[str, object]:
         """Return a redacted preview and one-time approval token."""
         report = await self.get_snapshot()
         peripheral_status = None
@@ -508,7 +508,7 @@ class Plugin:
             and resolution.context.uid == expected_uid
         )
 
-    async def preview_presentation_preparation(self) -> dict[str, object]:
+    async def preview_presentation_preparation(self, _request: object = None) -> dict[str, object]:
         """Inspect the reversible integration without writing or restarting."""
         try:
             preview = await asyncio.to_thread(
@@ -529,7 +529,7 @@ class Plugin:
                 "confirmation_required": False,
             }
 
-    async def approve_presentation_preparation(self) -> dict[str, object]:
+    async def approve_presentation_preparation(self, _request: object = None) -> dict[str, object]:
         """Issue one exact approval after the controller confirmation action."""
         try:
             preview = await asyncio.to_thread(
@@ -589,7 +589,7 @@ class Plugin:
             "rollback_succeeded": outcome.rollback_succeeded,
         }
 
-    async def get_process_release_status(self) -> dict[str, object]:
+    async def get_process_release_status(self, _request: object = None) -> dict[str, object]:
         """Return only categorical durable release state and acknowledgement ID."""
         try:
             status = await asyncio.to_thread(self._process_service().status)
