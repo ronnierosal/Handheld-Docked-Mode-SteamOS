@@ -1061,12 +1061,19 @@ class Plugin:
             plugin_root=PLUGIN_ROOT,
             user=resolution.context,
         )
-        state_root = RootOwnedRuntimeState().ensure()
+        journal_root = RootOwnedRuntimeState().ensure()
+        presentation_state_root = (
+            resolution.context.home / ".local" / "share" / "handheld-dock-mode"
+        )
         observations = SnapshotTransitionObservationAdapter(self._discovery)
-        journal = FileTransitionJournalStore(state_root)
+        journal = FileTransitionJournalStore(journal_root)
         mechanism = PresentationTransitionMechanism(
             integration=integration,
-            config=PresentationConfigStore(state_root),
+            # The prepared drop-in passes this exact per-user path to the shim.
+            # The transaction journal remains root-only and is intentionally a
+            # different store; placing launch config there makes the shim fall
+            # back safely to the internal panel after a restart.
+            config=PresentationConfigStore(presentation_state_root),
             commands=UserServiceCommandRunner(),
             resolve_user=lambda: resolve_gamescope_user(GamescopeDiscovery().scan()),
             read_boot_id=self._boot_session_id,

@@ -74,6 +74,8 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("PresentationTransitionMechanism", source)
         self.assertIn("SupervisedPresentationTransitionService", source)
         self.assertIn("TransitionOrchestrator", source)
+        self.assertIn("config=PresentationConfigStore(presentation_state_root)", source)
+        self.assertNotIn("config=PresentationConfigStore(journal_root)", source)
         promotion_source = (
             ROOT / "backend" / "hdm" / "application" / "docked_igpu_promotion.py"
         ).read_text(encoding="utf-8")
