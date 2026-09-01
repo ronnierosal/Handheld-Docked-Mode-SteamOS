@@ -194,6 +194,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   connected”; observed state is not a cable-quality, performance, recovery, or
   removal conclusion. No watcher, poller, notification path, or hardware action
   was added.
+- **Controller shortcut presentation checkpoint (pure local contract):** the
+  future Guide + Y hold policy can be presented only as delivery/input status or
+  later request revalidation. It omits event/generation/device identity and
+  never claims HDM listened to, owns, disables, or remaps a controller. A match
+  is not an undock or Safe Undock result, and this adds no listener, relay
+  invocation, RPC, transition, or hardware action. Input delivery and
+  supervised validation remain required.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

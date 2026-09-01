@@ -78,6 +78,11 @@ opaque-bound observed Up/Down link facts. It exposes only categorical state
 change/stability evidence and has no quality, performance, recovery, removal,
 or action authority. See [Link-instability evidence](LINK_INSTABILITY.md).
 
+Controller Safe Undock presentation separately maps the existing pure Guide +
+Y hold policy into non-authorizing delivery/input/revalidation states. It has no
+listener, relay invocation, controller ownership, transition, or device-action
+authority. See [Controller Safe Undock presentation](CONTROLLER_SHORTCUT_PRESENTATION.md).
+
 Future game configuration is bounded by a pure Game Adapter change contract.
 Only a reviewed adapter can begin a typed, allowlisted setting change. The
 future mechanism must compare the expected opaque revision, create an exact

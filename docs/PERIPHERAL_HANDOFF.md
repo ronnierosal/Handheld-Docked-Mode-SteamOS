@@ -50,6 +50,12 @@ a transition, or retry an uncertain dispatch. A future platform adapter must
 still verify/debounce physical events and bind that sink to the canonical request
 facade; this relay cannot create a parallel Safe Undock path.
 
+The separate presentation contract exposes only categorical readiness for that
+future chord: delivery-not-connected, awaiting verified input, input mismatch,
+or later request revalidation. It intentionally omits opaque event identity and
+does not imply that HDM owns, listens to, disables, or remaps a controller. See
+[Controller Safe Undock presentation](CONTROLLER_SHORTCUT_PRESENTATION.md).
+
 The optional troubleshooting overlay can request a separate identity-free
 status payload. It displays only mapped/unmapped state and categorical evidence
 codes; it never receives private bindings, inventory paths, device names, or
