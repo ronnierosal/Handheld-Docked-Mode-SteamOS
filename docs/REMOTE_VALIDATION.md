@@ -46,8 +46,10 @@ Existing files are never overwritten. The report includes:
 - collector source SHA-256 and no-write declaration
 - hashed boot identity and bounded uptime
 - categorical Steam/Gamescope/Decky process health counts without PIDs
-- installed HDM version plus hashes of its fixed package manifest and critical
-  plugin files
+- installed HDM version, static archive build label, and hashes of its fixed
+  package manifest and critical plugin files. The label is only a short source
+  revision from a clean archive; `uncommitted` or `unavailable` remains
+  inconclusive.
 - redacted HDM profile, GPU/display, game, blocker, and disconnect observations
 - categorical G1 PCI wake-capability/runtime aggregates when the exact profile
   can be resolved (no PCI identity is returned)

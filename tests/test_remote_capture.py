@@ -274,6 +274,15 @@ class RemoteCaptureTests(unittest.TestCase):
         self.assertIn('Path("package.json")', source)
         self.assertIn('Path("plugin.json")', source)
 
+    def test_payload_reads_only_the_static_archive_build_label(self):
+        source = (ROOT / "scripts" / "remote_capture_payload.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('BUILD_INFO_FILENAME = "build_info.json"', source)
+        self.assertIn('"build": _build_info()', source)
+        self.assertNotIn("subprocess", source)
+        self.assertNotIn(".git", source)
+
     def test_payload_reports_privilege_without_identity(self):
         source = (ROOT / "scripts" / "remote_capture_payload.py").read_text(
             encoding="utf-8"

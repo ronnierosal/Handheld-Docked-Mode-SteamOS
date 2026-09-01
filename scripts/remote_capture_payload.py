@@ -18,6 +18,8 @@ from typing import Any, Callable
 
 SCHEMA_VERSION = 1
 PLUGIN_ROOT = Path("/home/deck/homebrew/plugins/HandheldDockMode")
+BUILD_INFO_FILENAME = "build_info.json"
+REVISION_RE = frozenset("0123456789abcdef")
 CRITICAL_FILES = (
     Path("plugin.json"),
     Path("package.json"),
@@ -50,6 +52,32 @@ def _plugin_version() -> str:
         return "unknown"
     version = value.get("version", "unknown") if isinstance(value, dict) else "unknown"
     return str(version)[:32]
+
+
+def _build_info() -> dict[str, object]:
+    """Read only the archive-local public provenance label, never a Git checkout."""
+    fallback = {"schema_version": 1, "version": _plugin_version(), "revision": "unavailable"}
+    try:
+        value = json.loads((PLUGIN_ROOT / BUILD_INFO_FILENAME).read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return fallback
+    if not isinstance(value, dict) or value.get("schema_version") != 1:
+        return fallback
+    version = value.get("version")
+    revision = value.get("revision")
+    if not isinstance(version, str) or not version or len(version) > 32:
+        return fallback
+    if revision in {"uncommitted", "unavailable"}:
+        public_revision = revision
+    elif (
+        isinstance(revision, str)
+        and len(revision) == 40
+        and set(revision) <= REVISION_RE
+    ):
+        public_revision = revision[:12]
+    else:
+        return fallback
+    return {"schema_version": 1, "version": version, "revision": public_revision}
 
 
 def _critical_hashes() -> dict[str, str]:
@@ -192,6 +220,7 @@ def collect() -> dict[str, Any]:
         "plugin": {
             "present": PLUGIN_ROOT.is_dir(),
             "version": _plugin_version(),
+            "build": _build_info(),
             "critical_file_sha256": _critical_hashes(),
         },
         "diagnostics": _safe_value("diagnostics", _diagnostics, errors),

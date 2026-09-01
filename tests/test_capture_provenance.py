@@ -51,6 +51,37 @@ class CaptureProvenanceTests(unittest.TestCase):
         self.assertEqual(result["reason"], "provenance.fixed_files_mismatch")
         self.assertEqual(result["mismatched_file_count"], 1)
 
+    def test_build_revision_is_compared_only_when_capture_includes_it(self):
+        capture = self._capture()
+        capture["plugin"] = dict(
+            capture["plugin"],
+            build={"schema_version": 1, "version": "0.2.0", "revision": "a" * 12},
+        )
+        self.assertEqual(
+            compare_capture_provenance(capture, checkout_revision="a" * 40),
+            {"state": "match", "reason": "provenance.fixed_files_match"},
+        )
+        self.assertEqual(
+            compare_capture_provenance(capture, checkout_revision="b" * 40),
+            {"state": "mismatch", "reason": "provenance.build_revision_mismatch"},
+        )
+
+    def test_uncommitted_or_unavailable_build_metadata_never_matches(self):
+        capture = self._capture()
+        for revision, reason in (
+            ("uncommitted", "provenance.capture_build_uncommitted"),
+            ("unavailable", "provenance.capture_build_unavailable"),
+        ):
+            with self.subTest(revision=revision):
+                capture["plugin"] = dict(
+                    capture["plugin"],
+                    build={"schema_version": 1, "version": "0.2.0", "revision": revision},
+                )
+                self.assertEqual(
+                    compare_capture_provenance(capture, checkout_revision="a" * 40),
+                    {"state": "inconclusive", "reason": reason},
+                )
+
     def test_missing_plugin_or_incomplete_capture_remains_inconclusive(self):
         self.assertEqual(
             compare_capture_provenance({})["reason"],
