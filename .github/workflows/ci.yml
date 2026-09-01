@@ -50,6 +50,8 @@ jobs:
         run: |
           git rev-parse HEAD > out/source-revision.txt
           sha256sum out/HandheldDockMode-*.zip > out/SHA256SUMS.txt
+      - name: Verify controlled validation artifact
+        run: python scripts/verify_validation_artifact.py "$GITHUB_WORKSPACE/out"
       - name: Upload controlled validation artifact
         uses: actions/upload-artifact@v4
         with:

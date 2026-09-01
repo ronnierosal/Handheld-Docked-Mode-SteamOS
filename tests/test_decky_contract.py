@@ -185,6 +185,7 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("retention-days: 14", source)
         self.assertIn("out/source-revision.txt", source)
         self.assertIn("out/SHA256SUMS.txt", source)
+        self.assertIn("scripts/verify_validation_artifact.py", source)
         self.assertNotIn("action-gh-release", source)
         self.assertNotIn("gh release", source.lower())
 

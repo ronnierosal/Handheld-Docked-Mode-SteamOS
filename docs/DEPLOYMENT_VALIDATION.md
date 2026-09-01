@@ -71,6 +71,10 @@ matches, its full source revision matches the embedded build metadata, and the
 embedded version agrees with the packaged manifest. It never opens SSH,
 installs a plugin, or modifies the Ally.
 
+CI runs this same verifier against the candidate directory before uploading the
+artifact. Local verification is still required after download because it proves
+the exact bytes the maintainer received.
+
 ## Validation ladder
 
 Each stage must pass before proceeding. A failure returns to diagnosis; it does
