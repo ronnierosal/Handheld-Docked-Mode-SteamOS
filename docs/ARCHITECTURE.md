@@ -115,6 +115,13 @@ classifying external-display readiness and known game state. This preserves
 `Connecting` as a workflow phase without treating eGPU presence as an automatic
 dock request; see [eGPU attach readiness](ATTACH_READINESS.md).
 
+A separate pure deferred-dock-intent contract can retain one direct player Dock
+request while the game is known running. Its opaque binding, expiry, explicit
+cancellation, and invalidation rules can yield only a fresh idle eligibility
+handoff; it creates no transition plan, permit, scheduler, persistence, or
+delivery authority. Any future owner must revalidate and route through the
+unified engine. See [Deferred dock intent](DEFERRED_DOCK_INTENT.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the

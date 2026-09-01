@@ -109,6 +109,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   unavailable link is delivered as a categorical waiting state. This is neither
   TV activity nor render-GPU, bandwidth, controller/audio, or Safe Undock proof.
   It adds no event source, RPC, polling loop, deployment, or transition authority.
+- **Stage 1.2 checkpoint (pure local contract):** a direct player Dock request
+  during an exactly running game can be retained only with an opaque attach
+  binding and bounded expiry. Cancellation, expiry, changed binding, or Unknown
+  game evidence terminalize it; a fresh idle result yields only a non-authorizing
+  eligibility handoff. No persistence, scheduler, Decky route, game-close action,
+  or display/GPU/audio/controller transition is wired.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
