@@ -44,6 +44,10 @@ do not leave a growing queue of completed worktree commits unintegrated.
   only a dock-mode controller. It must prevent or soften player-visible PC
   paper cuts, explain state clearly, and use only validated, reversible recovery
   authority. Docking/eGPU work remains the initial, tightly gated domain.
+- The [Ally ↔ G1 end-to-end journey](WORK_QUEUE.md#1-ally--g1-end-to-end-dock-play-sleep-and-undock-journey)
+  is the current player-facing parent focus. Its stages remain independently
+  gated; it does not authorize live GPU migration, unattended disruption, or a
+  safe-unplug claim without fresh complete evidence.
 - **Repository-health audit (2026-09-01):** `main` is clean and passed
   architecture, compile, 659 Python tests (5 skipped), 47 frontend tests,
   typecheck, build, package, and diff checks. The completed read-only-profile

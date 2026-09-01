@@ -25,13 +25,35 @@ use; see [Licensing](LICENSING.md).
 
 ## Ordered queue
 
+### 1. Ally ↔ G1 end-to-end dock, play, sleep, and undock journey
+
+**Status: Proposed parent journey.** It is the overarching player-facing focus,
+not a claim that the journey is currently supported. HDM must never promise
+live GPU migration or game survival. No disruptive hardware action is allowed
+without explicit supervision, and no safe-to-unplug result is allowed without
+verified clients, topology, display, and input evidence. Read-only Ally evidence
+is permitted.
+
+| Priority | Bounded sub-item and owner | Status | Acceptance evidence |
+| --- | --- | --- | --- |
+| 1.1 | Attach detection and health. Owner: mode/link worker. | **Implemented** read-only foundation; end-to-end behavior is **Hardware Validation Required**. | Exact attach/health replay tests and redacted read-only supported-profile evidence. |
+| 1.2 | Game-open deferred dock intent. Owner: transition worker. | **Proposed**; no dock intent or automatic transition authority exists. | Deterministic game-running/unknown deferral tests; later supervised proof only after a reviewed mechanism. |
+| 1.3 | Game-closed verified TV, audio, and controller handoff. Owner: transition/peripheral worker. | Policies are **Implemented/Simulated**; handoff is **Hardware Validation Required**. | Exact idle, display, audio, controller, and rollback evidence in a supervised test. |
+| 1.4 | Five-second post-game prepared-docked-idle state. Owner: transition worker. | **Proposed**; no timer or prepared-dock authority exists. | Deterministic expiry/revalidation tests, then supervised observation without a running game. |
+| 1.5 | Safe Undock readiness scans. Owner: recovery worker. | Scan/guards are **Implemented**; complete live evidence is **Hardware Validation Required**. | Fresh exact client, storage, topology, display, and input scans; incomplete evidence remains unsafe. |
+| 1.6 | Explicit safe-to-unplug result. Owner: recovery worker. | Policy is **Implemented/Simulated**; result is **Hardware Validation Required**. | A verified safe result tied to fresh readiness evidence; never infer from G1 presence alone. |
+| 1.7 | Unexpected removal recovery to handheld. Owner: recovery worker. | Local classifier/checkpoint contract is **Implemented**; recovery is **Hardware Validation Required**. | Deterministic stale/incomplete failure tests and a separately supervised handheld recovery scenario. |
+| 1.8 | Sleep/wake with G1 present or missing, with honest game-relaunch policy. Owner: sleep/recovery worker. | Checkpoint/classifier policy is **Implemented**; wake behavior and relaunch are **Hardware Validation Required**. | Read-only wake/topology diagnostics; separately approved supervised scenarios. No crash or relaunch claim from passive evidence. |
+
+### Supporting queue
+
 | Priority | Work item and owner | Status | Acceptance evidence |
 | --- | --- | --- | --- |
-| 1 | Mode/link health: improve fail-closed usability signals and bounded link-instability diagnostics. Owner: next safe worker. | **Implemented** foundation; hardware link quality is **Hardware Validation Required**. | Pure/replay tests; privacy-safe snapshot/UI checks; supported-profile read-only capture when useful. |
-| 2 | Recovery and unified transitions: deterministic replay, journal, rollback, Portable recovery, and Safe Undock guards. Owner: transition/recovery worker. | Policy and replay are **Implemented/Simulated**; live execution is **Hardware Validation Required**. | Architecture + deterministic failure tests; a separately approved supervised run for any mechanism. |
-| 3 | Offline Readiness delivery: review a local Steam/launcher source, then surface only fresh categorical results. Owner: evidence/UI worker. | Classifier and admission contract are **Implemented**; source, UI, and collection authority are not. | Privacy review, declared/benchmarked cost, idle-only/defer tests, freshness tests; no account/AppID/title/path in delivery. |
-| 4 | Navigation/UI cleanup: keep Quick Access compact, controller-friendly, and non-authorizing. Owner: frontend worker. | Existing compact/status and troubleshooting split is **Implemented** locally. | Frontend tests, typecheck/build, and a maintainer-visible package review before install. |
-| 5 | Performance/resource measurement: measure snapshot and optional-observer overhead; retain only event-driven or budgeted work. Owner: performance worker. | Telemetry admission and UI cadence policy are **Implemented**; real collector measurement is pending. | Reproducible timing evidence on the supported profile; no meaningful game-impact regression. |
+| 2 | Mode/link health: improve fail-closed usability signals and bounded link-instability diagnostics. Owner: next safe worker. | **Implemented** foundation; hardware link quality is **Hardware Validation Required**. | Pure/replay tests; privacy-safe snapshot/UI checks; supported-profile read-only capture when useful. |
+| 3 | Recovery and unified transitions: deterministic replay, journal, rollback, Portable recovery, and Safe Undock guards. Owner: transition/recovery worker. | Policy and replay are **Implemented/Simulated**; live execution is **Hardware Validation Required**. | Architecture + deterministic failure tests; a separately approved supervised run for any mechanism. |
+| 4 | Offline Readiness delivery: review a local Steam/launcher source, then surface only fresh categorical results. Owner: evidence/UI worker. | Classifier and admission contract are **Implemented**; source, UI, and collection authority are not. | Privacy review, declared/benchmarked cost, idle-only/defer tests, freshness tests; no account/AppID/title/path in delivery. |
+| 5 | Navigation/UI cleanup: keep Quick Access compact, controller-friendly, and non-authorizing. Owner: frontend worker. | Existing compact/status and troubleshooting split is **Implemented** locally. | Frontend tests, typecheck/build, and a maintainer-visible package review before install. |
+| 6 | Performance/resource measurement: measure snapshot and optional-observer overhead; retain only event-driven or budgeted work. Owner: performance worker. | Telemetry admission and UI cadence policy are **Implemented**; real collector measurement is pending. | Reproducible timing evidence on the supported profile; no meaningful game-impact regression. |
 
 ## Required checkpoint check-in
 
