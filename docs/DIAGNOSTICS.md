@@ -69,6 +69,12 @@ retains only the essential snapshot and shows a short deferred message. This
 does not pause the underlying safety snapshot, sleep protection, or any
 already-enabled temporary diagnostic logging.
 
+The essential snapshot likewise defers the expensive whole-process G1
+client-resource scan while game state is running or unknown. Disconnect
+readiness stays explicitly incomplete and unsafe in that interval; it never
+uses the deferred scan to imply that removal is safe. The scan resumes only
+after an exact idle observation.
+
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
 health blockers. It does not add a collection loop, infer a workflow, change

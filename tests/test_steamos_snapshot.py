@@ -35,6 +35,16 @@ class Fixed:
         return self.value
 
 
+class CountingFixed(Fixed):
+    def __init__(self, value):
+        super().__init__(value)
+        self.calls = 0
+
+    def scan(self, *args, **kwargs):
+        self.calls += 1
+        return super().scan(*args, **kwargs)
+
+
 class FixedTopology:
     def __init__(self, pci, usb4):
         self.pci = pci
@@ -90,6 +100,62 @@ def certified_topology():
 
 
 class SteamOsSnapshotTests(unittest.TestCase):
+    def test_active_or_unknown_game_defers_expensive_egpu_client_scan(self):
+        internal = DrmCardRecord(
+            "card0",
+            "0000:01:00.0",
+            "0x1002",
+            "0x0001",
+            True,
+            "amdgpu",
+            (DrmConnectorRecord("card0", "eDP-1", "connected", "enabled", (), "d" * 64),),
+        )
+        external = DrmCardRecord(
+            "card9",
+            "0000:08:00.0",
+            "0x1002",
+            "0x7480",
+            False,
+            "amdgpu",
+            (DrmConnectorRecord("card9", "HDMI-A-9", "connected", "enabled", (), "e" * 64),),
+        )
+        process = GamescopeProcessRecord(
+            47959,
+            ("/usr/bin/gamescope", "-O", "HDMI-A-9", "--prefer-vk-device", "1002:7480"),
+            ("HDMI-A-9",),
+            "1002:7480",
+            "1002:7480",
+            True,
+        )
+        pci, usb4 = certified_topology()
+
+        for state in (GameState.RUNNING, GameState.UNKNOWN):
+            with self.subTest(state=state):
+                clients = CountingFixed(EgpuClientScan(True, True))
+                discovery = SteamOsDiscovery(
+                    drm=Fixed((internal, external)),
+                    gamescope=Fixed(GamescopeScan(process, 1)),
+                    game_scopes=Fixed(GameScopeScan(state, error="scope unavailable")),
+                    pci_usb4=FixedTopology(pci, usb4),
+                    host=Fixed(
+                        HostRecord("ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "RC72LA")
+                    ),
+                    egpu_clients=clients,
+                    sleep_guard_status=lambda: InhibitorLeaseStatus(True),
+                    clock=lambda: datetime(2026, 8, 31, tzinfo=timezone.utc),
+                )
+
+                snapshot = discovery.collect_snapshot()
+
+                self.assertEqual(clients.calls, 0)
+                self.assertTrue(snapshot.disconnect_readiness.applicable)
+                self.assertFalse(snapshot.disconnect_readiness.scan_complete)
+                self.assertFalse(snapshot.disconnect_readiness.ready)
+                self.assertIn(
+                    "egpu_client_scan_incomplete",
+                    {blocker.code for blocker in snapshot.blockers},
+                )
+
     def test_aggregates_portable_state_when_no_gpu_selector_is_present(self):
         internal = DrmCardRecord(
             "card4",

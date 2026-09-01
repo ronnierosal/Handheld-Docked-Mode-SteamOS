@@ -140,7 +140,7 @@ class SteamOsDiscovery:
             ),
         )
 
-        if g1.verified:
+        if g1.verified and game_scan.state is GameState.IDLE:
             client_scan = timed(
                 "disconnect_clients",
                 lambda: self._egpu_clients.scan(
@@ -155,6 +155,19 @@ class SteamOsDiscovery:
                         else None
                     ),
                     session_uid=gamescope_uid,
+                ),
+            )
+        elif g1.verified:
+            client_scan = timed(
+                "disconnect_clients",
+                lambda: EgpuClientScan(
+                    applicable=True,
+                    complete=False,
+                    error=(
+                        "eGPU client scan is deferred while a game is running."
+                        if game_scan.state is GameState.RUNNING
+                        else "eGPU client scan is deferred until game state is known."
+                    ),
                 ),
             )
         else:
