@@ -59,6 +59,8 @@ export interface EgpuLinkPayload {
   confidence: "unknown" | "observed" | "verified";
   reason: string;
   error: string;
+  speed_gtps?: number | null;
+  width_lanes?: number | null;
 }
 
 export type ProfileResolutionStatus = "exact" | "absent" | "unknown";

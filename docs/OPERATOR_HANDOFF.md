@@ -53,6 +53,11 @@ each independently before relying on this snapshot.
   Steam Sleep behavior. Keep the button Steam-owned; the specified future
   fallback is verified **Guide + Y** hold routed to the ordinary `UNDOCK`
   request. See [physical power-button feasibility](POWER_BUTTON_SAFE_UNDOCK.md).
+- Power and Link Health currently exposes only existing exact-bridge PCIe link
+  state plus optional current GT/s/lane metrics in Troubleshooting. Link-change
+  notices are non-blocking and deduplicated; power, battery, thermal, throttle,
+  budget, and sustained-churn inference remain unimplemented/Unknown. No health
+  display enables a transition or Safe Undock. See [Power and Link Health](POWER_LINK_HEALTH.md).
 
 ## SSH access
 

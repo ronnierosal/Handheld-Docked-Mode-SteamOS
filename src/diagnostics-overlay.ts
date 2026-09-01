@@ -112,6 +112,14 @@ export function diagnosticOverlayRows(
         : "not applicable",
     },
     {
+      name: "eGPU link metrics",
+      value: snapshot.egpu_link.applicable
+        && typeof snapshot.egpu_link.speed_gtps === "number"
+        && typeof snapshot.egpu_link.width_lanes === "number"
+        ? `${snapshot.egpu_link.speed_gtps} GT/s · x${snapshot.egpu_link.width_lanes} lanes · current values, not a performance rating`
+        : "not reported",
+    },
+    {
       name: "External display",
       value: externalDisplay
         ? `connected ${yesNoUnknown(externalDisplay.connected)} · active ${yesNoUnknown(externalDisplay.active)} · ${humanize(externalDisplay.confidence)}`

@@ -49,6 +49,7 @@ import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { healthStatusLabel } from "./health-ui";
+import { decideLinkHealthNotification } from "./link-health-notification";
 import { atAGlanceRows, restoreQuickAccessFocus } from "./quick-access-ui";
 import {
   collectOptionalDiagnostics,
@@ -419,6 +420,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const refreshInFlight = useRef(false);
   const warningToastShown = useRef(false);
   const inactiveToastShown = useRef(false);
+  const linkHealthNotification = useRef<ReturnType<typeof decideLinkHealthNotification>["memory"]>(null);
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
   const tvSwitchModal = useRef<ReturnType<typeof showModal> | null>(null);
@@ -497,6 +499,19 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
     try {
       const nextPayload = await getSnapshot();
+      const linkDecision = decideLinkHealthNotification(
+        linkHealthNotification.current,
+        nextPayload,
+      );
+      linkHealthNotification.current = linkDecision.memory;
+      if (linkDecision.notification) {
+        try {
+          toaster.toast(linkDecision.notification);
+        } catch {
+          // A transient QAM toast-host failure must not turn a successful
+          // read-only snapshot into an apparent hardware failure.
+        }
+      }
       const optionalDiagnostics = await collectOptionalDiagnostics(
         shouldCollectOptionalDiagnostics(
           quickAccessVisible && showDiagnostics,

@@ -77,6 +77,8 @@ function payload() {
         confidence: "observed",
         reason: "egpu.link_observed",
         error: "",
+        speed_gtps: 16.0,
+        width_lanes: 4,
       },
       blockers: [{ code: "test.blocker", message: "Fixture blocker" }],
     },
@@ -153,6 +155,8 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /shutdown before disconnect/);
   assert.match(text, /eGPU link/);
   assert.match(text, /up · observed/);
+  assert.match(text, /eGPU link metrics/);
+  assert.match(text, /16 GT\/s · x4 lanes · current values, not a performance rating/);
   assert.match(text, /System health/);
   assert.match(text, /attention required/);
   assert.match(text, /health egpu link unknown/);
