@@ -177,6 +177,17 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn(wrapper, included_files())
         self.assertEqual(archive_mode(wrapper) & 0o777, 0o755)
 
+    def test_ci_exposes_only_a_bounded_validation_artifact(self):
+        source = (ROOT / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("actions/upload-artifact@v4", source)
+        self.assertIn("retention-days: 14", source)
+        self.assertIn("out/source-revision.txt", source)
+        self.assertIn("out/SHA256SUMS.txt", source)
+        self.assertNotIn("action-gh-release", source)
+        self.assertNotIn("gh release", source.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

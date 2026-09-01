@@ -46,3 +46,17 @@ jobs:
         run: python scripts/check_plugin_package.py .
       - name: Build Decky archive
         run: python scripts/build_plugin.py
+      - name: Record validation artifact provenance
+        run: |
+          git rev-parse HEAD > out/source-revision.txt
+          sha256sum out/HandheldDockMode-*.zip > out/SHA256SUMS.txt
+      - name: Upload controlled validation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HandheldDockMode-${{ github.sha }}
+          path: |
+            out/HandheldDockMode-*.zip
+            out/source-revision.txt
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

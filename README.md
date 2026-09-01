@@ -154,6 +154,12 @@ are development artifacts for controlled validation through Decky Loader's
 native lifecycle. Do not copy files into a running plugin or combine frontend
 and backend artifacts from different commits.
 
+Each successful CI run retains one **controlled validation artifact** for 14
+days. It contains the ZIP, its SHA-256 manifest, and the exact source revision;
+it is not a GitHub Release, public installer, or automatic deployment. Use it
+only when its workflow commit, `source-revision.txt`, and the installed QAM
+**HDM build** label agree.
+
 Hardware validation must follow the staged
 [deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md), beginning
 with one clean, provenance-recorded package and the G1 disconnected.

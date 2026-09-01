@@ -53,6 +53,12 @@ For each candidate, retain a small local manifest containing only:
 
 Do not place device secrets or raw hardware identifiers in that manifest.
 
+A successful CI run may provide the same controlled candidate as a short-lived
+workflow artifact. Before using one, compare its workflow commit with
+`source-revision.txt`, verify its ZIP against `SHA256SUMS.txt`, and confirm the
+installed QAM **HDM build** row after Decky's native install. CI artifacts are
+not releases and must not be installed automatically.
+
 ## Validation ladder
 
 Each stage must pass before proceeding. A failure returns to diagnosis; it does
