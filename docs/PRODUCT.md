@@ -9,6 +9,10 @@ recovery where authority and evidence allow. Docking and eGPU safety are the
 first domains, not the product boundary. The current scope remains narrowly
 limited to the implemented, evidence-gated capabilities below.
 
+Games always come first. HDM is a lightweight, mostly dormant SteamOS
+reliability layer: it must not become a performance problem while it removes
+avoidable friction and makes uncertain state understandable.
+
 ## Target user-facing placement
 
 - **Portable:** internal GPU renders to the internal panel.
@@ -74,6 +78,28 @@ configuration writes, Steam Library badges, travel automation, or controller
 wake. Future work must place those behind narrow telemetry, device-profile,
 and game-adapter boundaries and preserve the same recovery and explicit-consent
 rules.
+
+## Interrupted docked-sleep recovery policy
+
+**Product intent; not current hardware behavior:** if an eGPU is removed while
+the handheld sleeps and wake leaves the original game/session no longer
+running, HDM should first establish a usable handheld path. It may describe
+handheld recovery only after independent display, input, and audio verification.
+It must not claim that a game crashed, that sleep caused the loss, or that
+recovery succeeded without that evidence.
+
+Only after those checks are complete, and only when the current game has no
+known update, cloud-sync, or repeat-failure concern, the intended default is to
+offer a safe game relaunch. On the first successful use of that capability, HDM
+will show one non-intrusive choice to keep automatic restart enabled or turn it
+off. That preference is future player policy, not authority to bypass Steam,
+game, save, update, or recovery gates.
+
+The locally implemented foundation is limited to a privacy-safe canonical sleep
+checkpoint, a redacted terminal result, post-wake evidence classification, and
+deduplicated notification policy. Production still needs owner-checked startup
+wake wiring, game/update/sync/repeat-failure evidence, a reviewed relaunch
+adapter, recovery verification, and supervised hardware validation.
 
 ## Decky-native delivery
 

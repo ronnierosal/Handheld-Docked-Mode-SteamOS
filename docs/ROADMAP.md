@@ -487,3 +487,11 @@ transition remains R3 and requires its documented supervised rollback tests.
   showing a restored-handheld outcome. A supervised scenario is required for
   sleep with the G1 removed while asleep. No remote suspend, removal, recovery,
   or deployment is authorized by this contract.
+- **Product policy; future implementation:** after complete verified handheld
+  recovery and verified original game/session absence, HDM may default to a
+  safe relaunch only when update, cloud-sync, and repeat-failure concerns are
+  absent. First successful use must present one non-intrusive player choice to
+  keep automatic restart enabled or turn it off. This needs owner-checked wake
+  wiring, a reviewed game relaunch adapter, all prerequisite evidence, loop
+  prevention, fallback, and supervised hardware validation. It does not imply
+  that a game crashed or that sleep caused a loss.

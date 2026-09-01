@@ -55,7 +55,8 @@ each independently before relying on this snapshot.
   request. See [physical power-button feasibility](POWER_BUTTON_SAFE_UNDOCK.md).
 - Power and Link Health currently exposes only existing exact-bridge PCIe link
   state plus optional current GT/s/lane metrics in Troubleshooting. Link-change
-  notices are non-blocking and deduplicated; power, battery, thermal, throttle,
+  notices are non-blocking: one Down/Unknown instability episode and one later
+  Up observation are shown, while flapping is suppressed. Power, battery, thermal, throttle,
   budget, and sustained-churn inference remain unimplemented/Unknown. No health
   display enables a transition or Safe Undock. See [Power and Link Health](POWER_LINK_HEALTH.md).
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
@@ -66,6 +67,14 @@ each independently before relying on this snapshot.
   display, input, and audio; game/session outcome is never inferred. There is
   no startup wiring, sleep listener, topology watcher, recovery mechanism, or
   Ally deployment. Current unattended captures cannot supply this proof.
+- **Product policy, not implemented behavior:** after an interrupted docked
+  sleep incident, HDM should verify usable handheld display/input/audio before
+  considering the original game/session stopped. Only complete recovery
+  evidence plus no known update, sync, or repeat-failure concern may permit a
+  future default game relaunch. The first successful use must offer one
+  non-intrusive choice to retain automatic restart or turn it off. No current
+  code has wake wiring, those concerns, a relaunch adapter, or hardware proof;
+  never claim a game crash or successful recovery from passive capture.
 
 ## SSH access
 

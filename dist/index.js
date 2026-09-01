@@ -356,7 +356,11 @@ function decideLinkHealthNotification(previous, payload) {
     if (!isEgpuRelevantPlacement(payload.inference.mode)) {
         return { memory: previous, notification: null };
     }
-    const current = { state: link.state, reason: reasonFor(payload) };
+    const current = {
+        state: link.state,
+        reason: reasonFor(payload),
+        instabilityNotified: previous?.instabilityNotified ?? false,
+    };
     if (previous === null) {
         return { memory: current, notification: null };
     }
@@ -364,17 +368,23 @@ function decideLinkHealthNotification(previous, payload) {
         return { memory: current, notification: null };
     }
     if (current.state === "up") {
+        const wasUnstable = previous.state !== "up" && previous.instabilityNotified === true;
         return {
-            memory: current,
-            notification: {
-                title: "eGPU link observed again",
-                body: "HDM is preserving the current setup. Verify the display and controls before changing it.",
-                critical: false,
-            },
+            memory: { ...current, instabilityNotified: false },
+            notification: wasUnstable
+                ? {
+                    title: "eGPU link observed again",
+                    body: "HDM is preserving the current setup. Verify the display and controls before changing it.",
+                    critical: false,
+                }
+                : null,
         };
     }
+    if (previous.instabilityNotified === true) {
+        return { memory: { ...current, instabilityNotified: true }, notification: null };
+    }
     return {
-        memory: current,
+        memory: { ...current, instabilityNotified: true },
         notification: {
             title: current.state === "down" ? "eGPU link is down" : "eGPU link needs verification",
             body: "HDM is preserving the current setup. Avoid disconnecting until the link is stable.",

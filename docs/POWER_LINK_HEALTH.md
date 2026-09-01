@@ -11,9 +11,10 @@ or certification.
 The player-facing policy is deliberately small:
 
 - the first eGPU-relevant link observation is silent;
-- a changed Down or Unknown observation produces one non-blocking Decky notice;
-- repeated identical observations are suppressed until recovery or a materially
-  changed reason;
+- a changed Down or Unknown observation opens one non-blocking instability
+  episode;
+- all subsequent Down/Unknown samples in that episode, including a materially
+  changed reason, are suppressed until recovery;
 - a later observed Up state produces one compact recovery notice; and
 - eGPU absence resets the episode without a notice.
 

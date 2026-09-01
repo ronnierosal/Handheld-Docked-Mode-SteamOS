@@ -12,11 +12,11 @@ function payload({ applicable = true, state = "up", reason = "egpu.link_observed
 
 test("first relevant link observation establishes a silent baseline", () => {
   const result = decideLinkHealthNotification(null, payload());
-  assert.deepEqual(result.memory, { state: "up", reason: "egpu.link_observed" });
+  assert.deepEqual(result.memory, { state: "up", reason: "egpu.link_observed", instabilityNotified: false });
   assert.equal(result.notification, null);
 });
 
-test("link degradation is deduplicated by state and reason", () => {
+test("one instability episode suppresses Down/Unknown flapping until recovery", () => {
   const baseline = decideLinkHealthNotification(null, payload());
   const down = decideLinkHealthNotification(
     baseline.memory,
@@ -29,9 +29,15 @@ test("link degradation is deduplicated by state and reason", () => {
     null,
   );
   assert.equal(
-    decideLinkHealthNotification(down.memory, payload({ state: "down", reason: "egpu.link_new_reason" })).notification?.title,
-    "eGPU link is down",
+    decideLinkHealthNotification(down.memory, payload({ state: "down", reason: "egpu.link_new_reason" })).notification,
+    null,
   );
+  const unknown = decideLinkHealthNotification(
+    down.memory,
+    payload({ state: "unknown", reason: "egpu.link_metrics_unavailable" }),
+  );
+  assert.equal(unknown.notification, null);
+  assert.equal(decideLinkHealthNotification(unknown.memory, payload()).notification?.title, "eGPU link observed again");
 });
 
 test("unknown link state is attention-only and recovery is announced once", () => {
