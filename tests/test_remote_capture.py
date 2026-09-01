@@ -235,6 +235,13 @@ class RemoteCaptureTests(unittest.TestCase):
         self.assertIn("plugin_lifecycle_sleep_guard_not_observed", source)
         self.assertIn('row["result"] = "not_observed"', source)
 
+    def test_payload_hashes_the_installed_package_manifest_for_version_provenance(self):
+        source = (ROOT / "scripts" / "remote_capture_payload.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('Path("package.json")', source)
+        self.assertIn('Path("plugin.json")', source)
+
     def test_payload_reports_privilege_without_identity(self):
         source = (ROOT / "scripts" / "remote_capture_payload.py").read_text(
             encoding="utf-8"

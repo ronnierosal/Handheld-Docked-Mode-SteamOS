@@ -20,6 +20,7 @@ SCHEMA_VERSION = 1
 PLUGIN_ROOT = Path("/home/deck/homebrew/plugins/HandheldDockMode")
 CRITICAL_FILES = (
     Path("plugin.json"),
+    Path("package.json"),
     Path("main.py"),
     Path("dist/index.js"),
     Path("backend/hdm/domain/models.py"),
