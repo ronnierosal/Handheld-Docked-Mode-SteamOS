@@ -367,8 +367,9 @@ These items are intentionally deferred until the safe transition/recovery and
 hardware-validation gates above are closed. They must extend the existing core;
 they are not authorization for a separate optimizer or launcher.
 
-- Add a typed health aggregation contract over independently verified display,
-  audio, controller, session, storage, and eGPU/link evidence.
+- Expand the implemented typed health aggregation from current placement,
+  session, display, storage, and explicit unknown eGPU-link evidence to
+  independently verified controller, audio, and kernel link-health evidence.
 - Define a single low-overhead telemetry port and performance budget, with
   opt-in diagnostics separated from normal runtime observation.
 - Define logical controller-action adapters and a controller-driven Safe Undock

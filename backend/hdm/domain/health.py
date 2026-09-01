@@ -1,0 +1,214 @@
+"""Pure, categorical health aggregation independent of placement/workflow."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import StrEnum
+
+from .control_plane import PlacementState
+from .models import Confidence, ObservedSnapshot
+
+
+class HealthState(StrEnum):
+    READY = "ready"
+    RECOVERING = "recovering"
+    DEGRADED = "degraded"
+    ATTENTION_REQUIRED = "attention_required"
+
+
+class HealthComponent(StrEnum):
+    PLACEMENT = "placement"
+    SESSION = "session"
+    DISPLAY = "display"
+    EGPU_LINK = "egpu_link"
+    STORAGE = "storage"
+    CONTROLLER = "controller"
+    AUDIO = "audio"
+
+
+class HealthEvidenceState(StrEnum):
+    READY = "ready"
+    RECOVERING = "recovering"
+    DEGRADED = "degraded"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class HealthComponentObservation:
+    component: HealthComponent
+    state: HealthEvidenceState
+    reason: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class HealthAssessment:
+    state: HealthState
+    components: tuple[HealthComponentObservation, ...] = field(default_factory=tuple)
+    blockers: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        components = tuple(component.component for component in self.components)
+        if len(components) != len(set(components)):
+            raise ValueError("health components must be unique")
+        if self.state is HealthState.READY and self.blockers:
+            raise ValueError("ready health cannot have blockers")
+
+
+def assess_health(
+    components: tuple[HealthComponentObservation, ...],
+) -> HealthAssessment:
+    """Aggregate evidence conservatively without inferring omitted components.
+
+    Callers decide which independently observable components belong to a given
+    assessment. Unknown evidence always requires attention; it is never folded
+    into a healthy placement merely because a device is present.
+    """
+    seen: set[HealthComponent] = set()
+    for component in components:
+        if component.component in seen:
+            return HealthAssessment(
+                HealthState.ATTENTION_REQUIRED,
+                (),
+                ("health.duplicate_component",),
+            )
+        seen.add(component.component)
+
+    if not components:
+        return HealthAssessment(
+            HealthState.ATTENTION_REQUIRED,
+            (),
+            ("health.no_observations",),
+        )
+
+    degraded = tuple(
+        f"health.{component.component.value}_degraded"
+        for component in components
+        if component.state is HealthEvidenceState.DEGRADED
+    )
+    if degraded:
+        return HealthAssessment(HealthState.DEGRADED, components, degraded)
+
+    unknown = tuple(
+        f"health.{component.component.value}_unknown"
+        for component in components
+        if component.state is HealthEvidenceState.UNKNOWN
+    )
+    if unknown:
+        return HealthAssessment(HealthState.ATTENTION_REQUIRED, components, unknown)
+
+    if any(
+        component.state is HealthEvidenceState.RECOVERING for component in components
+    ):
+        return HealthAssessment(HealthState.RECOVERING, components)
+    return HealthAssessment(HealthState.READY, components)
+
+
+def assess_snapshot_health(
+    snapshot: ObservedSnapshot, placement: PlacementState
+) -> HealthAssessment:
+    """Assess only current read-only snapshot evidence.
+
+    This initial bridge deliberately leaves controller/audio out until their
+    mechanisms have independent usable-state observations. External placements
+    retain an unknown eGPU-link component until the pending kernel link-health
+    collector can prove it; a connected eGPU is not silently considered healthy.
+    """
+    components = [
+        _placement_component(placement),
+        _session_component(snapshot),
+        _display_component(snapshot),
+    ]
+    if placement in {
+        PlacementState.BOOSTED_HANDHELD,
+        PlacementState.DOCKED_EGPU,
+    }:
+        components.append(
+            HealthComponentObservation(
+                HealthComponent.EGPU_LINK,
+                HealthEvidenceState.UNKNOWN,
+                "egpu.link_health_unobserved",
+            )
+        )
+    if snapshot.disconnect_readiness.applicable:
+        components.append(_storage_component(snapshot))
+    return assess_health(tuple(components))
+
+
+def _placement_component(placement: PlacementState) -> HealthComponentObservation:
+    if placement is PlacementState.DEGRADED:
+        return HealthComponentObservation(
+            HealthComponent.PLACEMENT,
+            HealthEvidenceState.DEGRADED,
+            "placement.degraded",
+        )
+    if placement is PlacementState.UNKNOWN:
+        return HealthComponentObservation(
+            HealthComponent.PLACEMENT,
+            HealthEvidenceState.UNKNOWN,
+            "placement.unknown",
+        )
+    return HealthComponentObservation(HealthComponent.PLACEMENT, HealthEvidenceState.READY)
+
+
+def _session_component(snapshot: ObservedSnapshot) -> HealthComponentObservation:
+    if snapshot.gamescope.running is False:
+        return HealthComponentObservation(
+            HealthComponent.SESSION,
+            HealthEvidenceState.DEGRADED,
+            "gamescope.not_running",
+        )
+    if (
+        snapshot.gamescope.running is not True
+        or snapshot.gamescope.confidence is not Confidence.VERIFIED
+    ):
+        return HealthComponentObservation(
+            HealthComponent.SESSION,
+            HealthEvidenceState.UNKNOWN,
+            "gamescope.unverified",
+        )
+    return HealthComponentObservation(HealthComponent.SESSION, HealthEvidenceState.READY)
+
+
+def _display_component(snapshot: ObservedSnapshot) -> HealthComponentObservation:
+    active = tuple(display for display in snapshot.displays if display.active is True)
+    if len(active) != 1:
+        return HealthComponentObservation(
+            HealthComponent.DISPLAY,
+            HealthEvidenceState.UNKNOWN,
+            "display.active_ambiguous",
+        )
+    display = active[0]
+    if display.connected is False:
+        return HealthComponentObservation(
+            HealthComponent.DISPLAY,
+            HealthEvidenceState.DEGRADED,
+            "display.active_disconnected",
+        )
+    if (
+        display.connected is not True
+        or display.confidence is not Confidence.VERIFIED
+        or display.connector not in snapshot.gamescope.output_order
+    ):
+        return HealthComponentObservation(
+            HealthComponent.DISPLAY,
+            HealthEvidenceState.UNKNOWN,
+            "display.unverified",
+        )
+    return HealthComponentObservation(HealthComponent.DISPLAY, HealthEvidenceState.READY)
+
+
+def _storage_component(snapshot: ObservedSnapshot) -> HealthComponentObservation:
+    readiness = snapshot.disconnect_readiness
+    if not readiness.scan_complete:
+        return HealthComponentObservation(
+            HealthComponent.STORAGE,
+            HealthEvidenceState.UNKNOWN,
+            "storage.scan_incomplete",
+        )
+    if readiness.storage_in_use:
+        return HealthComponentObservation(
+            HealthComponent.STORAGE,
+            HealthEvidenceState.DEGRADED,
+            "storage.egpu_in_use",
+        )
+    return HealthComponentObservation(HealthComponent.STORAGE, HealthEvidenceState.READY)

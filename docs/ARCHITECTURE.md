@@ -26,6 +26,15 @@ Physical connection, display target, render GPU, Gamescope, workload, support,
 and health are separate axes. `OperatingMode` is derived only from an exact
 combination of verified axes.
 
+The initial health aggregate is pure and categorical. It does not change
+placement or authorize recovery: it assesses placement, Gamescope session,
+active display, applicable eGPU storage, and (for external placements) an
+explicitly unknown eGPU-link component until the kernel link-health collector
+exists. Controller and audio are intentionally omitted until independently
+usable-state observations are available. Unknown evidence is Attention Required
+rather than a healthy guess; degraded evidence takes precedence over a pending
+recovery signal.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,

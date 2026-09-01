@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from ..domain.health import HealthAssessment, assess_snapshot_health
+from ..domain.inference import infer_placement
 from ..domain.inference import infer_operating_mode
 from ..domain.models import ModeInference, ObservedSnapshot
 from ..domain.serialization import snapshot_to_dict
@@ -18,6 +20,7 @@ from ..profiles.registry import (
 class SnapshotReport:
     snapshot: ObservedSnapshot
     inference: ModeInference
+    health: HealthAssessment | None = None
     timings: tuple[DiscoveryTiming, ...] = field(default_factory=tuple)
 
 
@@ -36,16 +39,37 @@ class SnapshotService:
         else:
             snapshot = self._discovery.collect_snapshot()
             timings = ()
-        return SnapshotReport(snapshot, infer_operating_mode(snapshot), timings)
+        inference = infer_operating_mode(snapshot)
+        return SnapshotReport(
+            snapshot,
+            inference,
+            assess_snapshot_health(snapshot, infer_placement(snapshot)),
+            timings,
+        )
 
 
 def report_to_dict(report: SnapshotReport) -> dict[str, object]:
     profiles = resolve_runtime_profiles(report.snapshot)
+    health = report.health or assess_snapshot_health(
+        report.snapshot, infer_placement(report.snapshot)
+    )
     return {
         "snapshot": snapshot_to_dict(report.snapshot),
         "inference": {
             "mode": report.inference.mode.value,
             "reasons": list(report.inference.reasons),
+        },
+        "health": {
+            "state": health.state.value,
+            "components": [
+                {
+                    "component": component.component.value,
+                    "state": component.state.value,
+                    "reason": component.reason,
+                }
+                for component in health.components
+            ],
+            "blockers": list(health.blockers),
         },
         "diagnostics": {
             "schema_version": 2,
