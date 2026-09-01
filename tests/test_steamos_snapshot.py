@@ -182,12 +182,18 @@ class SteamOsSnapshotTests(unittest.TestCase):
             discovery,
             workflow_observation=lambda: WorkflowState.RETURNING_TO_PORTABLE,
             peripheral_observation=peripherals,
+            monotonic_ns=TickingMonotonic(),
         ).observe()
 
         self.assertEqual(peripherals.calls, 1)
         self.assertEqual(report.health.state, HealthState.RECOVERING)
         self.assertEqual(report.workflow, WorkflowState.RETURNING_TO_PORTABLE)
         self.assertIsNotNone(report.peripheral)
+        self.assertEqual(
+            [timing.stage for timing in report.timings[-2:]],
+            ["workflow_health", "peripheral_health"],
+        )
+        self.assertTrue(all(timing.duration_ms >= 0 for timing in report.timings))
         self.assertEqual(
             {component["component"] for component in report_to_dict(report)["health"]["components"]},
             {"placement", "session", "display", "workflow", "controller", "audio"},
@@ -225,6 +231,10 @@ class SteamOsSnapshotTests(unittest.TestCase):
         self.assertEqual(report.health.state, HealthState.ATTENTION_REQUIRED)
         self.assertTrue(report.workflow_unavailable)
         self.assertTrue(report.peripheral_unavailable)
+        self.assertEqual(
+            [timing.stage for timing in report.timings[-2:]],
+            ["workflow_health", "peripheral_health"],
+        )
         self.assertEqual(
             set(report.health.blockers),
             {"health.workflow_unknown", "health.controller_unknown", "health.audio_unknown"},

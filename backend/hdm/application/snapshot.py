@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from time import perf_counter_ns
 from typing import Callable
 
 from ..domain.control_plane import WorkflowState
@@ -39,10 +40,12 @@ class SnapshotService:
         *,
         workflow_observation: Callable[[], WorkflowState] | None = None,
         peripheral_observation: PeripheralObservationPort | None = None,
+        monotonic_ns: Callable[[], int] = perf_counter_ns,
     ) -> None:
         self._discovery = discovery
         self._workflow_observation = workflow_observation
         self._peripheral_observation = peripheral_observation
+        self._monotonic_ns = monotonic_ns
 
     def observe(self) -> SnapshotReport:
         timed_collector = getattr(
@@ -56,8 +59,16 @@ class SnapshotService:
             snapshot = self._discovery.collect_snapshot()
             timings = ()
         inference = infer_operating_mode(snapshot)
-        workflow, workflow_unavailable = self._observe_workflow()
-        peripheral, peripheral_unavailable = self._observe_peripheral()
+        workflow, workflow_unavailable, workflow_timing = self._observe_workflow()
+        peripheral, peripheral_unavailable, peripheral_timing = (
+            self._observe_peripheral()
+        )
+        observer_timings = tuple(
+            value
+            for value in (workflow_timing, peripheral_timing)
+            if value is not None
+        )
+        timings = (*timings, *observer_timings)
         return SnapshotReport(
             snapshot=snapshot,
             inference=inference,
@@ -76,23 +87,39 @@ class SnapshotService:
             peripheral_unavailable=peripheral_unavailable,
         )
 
-    def _observe_workflow(self) -> tuple[WorkflowState | None, bool]:
+    def _observe_workflow(
+        self,
+    ) -> tuple[WorkflowState | None, bool, DiscoveryTiming | None]:
         if self._workflow_observation is None:
-            return None, False
+            return None, False, None
+        started_at = self._monotonic_ns()
         try:
             value = self._workflow_observation()
         except Exception:
-            return None, True
-        return (value, False) if isinstance(value, WorkflowState) else (None, True)
+            return None, True, self._timing("workflow_health", started_at)
+        if isinstance(value, WorkflowState):
+            return value, False, self._timing("workflow_health", started_at)
+        return None, True, self._timing("workflow_health", started_at)
 
-    def _observe_peripheral(self) -> tuple[PeripheralObservation | None, bool]:
+    def _observe_peripheral(
+        self,
+    ) -> tuple[PeripheralObservation | None, bool, DiscoveryTiming | None]:
         if self._peripheral_observation is None:
-            return None, False
+            return None, False, None
+        started_at = self._monotonic_ns()
         try:
             value = self._peripheral_observation.observe()
         except Exception:
-            return None, True
-        return (value, False) if isinstance(value, PeripheralObservation) else (None, True)
+            return None, True, self._timing("peripheral_health", started_at)
+        if isinstance(value, PeripheralObservation):
+            return value, False, self._timing("peripheral_health", started_at)
+        return None, True, self._timing("peripheral_health", started_at)
+
+    def _timing(self, stage: str, started_at: int) -> DiscoveryTiming:
+        return DiscoveryTiming(
+            stage=stage,
+            duration_ms=(self._monotonic_ns() - started_at) / 1_000_000,
+        )
 
 
 def report_to_dict(report: SnapshotReport) -> dict[str, object]:
