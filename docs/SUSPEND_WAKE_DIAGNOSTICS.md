@@ -31,6 +31,12 @@ aggregate schema and bounded count range. A malformed, extra-field, or
 identity-bearing wake payload is rejected rather than retained as diagnostic
 evidence.
 
+`python scripts/compare_wake_captures.py BEFORE.json AFTER.json` compares two
+already validated saved captures locally. It reports only whether aggregate
+capability/runtime counts changed; it never connects to the Ally or exposes a
+PCI function identity. An unchanged comparison is still inconclusive: it is
+not proof of a wake cause, successful suspend, or suspend safety.
+
 ## Supervised validation gate
 
 Actual suspend investigation is D6-only. With the player present and a known

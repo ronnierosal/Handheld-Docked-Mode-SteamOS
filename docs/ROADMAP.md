@@ -234,6 +234,9 @@ wake-capability/runtime collector in the remote capture payload. It exports
 only categorical aggregate evidence and does not identify a wake source or
 change any wake/power setting. The same categorical evidence is now included
 only in an explicit redacted support-bundle preview, never normal polling.
+The local wake-capture comparator can show aggregate evidence changes between
+two already validated read-only captures without reconnecting to the Ally or
+attributing a wake source.
 Actual suspend/resume proof remains a supervised D6 hardware gate; see
 [G1 suspend/wake diagnostics](SUSPEND_WAKE_DIAGNOSTICS.md).
 
