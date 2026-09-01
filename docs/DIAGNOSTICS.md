@@ -64,7 +64,8 @@ identity is exported.
 
 - `/sys/class/dmi/id`: host profile
 - `/sys/class/drm`: GPU, connector, mode, and hashed EDID observations
-- `/sys/bus/pci/devices`: PCI identity and topology
+- `/sys/bus/pci/devices`: PCI identity/topology plus current link status for the
+  exact already-verified eGPU bridge
 - `/sys/bus/thunderbolt/devices`: authorization and hashed USB4 identity
 - `/proc/<pid>/cmdline`: unique Steam Gamescope session and output arguments
 - `/proc/<pid>/environ`: Mesa Vulkan selector cross-check

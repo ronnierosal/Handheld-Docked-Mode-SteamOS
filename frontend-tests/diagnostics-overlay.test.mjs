@@ -71,6 +71,13 @@ function payload() {
         reason: "fixture",
         error: "",
       },
+      egpu_link: {
+        applicable: true,
+        state: "up",
+        confidence: "observed",
+        reason: "egpu.link_observed",
+        error: "",
+      },
       blockers: [{ code: "test.blocker", message: "Fixture blocker" }],
     },
     inference: { mode: "tv_docked", reasons: [] },
@@ -127,6 +134,8 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /host exact/);
   assert.match(text, /usb4/);
   assert.match(text, /shutdown before disconnect/);
+  assert.match(text, /eGPU link/);
+  assert.match(text, /up · observed/);
   assert.match(text, /Docked-iGPU watch/);
   assert.match(text, /promotion ready/);
   assert.match(text, /Promotion inspection/);

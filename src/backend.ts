@@ -53,6 +53,14 @@ export interface SleepGuardPayload {
   error: string;
 }
 
+export interface EgpuLinkPayload {
+  applicable: boolean;
+  state: "up" | "down" | "unknown";
+  confidence: "unknown" | "observed" | "verified";
+  reason: string;
+  error: string;
+}
+
 export type ProfileResolutionStatus = "exact" | "absent" | "unknown";
 
 export type HardwareCapabilityAxis =
@@ -110,6 +118,7 @@ export interface SnapshotPayload {
     };
     disconnect_readiness: DisconnectReadinessPayload;
     sleep_guard: SleepGuardPayload;
+    egpu_link: EgpuLinkPayload;
     blockers: BlockerPayload[];
   };
   inference: {
