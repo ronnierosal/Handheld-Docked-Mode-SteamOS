@@ -151,6 +151,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
   require supervised diagnosis. Game reporting is limited to observed
   stopped/running/unknown state; this neither claims game survival nor performs
   recovery, relaunch, deployment, or device action.
+- **Stage 1.8 checkpoint (pure interrupted-sleep relaunch policy):** only a
+  fresh opaque-bound observation with verified handheld display/input/audio,
+  an observed stopped game session, and verified-clear update/cloud/launch/
+  repeat-failure risks reaches player preference handling. Unknown preference
+  can prompt; explicit opt-in can label only a future flow eligible; opt-out is
+  no-relaunch. Unknown/running game, risks, stale or inconsistent evidence, or
+  incomplete recovery explain the block. It cannot persist preference, launch,
+  save/close a game, infer a crash/survival outcome, or act on sleep/wake.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

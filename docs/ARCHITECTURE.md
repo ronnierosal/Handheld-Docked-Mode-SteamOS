@@ -156,6 +156,13 @@ evidence. Stale, unknown, and contradictory facts require supervised diagnosis;
 it has no recovery mechanism or game-outcome authority. See
 [Unexpected removal recovery assessment](UNEXPECTED_REMOVAL_RECOVERY.md).
 
+Interrupted-sleep relaunch eligibility is likewise a pure policy over one
+fresh opaque-bound recovery observation. It requires verified handheld fallback,
+an observed stopped session, clear update/cloud/launch/repeat-failure risks, and
+an explicit preference before it can label a future flow eligible. It creates
+no relaunch or preference-storage authority. See
+[Interrupted sleep relaunch eligibility](SLEEP_RELAUNCH_ELIGIBILITY.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the
