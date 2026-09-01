@@ -16,6 +16,12 @@ Always re-check live state before making a hardware claim.
 - Last verified loader state: `plugin_loader.service` active.
 - A signed candidate based on `3584a4d` is staged but was not installed when
   this note was written.
+- **Current local candidate (2026-09-01):**
+  [candidate `84219fc`](DEPLOYMENT_CANDIDATE_2026-09-01.md) passed D0/D1
+  locally and has an inspected combined archive. It is not yet D2-stageable:
+  no local rollback archive matches the last observed installed `e73d249`
+  baseline. Do not install until that artifact or an explicit rollback plan is
+  available.
 
 The staged candidate, installed version, and local checkout may change. Confirm
 each independently before relying on this snapshot.
