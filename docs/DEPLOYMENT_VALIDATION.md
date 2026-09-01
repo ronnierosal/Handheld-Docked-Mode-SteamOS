@@ -89,6 +89,32 @@ With the player available for the initial install:
 
 This stage may be observed remotely after the physical precondition is confirmed.
 
+### D2a — Read-only gameplay observation overhead
+
+Run this only after D2 passes, with the G1 still disconnected and the player
+watching the internal display. It validates the installed panel's game-aware
+observation behavior; it is not an eGPU, sleep, or performance certification.
+
+1. Record the installed package commit and SHA-256, then start one ordinary
+   Steam game on the internal display.
+2. Open Quick Access → Handheld Dock Mode. Confirm the panel is controller
+   usable and reports a running game without changing the display, audio,
+   controller assignment, or game session.
+3. Open Troubleshooting. Confirm it says that additional checks wait until HDM
+   confirms no game is running. Do not invoke any destructive or export action.
+4. Leave the panel open for at least fifteen seconds while playing normally,
+   then close it and continue playing. The implementation's expected cadence is
+   one essential read-only snapshot at most every five seconds while game state
+   is running; this hardware check must not claim a performance measurement from
+   subjective observation alone.
+5. Record whether the panel stayed responsive and whether the player observed
+   any display, input, audio, game-session, or obvious performance regression.
+
+Pass only if the game and handheld remain usable with no unintended system
+change. On any regression, close/unload HDM or reinstall the recorded rollback
+package through Decky's native lifecycle; do not troubleshoot by restarting
+Gamescope, suspending, rebooting, or changing GPU/display settings remotely.
+
 ### D3 — Read-only G1 attachment
 
 Only after the player naturally connects the G1 and confirms visible control:
