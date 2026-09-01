@@ -307,6 +307,44 @@ native ZIP/URL installer; no supported non-interactive installation API is
 currently available. The operator selects the staged, checksum-verified ZIP in
 Decky's native installer until such an API is published and reviewed.
 
+### Developer direct-deploy helper (explicit local-owner setup)
+
+For this maintainer-controlled Ally only, a separate developer helper may be
+installed after a one-time **interactive** `sudo` action. It is not a Decky API
+and is never part of an HDM release. The helper is root-owned, accepts only a
+signed `HDM-update-<version>-<revision>.zip` and matching signature from the
+fixed `/home/deck/Downloads` directory, validates the embedded HDM provenance,
+then atomically replaces only `HandheldDockMode`. It moves the prior plugin to
+a root-owned rollback directory. It does not reload Decky, restart Gamescope,
+or alter displays, sleep, hardware, or the active session.
+
+The public verification key is installed once at
+`/etc/handheld-dock-mode/deploy-public-key.pem`; the corresponding private key
+must remain off the Ally and outside the repository. A package that is merely
+copied to Downloads is rejected unless its signature validates against that
+key. The helper therefore avoids turning a passwordless `sudo` rule into an
+arbitrary root-plugin installer.
+
+One-time setup (after the development machine has created an Ed25519 key pair
+and copied the **public** key and helper scripts to Downloads) is:
+
+```text
+sudo sh /home/deck/Downloads/install_ally_deploy_helper.sh
+```
+
+Each later candidate is built and provenance checked as usual, signed locally
+with `scripts/sign_hdm_deploy_package.py`, then staged with
+`scripts/stage_signed_hdm_deploy.py`. The automated, narrow install command is:
+
+```text
+sudo /usr/local/libexec/hdm-deploy-plugin HDM-update-<version>-<revision>.zip \
+  HDM-update-<version>-<revision>.zip.sig
+```
+
+Successful replacement alone is not a runtime validation and the helper does
+not invent a plugin reload. Inspect the installed build after Decky naturally
+reloads it or use a watched, explicitly approved plugin reload workflow later.
+
 ## Stop conditions
 
 Stop all mutations and preserve evidence if any of these occurs:
