@@ -250,6 +250,11 @@ do not leave a growing queue of completed worktree commits unintegrated.
   attention messages. Unknown or future codes collapse to one generic review
   message; raw codes are not rendered. This reuses the existing snapshot and
   adds no polling, action, deployment, or hardware claim.
+- **Compact journey UI checkpoint (read-only):** the controller-first journey
+  summary now hides unwired optional sources, showing one `Not connected` row
+  until delivery exists; its explicit detail view retains all source states.
+  This changes no request cadence, collection, action, deployment, or hardware
+  claim.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

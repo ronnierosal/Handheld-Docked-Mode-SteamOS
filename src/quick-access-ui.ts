@@ -107,6 +107,21 @@ export function journeyStatusRows(
   });
 }
 
+/** Keep the controller-first journey summary quiet until a read-only source wires it. */
+export function compactJourneyStatusRows(
+  journey: JourneyStatusPayload | undefined,
+): JourneyStatusRow[] {
+  const rows = journeyStatusRows(journey);
+  const connected = rows.filter((row) => row.value !== "Not connected");
+  return connected.length > 0
+    ? connected
+    : [{
+      name: "Status",
+      value: "Not connected",
+      detail: "No read-only journey status is connected yet. Open details to review each future status source.",
+    }];
+}
+
 /** State reset used before returning controller focus to the compact status. */
 export function compactStatusPanels(): {
   showDiagnostics: false;

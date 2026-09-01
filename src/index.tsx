@@ -53,6 +53,7 @@ import { decideLinkHealthNotification } from "./link-health-notification";
 import { sanitizeJourneyStatus } from "./journey-status-delivery";
 import {
   atAGlanceRows,
+  compactJourneyStatusRows,
   compactStatusPanels,
   journeyStatusRows,
   restoreQuickAccessFocus,
@@ -621,7 +622,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     actionHistory,
   );
   const optionalDiagnosticsDeferred = showDiagnostics && snapshot?.game_state !== "idle";
-  const journeyRows = journeyStatusRows(payload?.journey);
+  const journeyRows = compactJourneyStatusRows(payload?.journey);
+  const journeyDetailRows = journeyStatusRows(payload?.journey);
   const healthAttention = healthAttentionMessages(payload?.health);
   const needsAttention = Boolean(error)
     || (snapshot?.blockers.length ?? 0) > 0
@@ -1124,7 +1126,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           <PanelSectionRow>
             Read-only local policy status. It does not perform dock, undock, recovery, or game actions.
           </PanelSectionRow>
-          {journeyRows.map((row) => (
+          {journeyDetailRows.map((row) => (
             <DiagnosticRow key={row.name} name={row.name} value={row.detail} />
           ))}
         </PanelSection>

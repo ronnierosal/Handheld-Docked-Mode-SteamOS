@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   atAGlanceRows,
+  compactJourneyStatusRows,
   compactStatusPanels,
   journeyStatusRows,
   restoreQuickAccessFocus,
@@ -62,6 +63,22 @@ test("unwired or unknown journey states never resemble a hardware result", () =>
   assert.equal(rows[0].value, "Not connected");
   assert.equal(rows[2].value, "Not connected");
   assert.match(rows[2].detail, /not yet wired/i);
+});
+
+test("journey summary stays compact while details retain unwired sources", () => {
+  assert.deepEqual(compactJourneyStatusRows(undefined), [{
+    name: "Status",
+    value: "Not connected",
+    detail: "No read-only journey status is connected yet. Open details to review each future status source.",
+  }]);
+  const summary = compactJourneyStatusRows({
+    deferred_dock: { state: "deferred", code: "private.code" },
+  });
+  assert.deepEqual(summary.map(({ name, value }) => [name, value]), [
+    ["Dock request", "Waiting for game to close"],
+  ]);
+  assert.equal(journeyStatusRows({ deferred_dock: { state: "deferred", code: "private.code" } }).length, 6);
+  assert.doesNotMatch(JSON.stringify(summary), /private\.code/);
 });
 
 test("returning to status focuses an in-panel native control, never QAM Back", () => {
