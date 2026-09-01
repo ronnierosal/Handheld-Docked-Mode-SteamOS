@@ -63,6 +63,12 @@ the section uses the existing snapshot refresh loop to request them once per
 refresh; hiding it clears those optional values again. This keeps normal
 gameplay observation limited to the essential snapshot.
 
+Even while the section is visible, those nonessential checks wait until the
+same snapshot reports an exact idle game state. Running or unknown game state
+retains only the essential snapshot and shows a short deferred message. This
+does not pause the underlying safety snapshot, sleep protection, or any
+already-enabled temporary diagnostic logging.
+
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
 health blockers. It does not add a collection loop, infer a workflow, change

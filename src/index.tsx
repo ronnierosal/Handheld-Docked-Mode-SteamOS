@@ -44,7 +44,10 @@ import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { healthStatusLabel } from "./health-ui";
-import { collectOptionalDiagnostics } from "./optional-diagnostics-refresh";
+import {
+  collectOptionalDiagnostics,
+  shouldCollectOptionalDiagnostics,
+} from "./optional-diagnostics-refresh";
 import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
 import { canOfferForce, processReleaseOutcomeMessage } from "./process-release-ui";
 import {
@@ -375,15 +378,19 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
     }
     try {
-      const [nextPayload, optionalDiagnostics] = await Promise.all([
-        getSnapshot(),
-        collectOptionalDiagnostics(showDiagnostics, {
+      const nextPayload = await getSnapshot();
+      const optionalDiagnostics = await collectOptionalDiagnostics(
+        shouldCollectOptionalDiagnostics(
+          showDiagnostics,
+          nextPayload.snapshot.game_state,
+        ),
+        {
           getDockedIgpuStatus,
           getDiagnosticLoggingStatus,
           getPeripheralStatus,
           getActionHistory,
-        }),
-      ]);
+        },
+      );
       setPayload(nextPayload);
       setDockedIgpuStatus(optionalDiagnostics.dockedIgpuStatus);
       setDiagnosticLoggingStatus(optionalDiagnostics.diagnosticLoggingStatus);
@@ -461,6 +468,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     peripheralStatus,
     actionHistory,
   );
+  const optionalDiagnosticsDeferred = showDiagnostics && snapshot?.game_state !== "idle";
 
   const acknowledgeDockedIgpuWatch = useCallback(async () => {
     setDockedIgpuMessage("");
@@ -997,6 +1005,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           <PanelSectionRow>
             Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden.
           </PanelSectionRow>
+          {optionalDiagnosticsDeferred && (
+            <PanelSectionRow>
+              Additional troubleshooting checks are deferred until no game is running.
+            </PanelSectionRow>
+          )}
           {overlayRows.map((row) => (
             <DiagnosticRow key={row.name} name={row.name} value={row.value} />
           ))}

@@ -27,6 +27,13 @@ const EMPTY_VALUES: OptionalDiagnosticValues = {
   actionHistory: null,
 };
 
+export function shouldCollectOptionalDiagnostics(
+  visible: boolean,
+  gameState: string | undefined,
+): boolean {
+  return visible && gameState === "idle";
+}
+
 function optionalCall<T>(source: () => Promise<T>): Promise<T | null> {
   return Promise.resolve().then(source).catch(() => null);
 }

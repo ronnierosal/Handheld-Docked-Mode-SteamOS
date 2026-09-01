@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { collectOptionalDiagnostics } from "../src/optional-diagnostics-refresh.ts";
+import {
+  collectOptionalDiagnostics,
+  shouldCollectOptionalDiagnostics,
+} from "../src/optional-diagnostics-refresh.ts";
 
 
 function sources() {
@@ -31,6 +34,14 @@ test("hidden troubleshooting makes no optional diagnostic requests", async () =>
     peripheralStatus: null,
     actionHistory: null,
   });
+});
+
+test("optional diagnostics defer until exact idle game evidence", () => {
+  assert.equal(shouldCollectOptionalDiagnostics(false, "idle"), false);
+  assert.equal(shouldCollectOptionalDiagnostics(true, "running"), false);
+  assert.equal(shouldCollectOptionalDiagnostics(true, "unknown"), false);
+  assert.equal(shouldCollectOptionalDiagnostics(true, undefined), false);
+  assert.equal(shouldCollectOptionalDiagnostics(true, "idle"), true);
 });
 
 test("visible troubleshooting requests each optional status once", async () => {
