@@ -55,6 +55,7 @@ import {
   atAGlanceRows,
   compactJourneyStatusRows,
   compactStatusPanels,
+  revealJourneyDetails,
   journeyStatusRows,
   restoreQuickAccessFocus,
 } from "./quick-access-ui";
@@ -395,6 +396,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const quickAccessVisible = useQuickAccessVisible();
   const statusAnchor = useRef<HTMLDivElement | null>(null);
   const primaryControlAnchor = useRef<HTMLDivElement | null>(null);
+  const journeyDetailsAnchor = useRef<HTMLDivElement | null>(null);
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryPayload | null>(null);
@@ -1072,6 +1074,16 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     setShowDiagnostics((visible) => !visible);
   }, [refresh, showDiagnostics]);
 
+  const toggleJourneyDetails = useCallback(() => {
+    setShowJourneyDetails((visible) => {
+      const next = !visible;
+      if (next) {
+        window.setTimeout(() => revealJourneyDetails(journeyDetailsAnchor.current), 0);
+      }
+      return next;
+    });
+  }, []);
+
   return (
     <>
       <div ref={statusAnchor} tabIndex={-1}>
@@ -1115,21 +1127,23 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           <DiagnosticRow key={row.name} name={row.name} value={row.value} />
         ))}
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={() => setShowJourneyDetails((visible) => !visible)}>
+          <ButtonItem layout="below" onClick={toggleJourneyDetails}>
             {showJourneyDetails ? "Hide journey details" : "Open journey details"}
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
 
       {showJourneyDetails && (
-        <PanelSection title="Journey details">
-          <PanelSectionRow>
-            Read-only local policy status. It does not perform dock, undock, recovery, or game actions.
-          </PanelSectionRow>
-          {journeyDetailRows.map((row) => (
-            <DiagnosticRow key={row.name} name={row.name} value={row.detail} />
-          ))}
-        </PanelSection>
+        <div ref={journeyDetailsAnchor}>
+          <PanelSection title="Journey details">
+            <PanelSectionRow>
+              Read-only local policy status. It does not perform dock, undock, recovery, or game actions.
+            </PanelSectionRow>
+            {journeyDetailRows.map((row) => (
+              <DiagnosticRow key={row.name} name={row.name} value={row.detail} />
+            ))}
+          </PanelSection>
+        </div>
       )}
 
       <PanelSection title="Sleep protection">

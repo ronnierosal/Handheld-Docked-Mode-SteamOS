@@ -122,6 +122,15 @@ export function compactJourneyStatusRows(
     }];
 }
 
+/** Reveal newly expanded detail without moving controller focus away from its toggle. */
+export function revealJourneyDetails(anchor: HTMLElement | null): boolean {
+  if (!anchor) {
+    return false;
+  }
+  anchor.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  return true;
+}
+
 /** State reset used before returning controller focus to the compact status. */
 export function compactStatusPanels(): {
   showDiagnostics: false;

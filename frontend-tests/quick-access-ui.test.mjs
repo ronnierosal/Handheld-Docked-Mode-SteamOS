@@ -5,6 +5,7 @@ import {
   atAGlanceRows,
   compactJourneyStatusRows,
   compactStatusPanels,
+  revealJourneyDetails,
   journeyStatusRows,
   restoreQuickAccessFocus,
 } from "../src/quick-access-ui.ts";
@@ -91,4 +92,12 @@ test("returning to status focuses an in-panel native control, never QAM Back", (
   assert.equal(restoreQuickAccessFocus(() => control), true);
   assert.deepEqual(calls, [{ preventScroll: true }]);
   assert.equal(restoreQuickAccessFocus(() => null), false);
+});
+
+test("opening journey details reveals the new section without changing focus", () => {
+  const calls = [];
+  const anchor = { scrollIntoView: (options) => calls.push(options) };
+  assert.equal(revealJourneyDetails(anchor), true);
+  assert.deepEqual(calls, [{ block: "nearest", behavior: "smooth" }]);
+  assert.equal(revealJourneyDetails(null), false);
 });

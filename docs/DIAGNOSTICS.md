@@ -111,8 +111,9 @@ add an RPC or polling loop, create a transition permit, or automatically dock.
 Journey status keeps its first controller-facing view compact: it displays only
 read-only sources that are currently connected, or one `Not connected` row when
 none are. The explicit detail view retains every source and its unwired state.
-This is presentation only and does not request, infer, or authorize a journey
-action.
+Opening detail reveals that section without moving controller focus from its
+toggle, so it can be closed immediately. This is presentation only and does not
+request, infer, or authorize a journey action.
 
 The same optional section may show up to three recent actions from the existing
 bounded in-memory event log. Each row contains only time, a categorical action

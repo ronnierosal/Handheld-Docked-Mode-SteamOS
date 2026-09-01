@@ -591,6 +591,14 @@ function compactJourneyStatusRows(journey) {
                 detail: "No read-only journey status is connected yet. Open details to review each future status source.",
             }];
 }
+/** Reveal newly expanded detail without moving controller focus away from its toggle. */
+function revealJourneyDetails(anchor) {
+    if (!anchor) {
+        return false;
+    }
+    anchor.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    return true;
+}
 /** State reset used before returning controller focus to the compact status. */
 function compactStatusPanels() {
     return { showDiagnostics: false, showJourneyDetails: false };
@@ -1113,6 +1121,7 @@ function Content({ preflight }) {
     const quickAccessVisible = useQuickAccessVisible();
     const statusAnchor = SP_REACT.useRef(null);
     const primaryControlAnchor = SP_REACT.useRef(null);
+    const journeyDetailsAnchor = SP_REACT.useRef(null);
     const [payload, setPayload] = SP_REACT.useState(null);
     const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
     const [actionHistory, setActionHistory] = SP_REACT.useState(null);
@@ -1717,12 +1726,21 @@ function Content({ preflight }) {
         }
         setShowDiagnostics((visible) => !visible);
     }, [refresh, showDiagnostics]);
+    const toggleJourneyDetails = SP_REACT.useCallback(() => {
+        setShowJourneyDetails((visible) => {
+            const next = !visible;
+            if (next) {
+                window.setTimeout(() => revealJourneyDetails(journeyDetailsAnchor.current), 0);
+            }
+            return next;
+        });
+    }, []);
     return (SP_JSX.jsx(SP_JSX.Fragment, { children: SP_JSX.jsxs("div", { ref: statusAnchor, tabIndex: -1, children: [SP_JSX.jsxs(DFL.PanelSection, { title: "At a glance", children: [atAGlanceRows({
                             mode: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown"),
                             health: healthStatusLabel(payload?.health, loading),
                             connection: progress.label,
                             game: label(snapshot?.game_state ?? "unknown"),
-                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsx("div", { ref: primaryControlAnchor, children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }) }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setShowJourneyDetails((visible) => !visible), children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsx("div", { ref: primaryControlAnchor, children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }) }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
                                 ? "Checking…"
                                 : sleepGuard?.required
                                     ? sleepGuard.active
