@@ -132,8 +132,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifact_directory", type=Path)
     args = parser.parse_args()
-    print(json.dumps(verify_validation_artifact(args.artifact_directory), sort_keys=True))
-    return 0
+    result = verify_validation_artifact(args.artifact_directory)
+    print(json.dumps(result, sort_keys=True))
+    return 0 if result.get("state") == "verified" else 1
 
 
 if __name__ == "__main__":

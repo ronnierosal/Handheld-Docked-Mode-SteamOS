@@ -17,6 +17,7 @@ OUTPUT = ROOT / "out" / f"HandheldDockMode-{PACKAGE_VERSION}.zip"
 PLUGIN_DIRECTORY = "HandheldDockMode"
 BUILD_INFO_FILENAME = "build_info.json"
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+GENERATED_BUILD_OUTPUTS = frozenset(("dist/index.js", "dist/index.js.map"))
 TOP_LEVEL_FILES = (
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -72,11 +73,26 @@ def source_revision() -> str:
     status = _git_status("status", "--porcelain=v1", "--untracked-files=all")
     if status is None or status.returncode != 0:
         return "unavailable"
-    if status.stdout:
+    if _has_unexpected_worktree_changes(status.stdout):
         return "uncommitted"
     revision = _git_status("rev-parse", "HEAD")
     value = revision.stdout.strip() if revision is not None and revision.returncode == 0 else ""
     return value if REVISION_RE.fullmatch(value) else "unavailable"
+
+
+def _has_unexpected_worktree_changes(status: str) -> bool:
+    """Accept only the two tracked UI outputs produced immediately before packaging.
+
+    The archive is built after ``pnpm build``.  That build deterministically
+    refreshes these tracked outputs in CI, so treating those exact unstaged
+    changes as source dirtiness would make every CI archive unverifiable.
+    Every other tracked, staged, renamed, or untracked path remains a hard
+    refusal: it may influence the package or make the claimed commit ambiguous.
+    """
+    for line in status.splitlines():
+        if not line.startswith(" M ") or line[3:] not in GENERATED_BUILD_OUTPUTS:
+            return True
+    return False
 
 
 def build_info_bytes(revision: str) -> bytes:

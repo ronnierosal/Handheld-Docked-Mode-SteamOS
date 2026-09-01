@@ -69,6 +69,35 @@ class BuildInfoTests(unittest.TestCase):
         ):
             self.assertEqual(build_plugin.source_revision(), "a" * 40)
 
+    def test_only_expected_generated_ui_outputs_are_accepted_after_build(self):
+        with patch.object(
+            build_plugin,
+            "_git_status",
+            side_effect=(
+                CompletedProcess(
+                    ("git", "status"),
+                    0,
+                    stdout=" M dist/index.js\n M dist/index.js.map\n",
+                ),
+                CompletedProcess(("git", "rev-parse", "HEAD"), 0, stdout="a" * 40),
+            ),
+        ):
+            self.assertEqual(build_plugin.source_revision(), "a" * 40)
+
+    def test_any_other_dirty_path_still_refuses_a_clean_revision(self):
+        for status in (
+            " M src/index.tsx\n",
+            "M  dist/index.js\n",
+            "?? dist/untracked.js\n",
+            "R  dist/index.js -> dist/renamed.js\n",
+        ):
+            with self.subTest(status=status), patch.object(
+                build_plugin,
+                "_git_status",
+                return_value=CompletedProcess(("git", "status"), 0, stdout=status),
+            ):
+                self.assertEqual(build_plugin.source_revision(), "uncommitted")
+
 
 if __name__ == "__main__":
     unittest.main()

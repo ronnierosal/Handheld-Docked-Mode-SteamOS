@@ -6,13 +6,14 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from verify_validation_artifact import verify_validation_artifact  # noqa: E402
+from verify_validation_artifact import main, verify_validation_artifact  # noqa: E402
 
 
 REVISION = "a" * 40
@@ -96,6 +97,10 @@ class ValidationArtifactTests(unittest.TestCase):
             verify_validation_artifact(Path("relative"))["reason"],
             "artifact.directory_invalid",
         )
+
+    def test_command_fails_when_the_artifact_is_not_verified(self):
+        with patch.object(sys, "argv", ["verify_validation_artifact.py", "relative"]):
+            self.assertEqual(main(), 1)
 
 
 if __name__ == "__main__":
