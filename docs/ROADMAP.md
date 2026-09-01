@@ -382,8 +382,11 @@ they are not authorization for a separate optimizer or launcher.
   existing request vocabulary. Add a controller-driven Safe Undock delivery
   adapter only after it can call the canonical request facade without parallel
   execution logic.
-- Add device mode-profile data (including display preference separately from
-  game render target) without selecting a display or changing a game setting.
+- **Implemented (pure contract):** mode-profile data keeps display preference
+  (including HDR/VRR) separate from game render targets and player experience
+  goals. It resolves only exact stable observed modes and has no display,
+  GPU, power, audio, controller, or game-setting mechanism authority. Future
+  consumers still require capability proof and TRY/VERIFY.
 - Add a game-adapter interface with backup, atomic change, validation, and
   rollback requirements before any game configuration mechanism is approved.
 - Research community-settings licensing/attribution and Steam integration

@@ -43,6 +43,14 @@ and throttling optional explicit diagnostics during a running or unknown game.
 It provides no clock, collector, loop, or mechanism authority; future callers
 must re-observe before executing deferred work.
 
+Mode profiles are likewise pure player intent. A `ModeProfile` keeps the
+physical display preference (target, mode, HDR, and VRR) separate from a game's
+render-resolution/FPS target and high-level experience goal. An exact stable
+observed mode may look up its local profile; Unknown or Degraded observation
+gets no fallback. The contract has no display, GPU, audio, controller, power,
+or game-setting mechanism authority. Any future consumer must prove capability,
+perform TRY/VERIFY, and preserve observed placement as independent truth.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,
