@@ -65,9 +65,9 @@ def match_gpd_g1(
 ) -> GpdG1Match:
     candidates = [card for card in cards if (card.vendor, card.device) == GPU_ID]
     if not candidates:
-        return GpdG1Match(False, False, reason="RX 7600M XT was not detected")
+        return GpdG1Match(False, False, reason="Required external GPU was not detected")
     if len(candidates) != 1 or not candidates[0].pci_bdf:
-        return GpdG1Match(True, False, reason="RX 7600M XT identity is ambiguous")
+        return GpdG1Match(True, False, reason="External GPU identity is ambiguous")
 
     card = candidates[0]
     by_bdf = {record.bdf: record for record in pci_devices}
@@ -79,7 +79,7 @@ def match_gpd_g1(
         or gpu.driver != "amdgpu"
         or card.driver != "amdgpu"
     ):
-        return GpdG1Match(True, False, gpu_bdf=card.pci_bdf, reason="GPU PCI record is incomplete")
+        return GpdG1Match(True, False, gpu_bdf=card.pci_bdf, reason="External GPU PCI record is incomplete")
 
     root_candidates = [
         by_bdf[bdf]
@@ -104,7 +104,7 @@ def match_gpd_g1(
             True,
             False,
             gpu_bdf=card.pci_bdf,
-            reason="Unique top-level removable Intel 15ef bridge was not proven",
+            reason="Unique top-level removable eGPU bridge was not proven",
         )
     root = top_level_roots[0]
     subtree = tuple(
@@ -131,7 +131,7 @@ def match_gpd_g1(
             True,
             False,
             gpu_bdf=card.pci_bdf,
-            reason="G1 PCI subtree does not match the certified profile",
+            reason="eGPU PCI subtree does not match a certified profile",
             pci_functions=tuple(sorted(record.bdf for record in subtree)),
         )
 
@@ -153,7 +153,7 @@ def match_gpd_g1(
             True,
             False,
             gpu_bdf=card.pci_bdf,
-            reason="Exact authorized GPD G1 USB4 identity was not proven",
+            reason="Exact authorized eGPU USB4 identity was not proven",
             pci_functions=tuple(sorted(record.bdf for record in subtree)),
         )
 

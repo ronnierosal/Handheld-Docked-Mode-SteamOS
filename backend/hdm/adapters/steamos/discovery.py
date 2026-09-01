@@ -25,7 +25,7 @@ from ...domain.models import (
     SupportTier,
 )
 from ...profiles.ally_x import PROFILE_ID as ALLY_X_PROFILE_ID
-from ...profiles.ally_x import matches_ally_x
+from ...profiles.ally_x import match_ally_x, matches_ally_x
 from ...profiles.gpd_g1 import GpdG1Match, match_gpd_g1
 from ...ports.discovery import DiscoveryResult, DiscoveryTiming
 from .drm import DrmCardRecord, DrmConnectorRecord, DrmDiscovery
@@ -439,9 +439,10 @@ class SteamOsDiscovery:
         sleep_guard: SleepGuardObservation,
     ) -> tuple[Blocker, ...]:
         blockers: list[Blocker] = []
-        if not matches_ally_x(host):
+        host_match = match_ally_x(host)
+        if not host_match.exact:
             blockers.append(
-                Blocker("host_profile_unknown", "This handheld is not a certified hardware profile.")
+                Blocker("host_profile_unknown", host_match.reason)
             )
         if not cards:
             blockers.append(

@@ -50,10 +50,10 @@ def match_ally_x(host: HostRecord) -> AllyXMatch:
         for value in (host.sys_vendor, host.product_name, host.board_name)
     )
     if not all(identity):
-        return AllyXMatch(False, "Ally X DMI identity is incomplete")
+        return AllyXMatch(False, "Handheld DMI identity is incomplete")
     if identity not in _CERTIFIED_DMI_IDENTITIES:
-        return AllyXMatch(False, "Ally X DMI identity is not an exact certified tuple")
-    return AllyXMatch(True, "Exact certified Ally X DMI tuple was observed")
+        return AllyXMatch(False, "Handheld DMI identity does not match a certified profile")
+    return AllyXMatch(True, "Exact certified handheld DMI profile was observed")
 
 
 def matches_ally_x(host: HostRecord) -> bool:
