@@ -22,3 +22,8 @@ There is no collector, poller, persistence, UI delivery, or hardware evidence
 in this slice. A supported-profile measurement must use existing HDM work or a
 separately reviewed bounded read-only source and record actual game-impact
 evidence before any operational conclusion.
+
+Troubleshooting has a read-only optional presentation mapper for a future
+public report. It accepts only schema-1 categorical result and a finite
+non-negative observed HDM cost, ignores raw code, and always labels game impact
+Unknown. Current snapshot delivery does not supply the report.

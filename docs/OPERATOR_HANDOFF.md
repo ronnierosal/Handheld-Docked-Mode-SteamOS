@@ -221,6 +221,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   freshness, and game-aware admission; rejection is categorical and fail-closed.
   This opens no files and adds no collector, process call, persistence, polling,
   UI delivery, launch authority, deployment, or hardware action.
+- **Performance Troubleshooting presentation checkpoint (read-only):** an
+  optional public overhead report can now display only finite observed HDM cost
+  plus game impact Unknown, deferred, incomplete, or unavailable. Raw codes and
+  identity are not rendered, negative/non-finite cost fails closed, and current
+  snapshot delivery remains unwired. This adds no collector, poller, timer,
+  measurement authority, Auto TDP, action, deployment, or hardware claim.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

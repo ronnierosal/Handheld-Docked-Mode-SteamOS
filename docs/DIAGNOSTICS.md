@@ -57,6 +57,12 @@ observation state (mapped or unmapped plus evidence codes). It never exposes
 input paths, sound-card paths, device names, addresses, or private bindings,
 and it grants no controller or audio handoff authority.
 
+When a future reviewed read-only source supplies the existing bounded
+HDM-overhead assessment, Troubleshooting can display only observed cost plus
+**game impact unknown**, deferred, incomplete, or unavailable. It never renders
+the raw code or identity, does not claim performance safety, and does not start
+or schedule a measurement collector.
+
 While Quick Access or that section is hidden, HDM does not request its separate
 Docked-iGPU, temporary-logging, peripheral-inventory, or action-history
 statuses. Opening the section uses the existing snapshot refresh loop to request

@@ -166,6 +166,13 @@ export interface SnapshotPayload {
       stage: string;
       duration_ms: number;
     }>;
+    overhead_measurement?: {
+      schema_version: 1;
+      status: "observed" | "deferred" | "evidence_insufficient" | "stale";
+      code: string;
+      game_impact: "unknown";
+      total_cost_ms?: number;
+    };
     hardware_profiles: HardwareProfileDiagnostics;
     build?: {
       schema_version: number;

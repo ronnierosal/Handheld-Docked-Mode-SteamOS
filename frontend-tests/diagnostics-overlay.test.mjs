@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   diagnosticLoggingLabel,
   diagnosticOverlayRows,
+  overheadMeasurementLabel,
 } from "../src/diagnostics-overlay.ts";
 
 
@@ -178,6 +179,32 @@ test("overlay exposes useful categorical state without raw identities", () => {
   ]) {
     assert.doesNotMatch(text, new RegExp(forbidden.replaceAll(":", "\\:")));
   }
+});
+
+test("HDM overhead presentation is bounded, privacy-safe, and never claims game impact", () => {
+  const observed = overheadMeasurementLabel({
+    schema_version: 1,
+    status: "observed",
+    code: "private.measurement.code",
+    game_impact: "unknown",
+    total_cost_ms: 15.4,
+  });
+  assert.equal(observed, "15ms observed · game impact unknown");
+  assert.doesNotMatch(observed, /private/);
+  assert.equal(overheadMeasurementLabel({
+    schema_version: 1,
+    status: "deferred",
+    code: "private",
+    game_impact: "unknown",
+  }), "deferred · game impact unknown");
+  assert.equal(overheadMeasurementLabel(undefined), "unavailable");
+  assert.equal(overheadMeasurementLabel({
+    schema_version: 1,
+    status: "observed",
+    code: "private",
+    game_impact: "unknown",
+    total_cost_ms: -1,
+  }), "unavailable");
 });
 
 test("peripheral diagnostics remain categorical when an observation is mapped", () => {

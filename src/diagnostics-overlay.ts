@@ -21,6 +21,29 @@ function yesNoUnknown(value: boolean | null): string {
   return value === true ? "yes" : value === false ? "no" : "unknown";
 }
 
+export function overheadMeasurementLabel(
+  measurement: SnapshotPayload["diagnostics"]["overhead_measurement"] | undefined,
+): string {
+  if (!measurement || measurement.schema_version !== 1 || measurement.game_impact !== "unknown") {
+    return "unavailable";
+  }
+  if (
+    measurement.status === "observed"
+    && typeof measurement.total_cost_ms === "number"
+    && Number.isFinite(measurement.total_cost_ms)
+    && measurement.total_cost_ms >= 0
+  ) {
+    return `${Math.round(measurement.total_cost_ms)}ms observed · game impact unknown`;
+  }
+  if (measurement.status === "deferred") {
+    return "deferred · game impact unknown";
+  }
+  if (measurement.status === "stale" || measurement.status === "evidence_insufficient") {
+    return "evidence incomplete · game impact unknown";
+  }
+  return "unavailable";
+}
+
 export function diagnosticOverlayRows(
   payload: SnapshotPayload | null,
   dockedIgpuStatus: DockedIgpuStatusPayload | null = null,
@@ -148,6 +171,10 @@ export function diagnosticOverlayRows(
       value: payload.diagnostics.timings_ms
         .map((timing) => `${timing.stage} ${Math.round(timing.duration_ms)}ms`)
         .join(" · ") || "unavailable",
+    },
+    {
+      name: "HDM overhead",
+      value: overheadMeasurementLabel(payload.diagnostics.overhead_measurement),
     },
     {
       name: "Verbose logging",
