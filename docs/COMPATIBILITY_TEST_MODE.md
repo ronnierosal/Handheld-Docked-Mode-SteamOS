@@ -13,7 +13,11 @@ Successful collection records only the hashed evidence generation and the
 categorical external-render result. It does not complete or review the session.
 Simulation still cannot promote a catalog record; a hardware result still
 requires trusted-runner authorization, explicit finish, and human review. No
-Decky UI or production Compatibility Test Mode construction exists.
+Decky UI or production plugin construction exists. An application-only
+lifecycle owns one ephemeral session and applies its temporary-diagnostics
+directives exactly; it cannot trigger a collector, catalog write, or hardware
+transition. Trusted hardware-test authorization remains an injected backend
+boundary rather than frontend-supplied data.
 
 Compatibility Test Mode is currently a dormant session policy, simulator, and
 read-only external-render evidence collector. It does not dock, undock, close a
@@ -54,7 +58,7 @@ Reviewed evidence is bound to the session's backend-owned catalog game identity
 and the exact baseline Steam AppID, preventing a result from being reused for a
 different title.
 
-No production test-mode construction, Decky RPC, or UI is enabled. A dormant
+No production plugin construction, Decky RPC, or UI is enabled. A dormant
 fixed-path atomic catalog store is available only for already domain-validated
 records; a backend-only transaction service can write through it only after the
 existing domain promotion gates pass. Neither is constructed by the production

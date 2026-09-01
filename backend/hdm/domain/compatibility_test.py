@@ -353,6 +353,26 @@ def cancel_compatibility_test(
     )
 
 
+def reconcile_compatibility_expiry(
+    session: CompatibilityTestSession, *, now_ms: int
+) -> CompatibilityTestSession:
+    """Expire only a live test; terminal outcomes retain their exact reason."""
+    if now_ms < 0:
+        raise ValueError("compatibility test clock is invalid")
+    if session.stage in {
+        CompatibilityTestStage.AWAITING_REVIEW,
+        CompatibilityTestStage.COMPLETED,
+        CompatibilityTestStage.CANCELLED,
+        CompatibilityTestStage.ACTION_REQUIRED,
+    }:
+        return session
+    return (
+        cancel_compatibility_test(session, "compatibility.expired")
+        if now_ms >= session.expires_at_ms
+        else session
+    )
+
+
 def require_compatibility_action(
     session: CompatibilityTestSession,
     reason_code: str,

@@ -387,8 +387,11 @@ itself.
 Compatibility Test Mode has one dormant application consumer for this evidence.
 It requires a same-AppID internal-GPU baseline plus active G1 counters in a
 Docked-eGPU snapshot, then records only a hashed generation and categorical
-result. Existing explicit finish/review and simulation-promotion prohibitions
-remain authoritative; no catalog update is automatic.
+result. Its application-only lifecycle serializes one ephemeral session and
+enables or disables temporary diagnostics exactly as the session policy
+requires; trusted hardware-test authorization is an injected backend port, not
+caller data. Existing explicit finish/review and simulation-promotion
+prohibitions remain authoritative; no catalog update is automatic.
 
 ## Application layer
 
