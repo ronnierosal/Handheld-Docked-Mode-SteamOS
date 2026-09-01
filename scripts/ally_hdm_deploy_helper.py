@@ -27,7 +27,9 @@ PLUGIN_PARENT = Path("/home/deck/homebrew/plugins")
 PLUGIN_NAME = "HandheldDockMode"
 TARGET = PLUGIN_PARENT / PLUGIN_NAME
 BACKUPS = PLUGIN_PARENT / ".hdm-deploy-backups"
-PUBLIC_KEY = Path("/etc/handheld-dock-mode/deploy-public-key.pem")
+# SteamOS keeps /usr immutable.  /var/lib/handheld-dock-mode is the existing
+# root-owned, mode-0700 HDM runtime authority and survives system updates.
+PUBLIC_KEY = Path("/var/lib/handheld-dock-mode/deploy-public-key.pem")
 PACKAGE_RE = re.compile(r"HDM-update-([0-9]+(?:\.[0-9]+){2}(?:[-+][A-Za-z0-9.-]+)?)-([0-9a-f]{12})\.zip")
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
 MAX_UNPACKED_BYTES = 96 * 1024 * 1024
