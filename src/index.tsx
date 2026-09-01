@@ -865,8 +865,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   }, [refresh, showDiagnostics]);
 
   return (
-    <>
-      <div ref={statusAnchor} tabIndex={-1} />
+    <ScrollPanel>
+      <div ref={statusAnchor} tabIndex={-1}>
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
         <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
@@ -1130,7 +1130,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
-    </>
+      </div>
+    </ScrollPanel>
   );
 }
 
