@@ -402,6 +402,11 @@ they are not authorization for a separate optimizer or launcher.
   config writer, game-setting UI, or frontend authority exists yet.
 - Research community-settings licensing/attribution and Steam integration
   boundaries before collecting, redistributing, or presenting recommendations.
+- **Implemented (projection only):** transparent action history derives a
+  short controller-friendly timeline from the existing bounded HDM event log.
+  It stores nothing new and exports only action kind, outcome, code, and time;
+  detail fields and correlation IDs stay private. Decky presentation wiring is
+  intentionally deferred.
 
 ## Smallest safe next milestone
 

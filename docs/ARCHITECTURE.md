@@ -69,6 +69,13 @@ before terminal success is possible. No adapter is yet constructed: the domain
 contract accepts no paths, bytes, commands, PIDs, arbitrary setting names, or
 frontend-provided game identity.
 
+Transparent action history is a bounded projection of the existing HDM event
+log, not a second audit or telemetry store. It retains only time, a categorical
+action kind, categorical outcome, and stable event code; it deliberately drops
+event details and correlation IDs. A future Decky history view can therefore
+explain attempted, completed, recovered, blocked, failed, or attention-required
+actions without exposing private hardware/process/session evidence.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,
