@@ -3,6 +3,7 @@ import {
   ButtonItem,
   ConfirmModal,
   DropdownItem,
+  Focusable,
   PanelSection,
   PanelSectionRow,
   ScrollPanel,
@@ -833,7 +834,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   }, []);
 
   return (
-    <>
+    <Focusable flow-children="vertical" noFocusRing>
       <div ref={statusAnchor} />
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
@@ -1102,7 +1103,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
-    </>
+    </Focusable>
   );
 }
 
