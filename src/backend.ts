@@ -125,6 +125,15 @@ export interface SnapshotPayload {
     mode: string;
     reasons: string[];
   };
+  health?: {
+    state: "ready" | "recovering" | "degraded" | "attention_required";
+    components: Array<{
+      component: string;
+      state: "ready" | "recovering" | "degraded" | "unknown";
+      reason: string;
+    }>;
+    blockers: string[];
+  };
   diagnostics: {
     schema_version: number;
     timings_ms: Array<{

@@ -81,6 +81,14 @@ function payload() {
       blockers: [{ code: "test.blocker", message: "Fixture blocker" }],
     },
     inference: { mode: "tv_docked", reasons: [] },
+    health: {
+      state: "attention_required",
+      components: [
+        { component: "placement", state: "ready", reason: "" },
+        { component: "egpu_link", state: "unknown", reason: "egpu.link_unobserved" },
+      ],
+      blockers: ["health.egpu_link_unknown"],
+    },
     diagnostics: {
       schema_version: 2,
       timings_ms: [{ stage: "snapshot_total", duration_ms: 25.4 }],
@@ -136,6 +144,9 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /shutdown before disconnect/);
   assert.match(text, /eGPU link/);
   assert.match(text, /up · observed/);
+  assert.match(text, /System health/);
+  assert.match(text, /attention required/);
+  assert.match(text, /health egpu link unknown/);
   assert.match(text, /Docked-iGPU watch/);
   assert.match(text, /promotion ready/);
   assert.match(text, /Promotion inspection/);

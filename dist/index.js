@@ -140,6 +140,16 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
     };
     const rows = [
         { name: "Observed mode", value: humanize(payload.inference.mode) },
+        {
+            name: "System health",
+            value: humanize(payload.health?.state ?? "unavailable"),
+        },
+        {
+            name: "Health blockers",
+            value: payload.health?.blockers.length
+                ? payload.health.blockers.map(humanize).join(", ")
+                : "none",
+        },
         { name: "Snapshot schema", value: String(snapshot.schema_version) },
         { name: "Device profile", value: snapshot.host_profile },
         { name: "Support tier", value: humanize(snapshot.support_tier) },

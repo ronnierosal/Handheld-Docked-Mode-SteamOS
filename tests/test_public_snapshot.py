@@ -73,6 +73,8 @@ class PublicSnapshotTests(unittest.TestCase):
         self.assertEqual(profiles["host"]["status"], "exact")
         self.assertEqual(profiles["egpu"]["status"], "unknown")
         self.assertEqual(payload["delivery_schema_version"], 2)
+        self.assertEqual(payload["health"]["state"], "ready")
+        self.assertNotIn(private, payload["health"])
 
 
 if __name__ == "__main__":

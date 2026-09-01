@@ -55,6 +55,12 @@ observation state (mapped or unmapped plus evidence codes). It never exposes
 input paths, sound-card paths, device names, addresses, or private bindings,
 and it grants no controller or audio handoff authority.
 
+The same view displays the snapshot's existing categorical health state
+(`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
+health blockers. It does not add a collection loop, infer a workflow, change
+placement, or authorize any action. Older payloads show health as unavailable
+rather than guessing.
+
 The same optional section may show up to three recent actions from the existing
 bounded in-memory event log. Each row contains only time, a categorical action
 kind, outcome, and event code. It persists nothing new and never exposes event
