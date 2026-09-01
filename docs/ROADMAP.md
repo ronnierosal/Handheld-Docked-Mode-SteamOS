@@ -32,7 +32,7 @@ No broader label may be inferred from a narrower one.
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated; includes bounded categorical peripheral observation state when available | Controller-visible preview and save acceptance remain pending. |
-| Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, and one explicit player-watched idle TV-switch test implemented and simulated | Hardware proof and startup recovery wiring remain; automatic attach is disabled. |
+| Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, and one explicit player-watched idle TV-switch test implemented and simulated. Preparation has hardware evidence; the first watched TV attempt safely stayed on the internal panel and exposed a corrected shim-config path defect. | The `8c721fb` path fix requires a new supervised eGPU/TV hardware proof. Startup recovery wiring remains; automatic attach is disabled. |
 | Docked-iGPU promotion/recovery path | Durable transition path plus bounded natural-exit watcher, serialized lifecycle, non-authorizing preview composition, and single-owner async driver are implemented and simulated; production runs the watcher in no-preview mode and exposes identity-free status/acknowledgement | Hardware proof, production read-only preview construction, and separately gated confirmation/execution remain. |
 | Process release/termination | Approval/classification, redacted Decky inspect/confirm flow, guarded facade, Linux pidfd adapter, mandatory re-scan runner, root-owned durable pre-signal journal, and no-repeat startup recovery implemented and simulated | Supervised disposable-process proof remains. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
@@ -161,7 +161,8 @@ disposable-process validation. This does not enable physical removal.
 
 ### R3 — Manual verified transition engine and recovery
 
-**Status:** DURABLE GUARDED ORCHESTRATOR IMPLEMENTED AND SIMULATED — a one-step
+**Status:** DURABLE GUARDED ORCHESTRATOR IMPLEMENTED AND SIMULATED; PREPARATION
+HARDWARE-EXERCISED; TV-SWITCH ACCEPTANCE FAILED ON FIRST ATTEMPT — a one-step
 manual Portable↔Docked-eGPU plan is produced only from exact runtime profile,
 device/display binding, game, display/render, and source-rollback evidence. A
 two-minute single-use backend permit can authorize one explicitly confirmed
@@ -187,8 +188,19 @@ back a new drop-in on failure.
 - Treat game-running or unknown game state as a blocker whenever Gamescope would
   restart.
 
-Exit: simulation passes first; then supervised Ally X/G1/TV testing with the G1
-connected naturally and no live unplug.
+The Decky preparation endpoint is hardware-exercised: an old eGPUBridge `PATH`
+override was removed separately and recoverably, HDM installed its own
+reversible drop-in, and the user service was reloaded/verified without a
+Gamescope restart. The first watched ready-TV attempt did not switch to TV; the
+shim safely used the internal panel because the transaction wrote its
+shim-facing config to the root-only journal directory. `8c721fb` writes that
+launch config to the exact prepared user's state directory while retaining the
+root-owned journal. This is a corrected implementation, not a hardware pass.
+
+Exit: simulation passes first; then a fresh supervised Ally X/G1/TV test of the
+corrected build with G1 connected naturally, game idle, before/attempt/after
+evidence, and no live unplug. Automatic attach remains disabled regardless of
+that single test.
 
 ### R4 — Canonical sleep request orchestration
 

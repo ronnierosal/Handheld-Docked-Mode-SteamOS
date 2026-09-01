@@ -223,6 +223,20 @@ disconnected, the system is verified Portable/idle, and the player is watching:
 
 Preparation is not a display-transition test and does not authorize one.
 
+The currently packaged controller endpoint is only the named **supervised idle
+TV-switch test**. It may be used only after preparation succeeds, with the
+player watching, a game confirmed idle, exact eGPU and TV/EDID evidence ready,
+and a known-good rollback package available. Remote automation may build,
+stage, inspect, and collect evidence, but must not invoke its confirmation or
+restart Gamescope unattended.
+
+The first watched G1/TV attempt did not switch output; the shim retained the
+internal panel because the transition launch configuration was written where the
+shim could not read it. Treat that attempt as a failed acceptance result. The
+corrected candidate must repeat the complete watched test and show a verified
+TV result or a verified Portable rollback before any automatic-docking proposal
+is considered.
+
 ### D6 — Physical and access-risk experiments
 
 Create a separate experiment plan with explicit player presence, acceptance

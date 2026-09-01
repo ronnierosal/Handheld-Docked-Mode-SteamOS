@@ -271,6 +271,40 @@ The privileged success path therefore remains UNVERIFIED on hardware; this
 failed attempt supplies no additional Gamescope, client, or sleep-lease
 evidence and performed no HDM or hardware mutation.
 
+## Supervised presentation preparation and first TV-switch result
+
+The user explicitly authorized cleanup of an eGPUBridge integration that still
+owned the Gamescope user-service `PATH` override after its Decky UI uninstall.
+The cleanup removed that fixed override and reloaded the user manager without
+restarting Gamescope; a recoverable backup was retained. This was a one-time
+environment repair, not an HDM automatic-uninstall capability.
+
+HDM's controller-first presentation-preparation flow was then exercised while
+Portable and idle. The first Decky request was rejected because the frontend
+sent Decky RPC placeholder arguments that the backend treated as actual
+arguments. Commit `c2fc911` accepts the framework placeholders only for this
+fixed endpoint. After native Decky reinstall, the on-screen confirmation
+successfully prepared HDM's reversible integration and reported that no
+Gamescope restart or display switch occurred. Read-only verification confirmed
+that the prepared integration remained active and the internal display session
+was usable.
+
+A later player-watched idle TV-switch attempt was made only after the eGPU and
+TV evidence were ready and the game state was idle. It did not move output to
+the TV. The known-good internal display remained available. Inspection found
+the transition mechanism wrote the shim-facing boot presentation config under
+the root-only transaction-journal directory, but the prepared Gamescope shim
+reads a fixed directory under the verified Gamescope user's home. Commit
+`8c721fb` corrects that location while retaining the journal in root-owned
+state.
+
+Result: preparation is hardware-exercised; the first TV-switch acceptance
+attempt failed; the correction is implemented and locally tested but **not yet
+hardware validated**. No automatic attach behavior is enabled. A new watched
+test of the corrected build must collect before/attempt/after evidence and
+either verify TV presentation or verify a clean Portable rollback before this
+path can advance.
+
 ## Gaming-safe read-only capture before the next candidate
 
 At `2026-08-31T15:08:58-07:00`, the fixed unprivileged SSH-stdin collector ran

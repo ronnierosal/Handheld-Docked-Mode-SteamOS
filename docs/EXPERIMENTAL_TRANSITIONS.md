@@ -132,6 +132,31 @@ integration, rebuilds the exact plan, and enters the durable orchestrator.
 Pending recovery or unacknowledged terminal evidence blocks another attempt.
 The player must acknowledge the exact terminal result before a later test.
 
+## Current hardware evidence
+
+The integration-preparation flow has been exercised on the certified handheld
+while Portable and idle. It installed HDM's reversible drop-in, reloaded the
+verified user manager, and left the existing Gamescope session and internal
+display usable. A competing legacy eGPUBridge `PATH` override was removed as a
+separate, recoverable cleanup before that preparation; HDM did not overwrite the
+competing file.
+
+The first player-watched idle TV-switch attempt with a ready eGPU and TV did
+**not** reach the TV. The shim safely fell back to the internal panel. Review
+found that the transition mechanism had written its boot-scoped presentation
+configuration into the root-only journal state directory, while the prepared
+user-service shim reads the verified Gamescope user's fixed state directory.
+Commit `8c721fb` corrects that path split: the journal remains root-owned and
+the shim-facing launch configuration is written only to the exact prepared
+user path.
+
+This is a failed hardware acceptance result, not proof that the corrected path
+works. The fixed candidate still requires a new player-watched, idle,
+eGPU-and-TV-attached test with before/attempt/after evidence and recovery
+observation. It remains Experimental and neither this endpoint nor preparation
+authorizes automatic attach, an unattended Gamescope restart, a Docked-iGPU
+handoff, sleep, or removal.
+
 This is not an automatic attach path: it is unavailable when a game is running
 or unknown, and it does not authorize a Docked-iGPU handoff, live removal, or
 any sleep action. The player must watch the handheld screen for the one
