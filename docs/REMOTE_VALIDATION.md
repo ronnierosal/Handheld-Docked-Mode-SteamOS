@@ -33,6 +33,13 @@ wrapper does not prompt or retry with another mechanism. The operating system
 may retain its normal sudo/audit record even though the collector itself writes
 no remote files.
 
+An unprivileged connection failure reports one fixed local category, such as
+`ssh.authentication_failed`, `ssh.host_key_unverified`,
+`ssh.connection_refused`, or `ssh.connection_timed_out`. HDM never prints SSH
+stderr, remote commands, credentials, or host details. The harness does not
+retry with a guessed account, key, port, or transport; correct SSH access must
+already be configured before a later read-only capture is attempted.
+
 The local result is created exclusively under `out/remote-captures/` by default.
 Existing files are never overwritten. The report includes:
 

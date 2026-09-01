@@ -38,6 +38,26 @@ FORBIDDEN_KEYS = frozenset(
 )
 
 
+def ssh_failure_code(returncode: int, stderr: str) -> str:
+    """Classify local OpenSSH failure without returning its untrusted output."""
+    if returncode != 255:
+        return "ssh.remote_command_failed"
+    message = stderr.casefold()
+    if "permission denied" in message:
+        return "ssh.authentication_failed"
+    if "host key verification failed" in message:
+        return "ssh.host_key_unverified"
+    if "could not resolve hostname" in message:
+        return "ssh.host_unresolved"
+    if "connection refused" in message:
+        return "ssh.connection_refused"
+    if "no route to host" in message or "network is unreachable" in message:
+        return "ssh.network_unreachable"
+    if "connection timed out" in message or "operation timed out" in message:
+        return "ssh.connection_timed_out"
+    return "ssh.connection_failed"
+
+
 def validate_destination(host: str, user: str, port: int) -> str:
     if not HOST_RE.fullmatch(host):
         raise ValueError("host must be a DNS name or IPv4 address without options")
@@ -195,7 +215,10 @@ def collect_remote(
                 "non-interactive root read-only capture unavailable "
                 f"(SSH status {result.returncode})"
             )
-        raise RuntimeError(f"read-only SSH capture failed with status {result.returncode}")
+        raise RuntimeError(
+            "read-only SSH capture failed: "
+            f"{ssh_failure_code(result.returncode, result.stderr)}"
+        )
     return parse_capture(
         result.stdout,
         payload_hash,

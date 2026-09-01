@@ -132,6 +132,38 @@ class RemoteCaptureTests(unittest.TestCase):
         self.assertEqual(run.call_count, 1)
         self.assertNotIn("private remote diagnostic", str(raised.exception))
 
+    def test_unprivileged_failure_is_categorical_without_remote_stderr(self):
+        class Result:
+            returncode = 255
+            stdout = ""
+            stderr = "deck@192.168.1.141: Permission denied (publickey,password)."
+
+        with patch("remote_capture.subprocess.run", return_value=Result()):
+            with self.assertRaisesRegex(
+                RuntimeError, r"ssh\.authentication_failed"
+            ) as raised:
+                remote_capture.collect_remote(host="192.168.1.141")
+        self.assertNotIn("192.168.1.141", str(raised.exception))
+        self.assertNotIn("publickey", str(raised.exception))
+
+    def test_ssh_failure_classification_is_fixed_and_non_sensitive(self):
+        cases = {
+            "Permission denied (publickey).": "ssh.authentication_failed",
+            "Host key verification failed.": "ssh.host_key_unverified",
+            "Could not resolve hostname ally: Name or service not known": "ssh.host_unresolved",
+            "connect to host ally port 22: Connection refused": "ssh.connection_refused",
+            "connect to host ally port 22: No route to host": "ssh.network_unreachable",
+            "Connection timed out": "ssh.connection_timed_out",
+            "private diagnostic token=secret": "ssh.connection_failed",
+        }
+        for stderr, expected in cases.items():
+            with self.subTest(expected=expected):
+                self.assertEqual(remote_capture.ssh_failure_code(255, stderr), expected)
+        self.assertEqual(
+            remote_capture.ssh_failure_code(1, "private remote failure"),
+            "ssh.remote_command_failed",
+        )
+
     def test_parser_rejects_private_process_fields(self):
         value = {
             "schema_version": 1,
