@@ -7,6 +7,7 @@ from enum import StrEnum
 
 from .control_plane import PlacementState
 from .models import Confidence, EgpuLinkState, ObservedSnapshot
+from .peripheral_handoff import PeripheralObservation
 
 
 class HealthState(StrEnum):
@@ -104,14 +105,18 @@ def assess_health(
 
 
 def assess_snapshot_health(
-    snapshot: ObservedSnapshot, placement: PlacementState
+    snapshot: ObservedSnapshot,
+    placement: PlacementState,
+    peripheral: PeripheralObservation | None = None,
 ) -> HealthAssessment:
     """Assess only current read-only snapshot evidence.
 
-    This initial bridge deliberately leaves controller/audio out until their
-    mechanisms have independent usable-state observations. External placements
-    retain an unknown eGPU-link component until the read-only collector can
-    observe an exact bridge; a connected eGPU is not silently considered healthy.
+    A caller may add one separately collected peripheral observation. Incomplete
+    peripheral mapping/default-output/input evidence remains Attention Required;
+    it is never treated as usable merely because sysfs inventory exists. External
+    placements retain an unknown eGPU-link component until the read-only
+    collector can observe an exact bridge; a connected eGPU is not silently
+    considered healthy.
     """
     components = [
         _placement_component(placement),
@@ -125,6 +130,8 @@ def assess_snapshot_health(
         components.append(_egpu_link_component(snapshot))
     if snapshot.disconnect_readiness.applicable:
         components.append(_storage_component(snapshot))
+    if peripheral is not None:
+        components.extend((_controller_component(peripheral), _audio_component(peripheral)))
     return assess_health(tuple(components))
 
 
@@ -222,4 +229,54 @@ def _egpu_link_component(snapshot: ObservedSnapshot) -> HealthComponentObservati
         HealthComponent.EGPU_LINK,
         HealthEvidenceState.UNKNOWN,
         link.error or "egpu.link_health_unobserved",
+    )
+
+
+def _controller_component(
+    peripheral: PeripheralObservation,
+) -> HealthComponentObservation:
+    controller = peripheral.controller
+    if not controller.complete or not controller.exact:
+        return HealthComponentObservation(
+            HealthComponent.CONTROLLER,
+            HealthEvidenceState.UNKNOWN,
+            controller.failure_code or "controller.observation_incomplete",
+        )
+    if controller.builtin_available is False:
+        return HealthComponentObservation(
+            HealthComponent.CONTROLLER,
+            HealthEvidenceState.DEGRADED,
+            "controller.builtin_unavailable",
+        )
+    if controller.builtin_available is not True or not controller.builtin_input_verified:
+        return HealthComponentObservation(
+            HealthComponent.CONTROLLER,
+            HealthEvidenceState.UNKNOWN,
+            "controller.builtin_input_unverified",
+        )
+    return HealthComponentObservation(
+        HealthComponent.CONTROLLER,
+        HealthEvidenceState.READY,
+        "controller.builtin_input_verified",
+    )
+
+
+def _audio_component(peripheral: PeripheralObservation) -> HealthComponentObservation:
+    audio = peripheral.audio
+    if not audio.complete or not audio.exact:
+        return HealthComponentObservation(
+            HealthComponent.AUDIO,
+            HealthEvidenceState.UNKNOWN,
+            audio.failure_code or "audio.observation_incomplete",
+        )
+    if not audio.current_output_usable_verified:
+        return HealthComponentObservation(
+            HealthComponent.AUDIO,
+            HealthEvidenceState.UNKNOWN,
+            "audio.current_output_unverified",
+        )
+    return HealthComponentObservation(
+        HealthComponent.AUDIO,
+        HealthEvidenceState.READY,
+        "audio.current_output_verified",
     )

@@ -24,6 +24,12 @@ from hdm.domain.models import (  # noqa: E402
     EgpuLinkObservation,
     EgpuLinkState,
 )
+from hdm.domain.peripheral_handoff import (  # noqa: E402
+    AudioOutput,
+    AudioPeripheralState,
+    ControllerPeripheralState,
+    PeripheralObservation,
+)
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 
 
@@ -32,6 +38,38 @@ FIXTURES = ROOT / "tests" / "fixtures"
 
 def fixture(name: str) -> dict[str, object]:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def peripheral(
+    *,
+    controller: ControllerPeripheralState | None = None,
+    audio: AudioPeripheralState | None = None,
+) -> PeripheralObservation:
+    return PeripheralObservation(
+        1,
+        "peripheral-generation",
+        "peripheral-sample",
+        controller
+        or ControllerPeripheralState(
+            True, True, "", "builtin", True, True, True, "external", True, True
+        ),
+        audio
+        or AudioPeripheralState(
+            True,
+            True,
+            "",
+            AudioOutput.INTERNAL,
+            "current",
+            True,
+            "external-audio",
+            True,
+            True,
+            "portable-audio",
+            True,
+            True,
+            True,
+        ),
+    )
 
 
 class HealthAggregationTests(unittest.TestCase):
@@ -119,6 +157,49 @@ class HealthAggregationTests(unittest.TestCase):
         )
         self.assertEqual(health.state, HealthState.DEGRADED)
         self.assertIn("health.storage_degraded", health.blockers)
+
+    def test_verified_usable_peripherals_complete_the_optional_health_scope(self):
+        health = assess_snapshot_health(
+            snapshot_from_dict(fixture("portable.json")),
+            PlacementState.PORTABLE,
+            peripheral(),
+        )
+        self.assertEqual(health.state, HealthState.READY)
+        states = {component.component: component.state for component in health.components}
+        self.assertEqual(states[HealthComponent.CONTROLLER], HealthEvidenceState.READY)
+        self.assertEqual(states[HealthComponent.AUDIO], HealthEvidenceState.READY)
+
+    def test_incomplete_peripheral_observations_require_attention(self):
+        observed = peripheral(
+            controller=ControllerPeripheralState(
+                True, False, "controller.identity_unmapped", "", None, False, False, "", None, False
+            ),
+            audio=AudioPeripheralState(
+                True, False, "audio.default_output_unobserved", AudioOutput.UNKNOWN, "", False, "", None, False, "", None, False, False
+            ),
+        )
+        health = assess_snapshot_health(
+            snapshot_from_dict(fixture("portable.json")),
+            PlacementState.PORTABLE,
+            observed,
+        )
+        self.assertEqual(health.state, HealthState.ATTENTION_REQUIRED)
+        self.assertIn("health.controller_unknown", health.blockers)
+        self.assertIn("health.audio_unknown", health.blockers)
+
+    def test_known_loss_of_builtin_input_is_degraded(self):
+        observed = peripheral(
+            controller=ControllerPeripheralState(
+                True, True, "", "builtin", False, False, False, "external", True, True
+            )
+        )
+        health = assess_snapshot_health(
+            snapshot_from_dict(fixture("portable.json")),
+            PlacementState.PORTABLE,
+            observed,
+        )
+        self.assertEqual(health.state, HealthState.DEGRADED)
+        self.assertIn("health.controller_degraded", health.blockers)
 
 
 if __name__ == "__main__":

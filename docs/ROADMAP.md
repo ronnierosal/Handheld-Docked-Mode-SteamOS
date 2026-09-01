@@ -376,8 +376,11 @@ they are not authorization for a separate optimizer or launcher.
 - Expand the implemented typed health aggregation from placement, session,
   display, storage, and current exact-bridge PCIe link observation to
   independently verified controller, audio, link-quality, and recovery
-  evidence. Current link up/down is neither throughput proof nor removal
-  authority.
+  evidence. **Implemented (optional input):** one independently collected
+  peripheral observation now contributes controller/audio health only when it
+  proves usable built-in input/current output; incomplete evidence is Attention
+  Required and known built-in loss is Degraded. Snapshot wiring remains deferred.
+  Current link up/down is neither throughput proof nor removal authority.
 - **Implemented (pure contract):** the shared telemetry admission contract
   requires a typed bounded metric set, declared collection interval, measured
   cost, benchmark evidence, and an explicit low-cost budget before a future

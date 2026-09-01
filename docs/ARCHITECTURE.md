@@ -76,6 +76,14 @@ event details and correlation IDs. A future Decky history view can therefore
 explain attempted, completed, recovered, blocked, failed, or attention-required
 actions without exposing private hardware/process/session evidence.
 
+Health aggregation can also accept one independent private peripheral
+observation. Only exact, verified usable built-in input and current audio output
+produce Ready components; incomplete mapping, default-output, or input evidence
+is Attention Required, and a known loss of the built-in controller fallback is
+Degraded. The normal snapshot path remains unchanged until a future owner
+supplies that separate observation, so sysfs inventory alone cannot improve
+health or authorize handoff.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,
