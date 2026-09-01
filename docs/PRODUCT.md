@@ -79,6 +79,12 @@ wake. Future work must place those behind narrow telemetry, device-profile,
 and game-adapter boundaries and preserve the same recovery and explicit-consent
 rules.
 
+**Implemented foundation only:** Offline Readiness is a pure local classifier
+for supplied categorical install, download, entitlement, cloud-save, storage,
+and known online-check evidence. Its strongest positive result is **ready to
+try offline**, never a launch guarantee. It has no Steam collector, account or
+game-title delivery, persistence, UI, or automation.
+
 ## Interrupted docked-sleep recovery policy
 
 **Product intent; not current hardware behavior:** if an eGPU is removed while

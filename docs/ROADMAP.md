@@ -448,6 +448,11 @@ they are not authorization for a separate optimizer or launcher.
   goals. It resolves only exact stable observed modes and has no display,
   GPU, power, audio, controller, or game-setting mechanism authority. Future
   consumers still require capability proof and TRY/VERIFY.
+- **Implemented (pure contract):** Offline Readiness maps supplied categorical
+  local install/download/entitlement/cloud-save and online-check evidence to
+  ready-to-try, attention, online-check, or Unknown. It has no Steam collector,
+  storage scan, account/game identity, UI, persistence, or launch authority.
+  Any future source needs privacy, freshness, cost, and game-impact gates.
 - **Implemented (pure contract):** a reviewed Game Adapter must use typed
   allowlisted settings and exact opaque revisions. Its future mechanism is
   constrained to compare-before-write, backup, atomic staging, validation,

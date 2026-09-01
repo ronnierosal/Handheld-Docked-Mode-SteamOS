@@ -46,8 +46,9 @@ do not leave a growing queue of completed worktree commits unintegrated.
   and unexpected-undock worker commits are patch-equivalent to `46e69dd` and
   `77e518f` already on main; no duplicate merge was made. The canonical-sleep
   replay worktree predates later guarded-save/journal work and must not be
-  merged. One detached worktree has an uncommitted offline-readiness draft;
-  preserve it for its owner. No hardware status changed.
+  merged. The offline-readiness draft was reviewed, committed on its worker
+  branch, and cleanly cherry-picked as `7db80d9`; main verification then passed.
+  No hardware status changed.
 - The optional workflow/peripheral health inputs are deliberately not constructed
   by the production snapshot path yet. A future owner must be authoritative and
   event-driven or measured/cached; do not add continuous peripheral scans to
@@ -105,6 +106,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   non-intrusive choice to retain automatic restart or turn it off. No current
   code has wake wiring, those concerns, a relaunch adapter, or hardware proof;
   never claim a game crash or successful recovery from passive capture.
+- **Implemented (pure local contract):** Offline Readiness classifies only
+  supplied categorical install, download, entitlement, cloud-save, local
+  blocker, and known online-check evidence as ready-to-try, attention needed,
+  online check needed, or Unknown. It exposes no game/account/path/time data,
+  never promises offline launch, and has no Steam collector, UI, persistence,
+  or hardware evidence. Next safe work is an evidence-source design with
+  privacy, freshness, and game-impact gates.
 
 ## SSH access
 
