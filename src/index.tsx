@@ -1,4 +1,4 @@
-import { definePlugin, toaster } from "@decky/api";
+import { definePlugin, toaster, useQuickAccessVisible } from "@decky/api";
 import {
   ButtonItem,
   ConfirmModal,
@@ -48,7 +48,7 @@ import {
   collectOptionalDiagnostics,
   shouldCollectOptionalDiagnostics,
 } from "./optional-diagnostics-refresh";
-import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
+import { connectionProgress, refreshDelayForVisibility } from "./refresh-policy";
 import { canOfferForce, processReleaseOutcomeMessage } from "./process-release-ui";
 import {
   SleepPreflightCoordinator,
@@ -299,6 +299,7 @@ function preflightObservation(payload: SnapshotPayload): PreflightObservation {
 }
 
 function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
+  const quickAccessVisible = useQuickAccessVisible();
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryPayload | null>(null);
@@ -381,7 +382,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       const nextPayload = await getSnapshot();
       const optionalDiagnostics = await collectOptionalDiagnostics(
         shouldCollectOptionalDiagnostics(
-          showDiagnostics,
+          quickAccessVisible && showDiagnostics,
           nextPayload.snapshot.game_state,
         ),
         {
@@ -410,7 +411,18 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         setLoading(false);
       }
     }
-  }, [preflight, showDiagnostics]);
+  }, [preflight, quickAccessVisible, showDiagnostics]);
+
+  useEffect(() => {
+    if (quickAccessVisible) {
+      return;
+    }
+    setShowDiagnostics(false);
+    setDockedIgpuStatus(null);
+    setDiagnosticLoggingStatus(null);
+    setPeripheralStatus(null);
+    setActionHistory(null);
+  }, [quickAccessVisible]);
 
   useEffect(() => {
     let disposed = false;
@@ -426,7 +438,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       if (!disposed) {
         timer = window.setTimeout(
           () => void poll(true),
-          refreshDelayForSnapshot(nextPayload),
+          refreshDelayForVisibility(nextPayload, quickAccessVisible),
         );
       }
     };
@@ -437,7 +449,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         window.clearTimeout(timer);
       }
     };
-  }, [preflight, refresh]);
+  }, [preflight, quickAccessVisible, refresh]);
 
   const snapshot = payload?.snapshot;
   const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);

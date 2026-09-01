@@ -57,11 +57,15 @@ observation state (mapped or unmapped plus evidence codes). It never exposes
 input paths, sound-card paths, device names, addresses, or private bindings,
 and it grants no controller or audio handoff authority.
 
-While that section is hidden, HDM does not request its separate Docked-iGPU,
-temporary-logging, peripheral-inventory, or action-history statuses. Opening
-the section uses the existing snapshot refresh loop to request them once per
-refresh; hiding it clears those optional values again. This keeps normal
-gameplay observation limited to the essential snapshot.
+While Quick Access or that section is hidden, HDM does not request its separate
+Docked-iGPU, temporary-logging, peripheral-inventory, or action-history
+statuses. Opening the section uses the existing snapshot refresh loop to request
+them once per refresh; hiding Quick Access or the section clears those optional
+values again. The always-rendered Decky panel uses at most one essential UI
+snapshot every five seconds while Quick Access is closed; reopening it returns
+to the ordinary adaptive cadence. This keeps normal gameplay observation limited
+to the essential snapshot. Backend sleep protection is independent of this UI
+cadence.
 
 Even while the section is visible, those nonessential checks wait until the
 same snapshot reports an exact idle game state. Running or unknown game state

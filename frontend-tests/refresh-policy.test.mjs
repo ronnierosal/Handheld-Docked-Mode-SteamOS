@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   connectionProgress,
   ACTIVE_GAME_REFRESH_MS,
+  BACKGROUND_REFRESH_MS,
   DISCOVERY_REFRESH_MS,
+  refreshDelayForVisibility,
   refreshDelayForSnapshot,
   SETTLING_REFRESH_MS,
   STABLE_REFRESH_MS,
@@ -111,5 +113,21 @@ test("running or unknown game evidence never turns deferred diagnostics into rap
       gameState: "unknown",
     })),
     STABLE_REFRESH_MS,
+  );
+});
+
+test("closed Quick Access uses one low-frequency UI cadence without changing backend safety", () => {
+  const running = payload({ gameState: "running" });
+  assert.equal(
+    refreshDelayForVisibility(running, false),
+    BACKGROUND_REFRESH_MS,
+  );
+  assert.equal(
+    refreshDelayForVisibility(running, true),
+    ACTIVE_GAME_REFRESH_MS,
+  );
+  assert.equal(
+    refreshDelayForVisibility(payload(), true),
+    DISCOVERY_REFRESH_MS,
   );
 });

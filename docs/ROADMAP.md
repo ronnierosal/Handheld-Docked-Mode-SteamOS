@@ -411,6 +411,11 @@ they are not authorization for a separate optimizer or launcher.
   budget and has no collector, scheduler, Auto TDP, or mutation authority.
   A real collector remains deferred until cost and game-impact measurement are
   recorded for a supported profile.
+- **Implemented (Decky UI budget):** the always-rendered Quick Access panel
+  clears optional troubleshooting state when hidden and uses a five-second
+  essential-snapshot cadence outside Quick Access. Reopening the panel returns
+  immediately to the existing adaptive cadence. Backend sleep protection does
+  not depend on this UI polling path.
 - **Implemented (policy + dormant relay):** the default verified held **Guide +
   Y** chord maps to the existing controller Safe Undock logical request, which
   remains routed through the ordinary `UNDOCK` transition vocabulary. Its

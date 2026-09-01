@@ -17,6 +17,7 @@ if (api._version != API_VERSION) {
 }
 const callable = api.callable;
 const toaster = api.toaster;
+const useQuickAccessVisible = api.useQuickAccessVisible;
 const definePlugin = (fn) => {
     return (...args) => {
         return fn(...args);
@@ -351,6 +352,7 @@ const DISCOVERY_REFRESH_MS = 1_000;
 const SETTLING_REFRESH_MS = 750;
 const STABLE_REFRESH_MS = 3_000;
 const ACTIVE_GAME_REFRESH_MS = 5_000;
+const BACKGROUND_REFRESH_MS = 5_000;
 function firstHardwareBlocker(payload) {
     const blocker = payload.snapshot.blockers.find((item) => (item.code === "egpu_identity_unverified"
         || item.code === "drm_inventory_unavailable"
@@ -436,6 +438,16 @@ function refreshDelayForSnapshot(payload) {
         return SETTLING_REFRESH_MS;
     }
     return progress.label === "TV Docked" ? STABLE_REFRESH_MS : DISCOVERY_REFRESH_MS;
+}
+/**
+ * Keep the always-rendered Decky panel out of the player's way while Quick
+ * Access is closed. Backend sleep protection remains independently active, and
+ * reopening Quick Access immediately re-enters the ordinary adaptive cadence.
+ */
+function refreshDelayForVisibility(payload, quickAccessVisible) {
+    return quickAccessVisible
+        ? refreshDelayForSnapshot(payload)
+        : BACKGROUND_REFRESH_MS;
 }
 
 function processReleaseOutcomeMessage(outcome) {
@@ -747,6 +759,7 @@ function preflightObservation(payload) {
     }, Date.now(), SNAPSHOT_STALE_AFTER_MS);
 }
 function Content({ preflight }) {
+    const quickAccessVisible = useQuickAccessVisible();
     const [payload, setPayload] = SP_REACT.useState(null);
     const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
     const [actionHistory, setActionHistory] = SP_REACT.useState(null);
@@ -820,7 +833,7 @@ function Content({ preflight }) {
         }
         try {
             const nextPayload = await getSnapshot();
-            const optionalDiagnostics = await collectOptionalDiagnostics(shouldCollectOptionalDiagnostics(showDiagnostics, nextPayload.snapshot.game_state), {
+            const optionalDiagnostics = await collectOptionalDiagnostics(shouldCollectOptionalDiagnostics(quickAccessVisible && showDiagnostics, nextPayload.snapshot.game_state), {
                 getDockedIgpuStatus,
                 getDiagnosticLoggingStatus,
                 getPeripheralStatus,
@@ -847,7 +860,17 @@ function Content({ preflight }) {
                 setLoading(false);
             }
         }
-    }, [preflight, showDiagnostics]);
+    }, [preflight, quickAccessVisible, showDiagnostics]);
+    SP_REACT.useEffect(() => {
+        if (quickAccessVisible) {
+            return;
+        }
+        setShowDiagnostics(false);
+        setDockedIgpuStatus(null);
+        setDiagnosticLoggingStatus(null);
+        setPeripheralStatus(null);
+        setActionHistory(null);
+    }, [quickAccessVisible]);
     SP_REACT.useEffect(() => {
         let disposed = false;
         let timer = null;
@@ -858,7 +881,7 @@ function Content({ preflight }) {
             }
             const nextPayload = await refresh(quiet);
             if (!disposed) {
-                timer = window.setTimeout(() => void poll(true), refreshDelayForSnapshot(nextPayload));
+                timer = window.setTimeout(() => void poll(true), refreshDelayForVisibility(nextPayload, quickAccessVisible));
             }
         };
         void poll(false);
@@ -868,7 +891,7 @@ function Content({ preflight }) {
                 window.clearTimeout(timer);
             }
         };
-    }, [preflight, refresh]);
+    }, [preflight, quickAccessVisible, refresh]);
     const snapshot = payload?.snapshot;
     const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
     const display = snapshot?.displays.find((item) => item.active === true);

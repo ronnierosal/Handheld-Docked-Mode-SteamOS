@@ -2,6 +2,7 @@ export const DISCOVERY_REFRESH_MS = 1_000;
 export const SETTLING_REFRESH_MS = 750;
 export const STABLE_REFRESH_MS = 3_000;
 export const ACTIVE_GAME_REFRESH_MS = 5_000;
+export const BACKGROUND_REFRESH_MS = 5_000;
 
 export interface RefreshPolicyPayload {
   snapshot: {
@@ -135,4 +136,18 @@ export function refreshDelayForSnapshot(
     return SETTLING_REFRESH_MS;
   }
   return progress.label === "TV Docked" ? STABLE_REFRESH_MS : DISCOVERY_REFRESH_MS;
+}
+
+/**
+ * Keep the always-rendered Decky panel out of the player's way while Quick
+ * Access is closed. Backend sleep protection remains independently active, and
+ * reopening Quick Access immediately re-enters the ordinary adaptive cadence.
+ */
+export function refreshDelayForVisibility(
+  payload: RefreshPolicyPayload | null,
+  quickAccessVisible: boolean,
+): number {
+  return quickAccessVisible
+    ? refreshDelayForSnapshot(payload)
+    : BACKGROUND_REFRESH_MS;
 }
