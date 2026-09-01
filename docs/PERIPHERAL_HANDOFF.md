@@ -39,6 +39,13 @@ with only the delivery source differing. It has no Decky route, hotkey listener,
 transition executor, or mechanism authority. Performance-profile actions remain
 explicitly unavailable rather than being misrouted into an undock request.
 
+The pure shortcut policy now defines the default Safe Undock chord as holding
+**Guide + Y** for 1.2 seconds. It accepts only delivery-provided verified input
+evidence and an exact chord, then emits the same logical action routed above.
+It has no input listener, device binding, debounce state, Decky RPC, or detach
+authority. A future delivery adapter must debounce physical events and call the
+canonical request facade; this policy cannot create a parallel undock path.
+
 The optional troubleshooting overlay can request a separate identity-free
 status payload. It displays only mapped/unmapped state and categorical evidence
 codes; it never receives private bindings, inventory paths, device names, or
@@ -85,7 +92,8 @@ audio node identity.
    controller-visible supervised mapping workflow. Persisted mapping use must
    remain private and require fresh inventory matching.
 2. Add controller chord delivery only as an adapter to the typed logical-action
-   router; it must never implement a parallel Safe Undock path.
+   router/canonical request facade; it must never implement a parallel Safe
+   Undock path.
 3. Re-plan from the same semantic generation and a new sample immediately
    before each step.
 4. Execute one typed step through the shared transition journal.
