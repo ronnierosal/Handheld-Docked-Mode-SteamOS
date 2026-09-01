@@ -27,13 +27,13 @@ export interface JourneyStatusPayload {
   unexpected_removal_recovery?: { state: string; code: string };
   link_instability?: {
     schema_version: number;
-    status: string;
+    status: "stable_observed" | "instability_observed" | "evidence_insufficient";
     code: string;
     current_state: "up" | "down" | null;
   };
   offline_readiness?: {
     schema_version: number;
-    status: string;
+    status: "ready_to_try_offline" | "needs_attention" | "online_check_needed" | "unknown";
     reason_codes: string[];
   };
 }

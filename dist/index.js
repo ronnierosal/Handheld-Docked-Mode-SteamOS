@@ -393,6 +393,68 @@ function decideLinkHealthNotification(previous, payload) {
     };
 }
 
+const STATES = {
+    deferred_dock: new Set(["deferred", "eligible", "cancelled", "expired", "invalidated", "rejected"]),
+    prepared_docked_idle: new Set(["not_yet_stable", "prepared", "invalidated"]),
+    safe_undock: new Set(["ready_for_revalidation", "not_ready", "evidence_insufficient", "invalidated"]),
+    unexpected_removal_recovery: new Set(["portable_fallback_verified", "recovery_incomplete", "needs_supervised_diagnosis"]),
+    link_instability: new Set(["stable_observed", "instability_observed", "evidence_insufficient"]),
+    offline_readiness: new Set(["ready_to_try_offline", "needs_attention", "online_check_needed", "unknown"]),
+};
+function record(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+        ? value
+        : null;
+}
+function state(value, allowed) {
+    const candidate = record(value)?.state;
+    return typeof candidate === "string" && allowed.has(candidate) ? candidate : null;
+}
+/**
+ * Accept only known public journey states. Raw codes, reason lists, and all
+ * unknown fields are intentionally discarded before Quick Access presentation.
+ */
+function sanitizeJourneyStatus(value) {
+    const source = record(value);
+    if (!source)
+        return undefined;
+    const result = {};
+    for (const key of [
+        "deferred_dock",
+        "prepared_docked_idle",
+        "safe_undock",
+        "unexpected_removal_recovery",
+    ]) {
+        const valueState = state(source[key], STATES[key]);
+        if (valueState)
+            result[key] = { state: valueState, code: "" };
+    }
+    const link = record(source.link_instability);
+    if (link?.schema_version === 1
+        && typeof link.status === "string"
+        && STATES.link_instability.has(link.status)
+        && ((typeof link.current_state === "string" && ["up", "down"].includes(link.current_state))
+            || (link.current_state === null && link.status === "evidence_insufficient"))) {
+        result.link_instability = {
+            schema_version: 1,
+            status: link.status,
+            code: "",
+            current_state: link.current_state,
+        };
+    }
+    const offline = record(source.offline_readiness);
+    if (offline?.schema_version === 1
+        && typeof offline.status === "string"
+        && STATES.offline_readiness.has(offline.status)) {
+        result.offline_readiness = {
+            schema_version: 1,
+            status: offline.status,
+            reason_codes: [],
+        };
+    }
+    return Object.keys(result).length ? result : undefined;
+}
+
 /** Small, controller-first presentation helpers for the Quick Access panel. */
 /**
  * Keep the first screen to four player-facing facts. Technical evidence stays
@@ -1106,7 +1168,11 @@ function Content({ preflight }) {
                 getPeripheralStatus,
                 getActionHistory,
             });
-            setPayload(nextPayload);
+            const presentationPayload = {
+                ...nextPayload,
+                journey: sanitizeJourneyStatus(nextPayload.journey),
+            };
+            setPayload(presentationPayload);
             setDockedIgpuStatus(optionalDiagnostics.dockedIgpuStatus);
             setDiagnosticLoggingStatus(optionalDiagnostics.diagnosticLoggingStatus);
             setPeripheralStatus(optionalDiagnostics.peripheralStatus);
@@ -1114,7 +1180,7 @@ function Content({ preflight }) {
             setError("");
             lastSnapshotAt.current = Date.now();
             setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
-            return nextPayload;
+            return presentationPayload;
         }
         catch {
             setError("Read-only snapshot unavailable. Check the Decky log for details.");

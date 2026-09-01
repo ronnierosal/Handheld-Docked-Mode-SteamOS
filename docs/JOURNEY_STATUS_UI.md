@@ -14,6 +14,10 @@ Until a future reviewed read-only adapter supplies them, each row says "Not
 connected"; that is deliberate and is not a missing-hardware, safe-undock, or
 recovery conclusion. Unknown future states are treated the same way.
 
+Before presentation, the optional field is runtime-sanitized to recognized
+public categories. Raw codes, reason lists, and unrecognized fields never enter
+the Quick Access state. See [Journey status delivery validation](JOURNEY_STATUS_DELIVERY.md).
+
 The optional link-evidence row can show only stable observed state, a state
 change, or incomplete evidence. It never rates throughput, cable quality, or
 performance and does not produce a link-health recovery/removal conclusion.

@@ -208,6 +208,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   recovery, game survival/crash, safe unplug, or relaunch, and owns no evidence
   collection or notification transport. No watcher, poller, system/game action,
   deployment, or hardware claim was added.
+- **Journey delivery validation checkpoint (frontend boundary):** Quick Access
+  now runtime-sanitizes optional journey delivery to known public categories and
+  bounded schema-1 link/offline shapes before it enters UI state. Raw codes,
+  reason lists, and unknown fields are discarded; malformed/future values remain
+  “Not connected.” This validates no producer and adds no collector, RPC,
+  storage, action, timer, deployment, or hardware claim.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

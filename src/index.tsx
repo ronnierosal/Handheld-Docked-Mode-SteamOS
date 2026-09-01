@@ -50,6 +50,7 @@ import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { healthStatusLabel } from "./health-ui";
 import { decideLinkHealthNotification } from "./link-health-notification";
+import { sanitizeJourneyStatus } from "./journey-status-delivery";
 import {
   atAGlanceRows,
   compactStatusPanels,
@@ -530,7 +531,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           getActionHistory,
         },
       );
-      setPayload(nextPayload);
+      const presentationPayload = {
+        ...nextPayload,
+        journey: sanitizeJourneyStatus(nextPayload.journey),
+      };
+      setPayload(presentationPayload);
       setDockedIgpuStatus(optionalDiagnostics.dockedIgpuStatus);
       setDiagnosticLoggingStatus(optionalDiagnostics.diagnosticLoggingStatus);
       setPeripheralStatus(optionalDiagnostics.peripheralStatus);
@@ -538,7 +543,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
-      return nextPayload;
+      return presentationPayload;
     } catch {
       setError("Read-only snapshot unavailable. Check the Decky log for details.");
       setPreflightStatus(preflight.reconcile({ kind: "unavailable" }));
