@@ -5,6 +5,34 @@ cross-feature status and dependency plan is maintained in the
 [authoritative roadmap](ROADMAP.md); deployment gates are maintained in
 [Deployment and validation strategy](DEPLOYMENT_VALIDATION.md).
 
+## Restore natural controller scrolling in Decky troubleshooting
+
+**Status:** OBSERVED ON HARDWARE — deferred minor UX defect
+**Target:** Controller-first UX hardening; does not block current safety or
+hardware-discovery work
+
+On the ASUS ROG Ally X in Gaming Mode, the HDM troubleshooting panel can be
+read with a mouse wheel, but upward travel using the D-pad or left stick does
+not behave like ordinary scrolling. Focus can move too abruptly or fall through
+to Steam's QAM Back control instead of progressing naturally through HDM's
+content. The explicit **Back to top** action works and remains an accessible
+fallback.
+
+The current Decky-native scroll-panel experiment did not correct this behavior.
+Do not add a custom gamepad listener or synthesize mouse-wheel events as a
+workaround: HDM must remain Decky-native and must not interfere with Steam's
+controller routing.
+
+Acceptance requires supervised controller validation on the Ally X:
+
+- D-pad and left-stick up/down traverse the troubleshooting content predictably
+  in both directions without skipping to the QAM Back control.
+- Mouse-wheel behavior remains usable.
+- **Back to top** remains a reliable optional shortcut, not the only way to
+  return upward.
+- The fix neither changes HDM safety state nor adds display, GPU, sleep, audio,
+  controller, or process-control authority.
+
 ## Add guarded eGPU process closure
 
 **Status:** DECKY FLOW IMPLEMENTED AND SIMULATED — supervised proof pending

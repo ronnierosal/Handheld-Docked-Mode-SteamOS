@@ -865,7 +865,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   }, [refresh, showDiagnostics]);
 
   return (
-    <ScrollPanel>
+    <>
       <div ref={statusAnchor} tabIndex={-1}>
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
@@ -1131,7 +1131,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         </PanelSectionRow>
       </PanelSection>
       </div>
-    </ScrollPanel>
+    </>
   );
 }
 
