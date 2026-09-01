@@ -116,9 +116,9 @@ dock request; see [eGPU attach readiness](ATTACH_READINESS.md).
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the
-fixed-path store for guarded process release; the presentation runtime
-orchestrator remains unconstructed, so no production display/GPU transition
-endpoint is enabled.
+fixed-path store for guarded process release and one explicitly confirmed,
+player-watched idle TV-switch test. Automatic display/GPU transition endpoints
+remain disabled.
 
 The guarded-process backlog has an internal approval service that issues
 single-use tokens for backend-discovered eligible instances and requires a fresh
@@ -292,7 +292,9 @@ confirmation issues a maximum-two-minute single-use permit; execution consumes
 it, requires the same semantic generation and ready integration, reconstructs
 the exact plan, and delegates to the orchestrator. An incomplete journal blocks
 new approval until recovery; a terminal journal blocks until its exact random
-operation ID is acknowledged. No Decky RPC constructs this facade yet.
+operation ID is acknowledged. One Decky RPC constructs this facade only for the
+explicit idle TV-switch test after a separate on-screen confirmation; it is not
+an automatic attach path and remains Hardware Validation Required.
 
 That same durable path now treats exact idle Docked-iGPU as a supported source
 for a Docked-eGPU target. Boot config represents Docked-iGPU explicitly as TV

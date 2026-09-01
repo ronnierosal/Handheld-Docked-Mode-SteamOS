@@ -73,7 +73,7 @@ between production-safe features and dormant or simulated transition work.
 | Docked-iGPU natural-exit observer | Implemented and simulated | Read-only categorical status available in troubleshooting; hardware proof pending |
 | Temporary verbose diagnostics | Implemented and simulated | Explicit controller consent, bounded countdown, disable control, and reboot reset available; visible acceptance pending |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
-| Portable ↔ TV Docked transition engine | Implemented and simulated | Not wired to Decky; no transition RPC exists |
+| Supervised idle TV-switch test | Implemented and simulated | Explicit player-watched Decky test only; hardware proof pending, automatic docking remains unavailable |
 | Guarded process release | Implemented and simulated | Decky-native experimental flow; supervised disposable-process proof pending |
 | Physical eGPU live removal | Known unsafe/unsupported on the current certified profile | Not available |
 | Automatic docking | Planned | Not available |
@@ -223,7 +223,7 @@ python scripts/remote_capture.py --host <handheld-ip> --identity-file <ssh-key>
 
 The production plugin exposes no general-purpose command endpoint. Root access
 is constrained to the documented observation, sleep-protection, support-export,
-and supervised preparation boundaries.
+supervised preparation, and the explicit player-watched TV-test boundary.
 
 ## 🏗️ Architecture
 

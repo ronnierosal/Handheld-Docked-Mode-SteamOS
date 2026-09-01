@@ -98,6 +98,10 @@ def main() -> int:
             "preview_presentation_preparation",
             "approve_presentation_preparation",
             "prepare_presentation_integration",
+            "preview_supervised_tv_switch",
+            "approve_supervised_tv_switch",
+            "execute_supervised_tv_switch",
+            "acknowledge_supervised_tv_switch",
             "get_process_release_status",
             "preview_process_release",
             "approve_process_release",
@@ -106,7 +110,7 @@ def main() -> int:
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky RPCs must remain limited to diagnostics/logging, read-only peripheral/watcher/action-history status, approved support export, supervised preparation, and guarded process release"
+                "Decky RPCs must remain limited to diagnostics/logging, read-only peripheral/watcher/action-history status, approved support export, supervised preparation, one explicit supervised TV test, and guarded process release"
             )
 
     delivery_sources = "\n".join(
@@ -124,7 +128,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics/logging, read-only peripheral/watcher/action-history status, support export, sleep guard, supervised preparation, and guarded process release only."
+        "Plugin package check passed: diagnostics/logging, read-only peripheral/watcher/action-history status, support export, sleep guard, supervised preparation, one explicit supervised TV test, and guarded process release only."
     )
     return 0
 
