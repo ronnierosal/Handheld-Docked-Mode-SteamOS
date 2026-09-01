@@ -166,6 +166,7 @@ test("every blocked request emits feedback independently of passive preferences"
 
   assert.equal(warnings.length, 2);
   assert.equal(warnings[0].kind, "game");
+  assert.equal(coordinator.status().blockedAttemptCount, 2);
 });
 
 test("an unavailable resolver never claims complete protection", () => {

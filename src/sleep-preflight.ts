@@ -24,6 +24,7 @@ export interface SleepPreflightStatus {
   state: "active" | "inactive" | "unavailable";
   blocking: boolean;
   attemptWarningAvailable: boolean;
+  blockedAttemptCount: number;
   reason: PreflightObservation["kind"] | "required" | "verified_absent";
   error: string;
 }
@@ -122,6 +123,7 @@ export class SleepPreflightCoordinator {
   private stopped = false;
   private acquireFailed = false;
   private lifecycleError = "";
+  private blockedAttemptCount = 0;
 
   constructor(
     adapter: SteamSuspendAdapter | null,
@@ -143,6 +145,7 @@ export class SleepPreflightCoordinator {
       try {
         this.observerRelease = this.adapter.observeSuspendRequests(() => {
           if (this.blockerRelease) {
+            this.blockedAttemptCount += 1;
             this.onBlockedAttempt(warningForBlockedAttempt(this.observation));
           }
         });
@@ -197,6 +200,7 @@ export class SleepPreflightCoordinator {
         state: "unavailable",
         blocking: false,
         attemptWarningAvailable: false,
+        blockedAttemptCount: this.blockedAttemptCount,
         reason,
         error: this.lifecycleError || "Steam's native suspend blocker could not be resolved.",
       };
@@ -206,6 +210,7 @@ export class SleepPreflightCoordinator {
         state: "active",
         blocking: true,
         attemptWarningAvailable: this.observerRelease !== null,
+        blockedAttemptCount: this.blockedAttemptCount,
         reason,
         error: this.lifecycleError,
       };
@@ -214,6 +219,7 @@ export class SleepPreflightCoordinator {
       state: "inactive",
       blocking: false,
       attemptWarningAvailable: false,
+      blockedAttemptCount: this.blockedAttemptCount,
       reason,
       error: this.lifecycleError,
     };

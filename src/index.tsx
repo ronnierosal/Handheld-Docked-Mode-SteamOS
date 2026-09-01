@@ -925,6 +925,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
               ? "Standby — eGPU verified absent"
               : "Unavailable"}
         />
+        <DiagnosticRow
+          name="Blocked sleep attempts"
+          value={preflightStatus.blockedAttemptCount
+            ? `${preflightStatus.blockedAttemptCount} observed this session`
+            : "None observed this session"}
+        />
         {preflightStatus.error && (
           <PanelSectionRow>{preflightStatus.error}</PanelSectionRow>
         )}
@@ -1169,6 +1175,21 @@ export default definePlugin(() => {
   const preflight = new SleepPreflightCoordinator(
     createDeckySteamSuspendAdapter(),
     (warning) => {
+      let toastDelivered = false;
+      try {
+        // Steam may silently discard a modal during the transient Power-menu
+        // lifecycle. Show a durable native toast first, then still offer the
+        // controller-confirmable modal after that menu has closed.
+        toaster.toast({
+          title: warning.title,
+          body: warning.body,
+          critical: true,
+          duration: 30000,
+        });
+        toastDelivered = true;
+      } catch {
+        // The modal/fallback path below remains independently available.
+      }
       if (warningTimer !== null) {
         window.clearTimeout(warningTimer);
       }
@@ -1185,12 +1206,14 @@ export default definePlugin(() => {
             });
           },
           showFallbackToast: (fallback) => {
-            toaster.toast({
-              title: fallback.title,
-              body: fallback.body,
-              critical: true,
-              duration: 15000,
-            });
+            if (!toastDelivered) {
+              toaster.toast({
+                title: fallback.title,
+                body: fallback.body,
+                critical: true,
+                duration: 30000,
+              });
+            }
           },
         });
       }, BLOCKED_ATTEMPT_MODAL_DELAY_MS);
