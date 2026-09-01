@@ -49,6 +49,18 @@ It is a preserved local fallback only, not evidence that it is installed or a
 verified D2 rollback package. Do not substitute it silently for the missing
 `e73d249` rollback artifact.
 
+If a recovered validation-artifact directory is proposed as that rollback,
+first require its embedded revision to match the captured public label:
+
+```text
+python scripts/verify_validation_artifact.py <recovered-artifact-directory> \
+  --expected-revision-prefix e73d249db568
+```
+
+This is a bounded prefix comparison only. It does not prove the recovered
+archive was installed, and it does not replace independent checksum review or
+an explicit rollback decision.
+
 ## Supervised D2 checklist
 
 1. Obtain or independently verify the rollback archive/provenance matching the

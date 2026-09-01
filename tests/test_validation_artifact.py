@@ -80,6 +80,29 @@ class ValidationArtifactTests(unittest.TestCase):
                 "artifact.package_build_inconsistent",
             )
 
+    def test_expected_public_revision_prefix_is_optional_and_fail_closed(self):
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            self._artifact(root)
+            self.assertEqual(
+                verify_validation_artifact(
+                    root, expected_revision_prefix="a" * 12
+                )["state"],
+                "verified",
+            )
+            self.assertEqual(
+                verify_validation_artifact(
+                    root, expected_revision_prefix="b" * 12
+                )["reason"],
+                "artifact.expected_revision_mismatch",
+            )
+            self.assertEqual(
+                verify_validation_artifact(
+                    root, expected_revision_prefix="not-a-revision"
+                )["reason"],
+                "artifact.expected_revision_invalid",
+            )
+
     def test_missing_ambiguous_or_unsafe_input_is_not_accepted(self):
         with tempfile.TemporaryDirectory() as value:
             root = Path(value)
@@ -101,6 +124,22 @@ class ValidationArtifactTests(unittest.TestCase):
     def test_command_fails_when_the_artifact_is_not_verified(self):
         with patch.object(sys, "argv", ["verify_validation_artifact.py", "relative"]):
             self.assertEqual(main(), 1)
+
+    def test_command_accepts_a_matching_expected_public_revision_prefix(self):
+        with tempfile.TemporaryDirectory() as value:
+            root = Path(value)
+            self._artifact(root)
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "verify_validation_artifact.py",
+                    str(root),
+                    "--expected-revision-prefix",
+                    "a" * 12,
+                ],
+            ):
+                self.assertEqual(main(), 0)
 
 
 if __name__ == "__main__":

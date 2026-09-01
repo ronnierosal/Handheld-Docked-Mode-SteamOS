@@ -227,6 +227,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   identity are not rendered, negative/non-finite cost fails closed, and current
   snapshot delivery remains unwired. This adds no collector, poller, timer,
   measurement authority, Auto TDP, action, deployment, or hardware claim.
+- **Rollback artifact provenance checkpoint (local-only):** the validation
+  artifact verifier can now require a prior redacted capture's 12-character
+  public build label. A malformed or mismatched label fails closed before an
+  artifact is considered for rollback; a match remains only prefix provenance,
+  not installation, hardware, or certification evidence. It opens no SSH and
+  performs no install, deployment, device, or session action.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

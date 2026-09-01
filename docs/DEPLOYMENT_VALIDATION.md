@@ -72,6 +72,20 @@ matches, its full source revision matches the embedded build metadata, and the
 embedded version agrees with the packaged manifest. It never opens SSH,
 installs a plugin, or modifies the Ally.
 
+When the rollback baseline comes only from a redacted read-only capture, require
+that capture's public 12-character build label while inspecting a recovered
+artifact:
+
+```text
+python scripts/verify_validation_artifact.py <unpacked-artifact-directory> \
+  --expected-revision-prefix <captured-12-character-revision>
+```
+
+A mismatch or malformed label fails closed. A passing prefix comparison proves
+only that the artifact's full embedded revision starts with the captured public
+label; it does not prove which archive is installed, replace the required
+checksum/provenance review, or upgrade any hardware validation status.
+
 CI runs this same verifier against the candidate directory before uploading the
 artifact. Local verification is still required after download because it proves
 the exact bytes the maintainer received.

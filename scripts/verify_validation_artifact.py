@@ -20,6 +20,7 @@ SOURCE_REVISION_FILENAME = "source-revision.txt"
 CHECKSUM_FILENAME = "SHA256SUMS.txt"
 ARCHIVE_RE = re.compile(r"^HandheldDockMode-([0-9]+(?:\.[0-9]+){2}(?:[-+][A-Za-z0-9.-]+)?)\.zip$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+REVISION_PREFIX_RE = re.compile(r"^[0-9a-f]{12}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 PLUGIN_DIRECTORY = "HandheldDockMode"
 BUILD_INFO_NAME = f"{PLUGIN_DIRECTORY}/build_info.json"
@@ -100,10 +101,17 @@ def _embedded_build(archive: Path, expected_revision: str) -> tuple[str | None, 
     return build["version"], ""
 
 
-def verify_validation_artifact(root: Path) -> dict[str, object]:
+def verify_validation_artifact(
+    root: Path, *, expected_revision_prefix: str | None = None
+) -> dict[str, object]:
     """Return a categorical local-only verification result for one artifact folder."""
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
         return {"state": "invalid", "reason": "artifact.directory_invalid"}
+    if (
+        expected_revision_prefix is not None
+        and not REVISION_PREFIX_RE.fullmatch(expected_revision_prefix)
+    ):
+        return {"state": "invalid", "reason": "artifact.expected_revision_invalid"}
     archive, error = _single_archive(root)
     if archive is None:
         return {"state": "invalid", "reason": error}
@@ -121,6 +129,11 @@ def verify_validation_artifact(root: Path) -> dict[str, object]:
     version, error = _embedded_build(archive, revision)
     if version is None:
         return {"state": "invalid", "reason": error}
+    if (
+        expected_revision_prefix is not None
+        and not revision.startswith(expected_revision_prefix)
+    ):
+        return {"state": "invalid", "reason": "artifact.expected_revision_mismatch"}
     return {
         "state": "verified",
         "version": version,
@@ -131,8 +144,15 @@ def verify_validation_artifact(root: Path) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifact_directory", type=Path)
+    parser.add_argument(
+        "--expected-revision-prefix",
+        help="optional 12-character public build revision label to require",
+    )
     args = parser.parse_args()
-    result = verify_validation_artifact(args.artifact_directory)
+    result = verify_validation_artifact(
+        args.artifact_directory,
+        expected_revision_prefix=args.expected_revision_prefix,
+    )
     print(json.dumps(result, sort_keys=True))
     return 0 if result.get("state") == "verified" else 1
 
