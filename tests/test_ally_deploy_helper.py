@@ -61,7 +61,8 @@ class AllyDeployHelperTests(unittest.TestCase):
     def test_installer_has_constrained_sudo_command_and_no_session_actions(self):
         installer = (ROOT / "scripts" / "install_ally_deploy_helper.sh").read_text(encoding="utf-8")
         self.assertIn("install -d -m 0700 /var/lib/handheld-dock-mode", installer)
-        self.assertIn("/var/lib/handheld-dock-mode/hdm-deploy-plugin HDM-update-*.zip HDM-update-*.zip.sig", installer)
+        self.assertIn("deck ALL=(root) NOPASSWD: /var/lib/handheld-dock-mode/hdm-deploy-plugin", installer)
+        self.assertIn("helper itself rejects every argument", installer)
         self.assertNotIn("/usr/local", installer)
         self.assertNotIn("systemctl", installer)
         commands = "\n".join(
