@@ -123,6 +123,25 @@ def _diagnostics() -> dict[str, Any]:
     return payload
 
 
+def _wake_diagnostics() -> dict[str, Any]:
+    """Inspect exact G1 PCI wake-capability attributes without changing them."""
+    backend = PLUGIN_ROOT / "backend"
+    if not backend.is_dir():
+        raise RuntimeError("plugin_backend_missing")
+    sys.path.insert(0, str(backend))
+    from hdm.adapters.steamos.drm import DrmDiscovery
+    from hdm.adapters.steamos.pci import PciUsb4Discovery
+    from hdm.adapters.steamos.wake_diagnostics import WakeDiagnosticsDiscovery
+    from hdm.profiles.gpd_g1 import match_gpd_g1
+
+    pci = PciUsb4Discovery()
+    g1 = match_gpd_g1(DrmDiscovery().scan(), pci.scan_pci(), pci.scan_usb4())
+    return WakeDiagnosticsDiscovery().observe(
+        g1.root_bdf if g1.verified else "",
+        g1.pci_functions if g1.verified else (),
+    ).to_public_dict()
+
+
 def _safe_value(code: str, operation: Callable[[], Any], errors: list[str]) -> Any:
     try:
         return operation()
@@ -175,6 +194,9 @@ def collect() -> dict[str, Any]:
             "critical_file_sha256": _critical_hashes(),
         },
         "diagnostics": _safe_value("diagnostics", _diagnostics, errors),
+        "wake_diagnostics": _safe_value(
+            "wake_diagnostics", _wake_diagnostics, errors
+        ),
         "errors": errors,
     }
 

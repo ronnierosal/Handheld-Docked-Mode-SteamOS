@@ -41,6 +41,8 @@ Existing files are never overwritten. The report includes:
 - categorical Steam/Gamescope/Decky process health counts without PIDs
 - installed HDM version and hashes of fixed critical plugin files
 - redacted HDM profile, GPU/display, game, blocker, and disconnect observations
+- categorical G1 PCI wake-capability/runtime aggregates when the exact profile
+  can be resolved (no PCI identity is returned)
 - categorical collection errors
 
 The report excludes hostnames, usernames, network addresses, PIDs, command
