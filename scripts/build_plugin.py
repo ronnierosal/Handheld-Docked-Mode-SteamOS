@@ -62,15 +62,18 @@ def _git_status(*args: str) -> subprocess.CompletedProcess[str] | None:
 
 
 def source_revision() -> str:
-    """Return a commit only when tracked package inputs have no pending diff."""
-    unstaged = _git_status("diff", "--quiet")
-    staged = _git_status("diff", "--cached", "--quiet")
-    if unstaged is None or staged is None:
+    """Return a commit only when no tracked or untracked source is pending.
+
+    ``included_files`` discovers every backend file below ``backend/hdm``. An
+    untracked module could therefore enter an archive even when ``git diff`` is
+    empty, so a full porcelain status check is required before the archive may
+    claim a clean commit.
+    """
+    status = _git_status("status", "--porcelain=v1", "--untracked-files=all")
+    if status is None or status.returncode != 0:
         return "unavailable"
-    if unstaged.returncode == 1 or staged.returncode == 1:
+    if status.stdout:
         return "uncommitted"
-    if unstaged.returncode != 0 or staged.returncode != 0:
-        return "unavailable"
     revision = _git_status("rev-parse", "HEAD")
     value = revision.stdout.strip() if revision is not None and revision.returncode == 0 else ""
     return value if REVISION_RE.fullmatch(value) else "unavailable"

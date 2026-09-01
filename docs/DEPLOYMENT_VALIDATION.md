@@ -23,7 +23,8 @@ production feature or allowing an automated test to strand the handheld.
 
 ## Artifact build and provenance
 
-From a clean checkout at the intended commit:
+From a clean checkout at the intended commit, with no tracked or untracked
+source files pending:
 
 ```text
 python scripts/check_architecture.py
