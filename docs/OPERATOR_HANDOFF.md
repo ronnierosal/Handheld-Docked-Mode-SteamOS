@@ -173,6 +173,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
   snapshot delivery remains unwired, so it deliberately says “Not connected.”
   Source review, privacy/cost/freshness admission, a collector, persistence,
   and launch authority remain unimplemented.
+- **Performance measurement checkpoint (pure local assessment):** one supplied
+  existing-work snapshot/optional-observer timing sample can be assessed only
+  through the existing benchmarked shared telemetry budget and diagnostics
+  consumer. Running/unknown game defers; stale, unavailable, unbenchmarked, or
+  over-budget evidence fails closed. Public output is identity-free and labels
+  game impact Unknown. It creates no collector, poller, persistence, UI
+  delivery, Auto TDP, game/process intervention, device action, or performance
+  conclusion; real supported-profile measurement remains required.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

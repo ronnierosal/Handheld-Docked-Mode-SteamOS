@@ -67,6 +67,12 @@ state, while player-requested diagnostics use the narrower diagnostic delay.
 Samples contain only typed numeric metrics; this contract has no collector,
 scheduler, optimization, TDP, or mutation authority.
 
+The HDM-overhead measurement assessment consumes at most one caller-supplied
+snapshot/optional-observer timing sample under that same admission gate. It
+reports identity-free bounded cost only when fresh and within the declared
+budget, labels game impact Unknown, and cannot authorize any action. See
+[HDM overhead measurement](PERFORMANCE_MEASUREMENT.md).
+
 Future game configuration is bounded by a pure Game Adapter change contract.
 Only a reviewed adapter can begin a typed, allowlisted setting change. The
 future mechanism must compare the expected opaque revision, create an exact
