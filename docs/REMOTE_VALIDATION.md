@@ -48,8 +48,9 @@ Existing files are never overwritten. The report includes:
 - categorical Steam/Gamescope/Decky process health counts without PIDs
 - installed HDM version, static archive build label, and hashes of its fixed
   package manifest and critical plugin files. The label is only a short source
-  revision from a clean archive; `uncommitted` or `unavailable` remains
-  inconclusive.
+  revision from a clean archive and its version must agree with the installed
+  package manifest; `uncommitted`, `unavailable`, invalid, or internally
+  inconsistent metadata remains inconclusive.
 - redacted HDM profile, GPU/display, game, blocker, and disconnect observations
 - categorical G1 PCI wake-capability/runtime aggregates when the exact profile
   can be resolved (no PCI identity is returned)

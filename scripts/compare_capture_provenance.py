@@ -77,6 +77,13 @@ def _compare_build_revision(
         return None
     if not isinstance(build, dict):
         return {"state": "inconclusive", "reason": "provenance.capture_build_invalid"}
+    if build.get("schema_version") != 1:
+        return {"state": "inconclusive", "reason": "provenance.capture_build_invalid"}
+    if build.get("version") != plugin.get("version"):
+        return {
+            "state": "inconclusive",
+            "reason": "provenance.capture_build_version_inconsistent",
+        }
     revision = build.get("revision")
     if revision == "uncommitted":
         return {"state": "inconclusive", "reason": "provenance.capture_build_uncommitted"}

@@ -65,7 +65,12 @@ def _build_info() -> dict[str, object]:
         return fallback
     version = value.get("version")
     revision = value.get("revision")
-    if not isinstance(version, str) or not version or len(version) > 32:
+    if (
+        not isinstance(version, str)
+        or not version
+        or len(version) > 32
+        or version != _plugin_version()
+    ):
         return fallback
     if revision in {"uncommitted", "unavailable"}:
         public_revision = revision
