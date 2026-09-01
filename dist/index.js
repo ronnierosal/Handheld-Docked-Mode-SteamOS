@@ -328,6 +328,33 @@ function healthStatusLabel(health, loading = false) {
     }
 }
 
+/** Small, controller-first presentation helpers for the Quick Access panel. */
+/**
+ * Keep the first screen to four player-facing facts. Technical evidence stays
+ * behind the explicit troubleshooting control.
+ */
+function atAGlanceRows(state) {
+    return [
+        ["Mode", state.mode],
+        ["Health", state.health],
+        ["Connection", state.connection],
+        ["Game", state.game],
+    ];
+}
+/**
+ * Steam can otherwise send controller focus to the QAM Back control after a
+ * long panel collapses. Focus a native in-panel control after the owning panel
+ * has been scrolled back to its first row.
+ */
+function restoreQuickAccessFocus(findFirstControl) {
+    const control = findFirstControl();
+    if (!control) {
+        return false;
+    }
+    control.focus({ preventScroll: true });
+    return true;
+}
+
 const EMPTY_VALUES = {
     dockedIgpuStatus: null,
     diagnosticLoggingStatus: null,
@@ -822,6 +849,7 @@ function preflightObservation(payload) {
 function Content({ preflight }) {
     const quickAccessVisible = useQuickAccessVisible();
     const statusAnchor = SP_REACT.useRef(null);
+    const primaryControlAnchor = SP_REACT.useRef(null);
     const [payload, setPayload] = SP_REACT.useState(null);
     const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
     const [actionHistory, setActionHistory] = SP_REACT.useState(null);
@@ -982,12 +1010,9 @@ function Content({ preflight }) {
         };
     }, [preflight, quickAccessVisible, refresh]);
     const snapshot = payload?.snapshot;
-    const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
-    const display = snapshot?.displays.find((item) => item.active === true);
     const disconnect = snapshot?.disconnect_readiness;
     const sleepGuard = snapshot?.sleep_guard;
     const progress = connectionProgress(payload);
-    const totalTiming = payload?.diagnostics.timings_ms.find((timing) => timing.stage === "snapshot_total");
     const gameUsesEgpu = disconnect?.clients.some((client) => client.kind === "game") ?? false;
     const closeEligibleClientCount = disconnect?.clients.filter((client) => client.kind === "user" && client.close_eligible).length ?? 0;
     const disconnectStatus = loading
@@ -1386,14 +1411,14 @@ function Content({ preflight }) {
     const returnToStatus = SP_REACT.useCallback(() => {
         setShowDiagnostics(false);
         // Wait for the diagnostics section to collapse, then reset Steam's owning
-        // scroll panel and move focus to the status anchor. This avoids focus
-        // falling through to the QAM Back button after this action completes.
+        // scroll panel and move focus to a native in-panel control. A non-focusable
+        // status div leaves controller navigation at Steam's QAM Back control.
         window.setTimeout(() => {
             const anchor = statusAnchor.current;
             if (!anchor)
                 return;
             scrollToTopOfOwningPanel(anchor);
-            anchor.focus({ preventScroll: true });
+            restoreQuickAccessFocus(() => primaryControlAnchor.current?.querySelector("button, [role='button'], input, select") ?? null);
         }, 0);
     }, []);
     const toggleTroubleshooting = SP_REACT.useCallback(() => {
@@ -1402,9 +1427,12 @@ function Content({ preflight }) {
         }
         setShowDiagnostics((visible) => !visible);
     }, [refresh, showDiagnostics]);
-    return (SP_JSX.jsx(SP_JSX.Fragment, { children: SP_JSX.jsxs("div", { ref: statusAnchor, tabIndex: -1, children: [SP_JSX.jsxs(DFL.PanelSection, { title: "Observed state", children: [SP_JSX.jsx(DiagnosticRow, { name: "Connection", value: progress.label }), SP_JSX.jsx(DiagnosticRow, { name: "Mode", value: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "System health", value: healthStatusLabel(payload?.health, loading) }), SP_JSX.jsx(DiagnosticRow, { name: "HDM build", value: payload?.diagnostics.build
-                                ? `${payload.diagnostics.build.version} · ${payload.diagnostics.build.revision}`
-                                : "Unavailable" }), SP_JSX.jsx(DiagnosticRow, { name: "Game", value: label(snapshot?.game_state ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Render GPU", value: renderer ? label(renderer.role) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Active display", value: display ? label(display.kind) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Hardware", value: label(snapshot?.support_tier ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Snapshot time", value: totalTiming ? `${Math.round(totalTiming.duration_ms)} ms` : "Unknown" }), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Quick actions", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Status refreshes automatically while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+    return (SP_JSX.jsx(SP_JSX.Fragment, { children: SP_JSX.jsxs("div", { ref: statusAnchor, tabIndex: -1, children: [SP_JSX.jsxs(DFL.PanelSection, { title: "At a glance", children: [atAGlanceRows({
+                            mode: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown"),
+                            health: healthStatusLabel(payload?.health, loading),
+                            connection: progress.label,
+                            game: label(snapshot?.game_state ?? "unknown"),
+                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsx("div", { ref: primaryControlAnchor, children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }) }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
                                 ? "Checking…"
                                 : sleepGuard?.required
                                     ? sleepGuard.active

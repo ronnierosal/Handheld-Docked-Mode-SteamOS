@@ -2,10 +2,12 @@
 
 ## Objective
 
-HDM provides a console-like docking experience for SteamOS handheld PCs. It
-detects current hardware and gaming state, explains the safest available action,
-and eventually performs verified, recoverable transitions without requiring the
-player to understand Linux display or GPU internals.
+HDM's North Star is console-like SteamOS handheld gaming: systematically reduce
+PC-gaming paper cuts by detecting problems, preventing avoidable failures,
+explaining state in player language, and safely guiding or performing verified
+recovery where authority and evidence allow. Docking and eGPU safety are the
+first domains, not the product boundary. The current scope remains narrowly
+limited to the implemented, evidence-gated capabilities below.
 
 ## Target user-facing placement
 

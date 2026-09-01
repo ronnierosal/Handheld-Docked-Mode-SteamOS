@@ -8,14 +8,46 @@ Always re-check live state before making a hardware claim.
 
 - Repository: `C:\Users\SLDD\Codex Projects\Handheld-Docked-Mode-SteamOS`
 - Branch: `main`
-- Last source revision recorded here: `1b2a198`
+- Local source status must be checked with `git rev-parse HEAD` and `git status --short`.
+- Latest locally verified application slices at this handoff: `36da94f` (optional
+  authoritative health observations) and `c271309` (their measured timing).
+  They are local-only, not installed-device evidence, and may be unpushed.
 - Last verified installed HDM build on the Ally: `0.2.0`, revision `e73d249`
 - Last verified loader state: `plugin_loader.service` active.
 - A signed candidate based on `3584a4d` is staged but was not installed when
   this note was written.
 
-The staged candidate and any installed version may change. Confirm both with
-the read-only commands below before relying on this snapshot.
+The staged candidate, installed version, and local checkout may change. Confirm
+each independently before relying on this snapshot.
+
+## Continuity status
+
+- North Star: HDM is a safety-first SteamOS handheld reliability companion, not
+  only a dock-mode controller. It must prevent or soften player-visible PC
+  paper cuts, explain state clearly, and use only validated, reversible recovery
+  authority. Docking/eGPU work remains the initial, tightly gated domain.
+- The optional workflow/peripheral health inputs are deliberately not constructed
+  by the production snapshot path yet. A future owner must be authoritative and
+  event-driven or measured/cached; do not add continuous peripheral scans to
+  normal Quick Access refreshes.
+- The latest unattended read-only capture observed the supported handheld/G1
+  profile, an idle game, a usable internal display, and an inactive external
+  display. Render-GPU identity remained unavailable at unprivileged privilege;
+  safe undock was not ready because the client scan was incomplete and protected
+  session clients remained. Standalone capture cannot observe the Decky sleep
+  lease. These are observations, not transition or sleep validation.
+- Root read-only capture currently requires a maintainer-installed noninteractive
+  rule. Its absence is a diagnostic limitation, not a reason to broaden sudo.
+- The two saved wake-diagnostic aggregates were unchanged. That does not identify
+  a wake source or establish suspend safety.
+- The local Quick Access redesign keeps the first screen to Mode, Health,
+  Connection, and Game. Safety/actions remain compact and troubleshooting is
+  opt-in. Returning from long troubleshooting details resets the QAM panel
+  scroll and focuses the first native in-panel control, so controller focus
+  does not fall through to QAM Back. The redesign is locally tested only.
+- Next concrete work: review the locally built Quick Access package with the
+  maintainer; before any install, obtain a maintainer-approved exact deployment
+  plan with the G1 disconnected and player-visible recovery available.
 
 ## SSH access
 
@@ -24,23 +56,22 @@ on the Ally.
 
 ```powershell
 $key = Join-Path $env:USERPROFILE ".ssh\hdm_ally_deploy_v2"
-ssh -i $key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes deck@192.168.1.146
+ssh -i $key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes deck@<current-ally-host>
 ```
 
-`192.168.1.146` is the last observed LAN address, not a permanent hardware
-identity. If SSH fails, ask the maintainer for the current address; do not scan
-the network or guess another account/key. The private key remains on the
+Obtain the current host from the maintainer at capture time. If SSH fails, ask
+again; do not scan the network or guess another account/key. The private key remains on the
 development computer. Never copy it to the Ally, commit it, print it, or ask
 for the maintainer's password.
 
 Read-only deployment provenance check:
 
 ```powershell
-ssh -i $key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes deck@192.168.1.146 `
+ssh -i $key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes deck@<current-ally-host> `
   'cat /home/deck/homebrew/plugins/HandheldDockMode/build_info.json; systemctl is-active plugin_loader.service'
 ```
 
-Use `python scripts/remote_capture.py --host 192.168.1.146 --identity-file $key`
+Use `python scripts/remote_capture.py --host <current-ally-host> --identity-file $key`
 for a redacted read-only capture. Read [Remote read-only validation](REMOTE_VALIDATION.md)
 before using it.
 
@@ -50,7 +81,7 @@ The normal maintainer-operated path is:
 
 ```powershell
 .\scripts\deploy_hdm_to_ally.ps1 `
-  -HostName 192.168.1.146 `
+  -HostName <current-ally-host> `
   -UserName deck `
   -IdentityFile $key `
   -ConfirmDeploy `

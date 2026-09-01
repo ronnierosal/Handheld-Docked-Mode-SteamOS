@@ -4,7 +4,7 @@
 
 # Handheld Dock Mode
 
-**Safety-first dock mode for SteamOS handheld PCs**
+**Safety-first reliability companion for SteamOS handheld PCs**
 
 Move between handheld and TV gaming with player-friendly modes while HDM verifies the GPU, display, Gamescope, game, and hardware state underneath.
 
@@ -28,10 +28,15 @@ Move between handheld and TV gaming with player-friendly modes while HDM verifie
 
 ## 📖 About
 
-Handheld Dock Mode (HDM) is a Decky Loader-native controller for a future
-console-like docking experience on SteamOS handhelds. Players choose a desired
-placement—such as **Portable** or **TV Docked**—instead of managing DRM
-connectors, PCI addresses, GPU selectors, or Gamescope arguments.
+Handheld Dock Mode (HDM) is a Decky Loader-native reliability companion for
+console-like SteamOS handheld gaming. Its North Star is to reduce PC-gaming
+paper cuts by detecting problems, preventing avoidable failures, explaining
+state in player language, and safely guiding or performing verified recovery
+where authority and evidence allow. Docking is the first domain, not the
+product boundary; today’s implemented scope remains deliberately narrower.
+Players choose a desired placement—such as **Portable** or **TV Docked**—instead
+of managing DRM connectors, PCI addresses, GPU selectors, or Gamescope
+arguments.
 
 The project is deliberately fail-closed. If HDM cannot prove the exact hardware,
 active display, render GPU, game state, or rollback path, it reports the state

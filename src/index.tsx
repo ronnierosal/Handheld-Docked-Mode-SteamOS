@@ -49,6 +49,7 @@ import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { healthStatusLabel } from "./health-ui";
+import { atAGlanceRows, restoreQuickAccessFocus } from "./quick-access-ui";
 import {
   collectOptionalDiagnostics,
   shouldCollectOptionalDiagnostics,
@@ -385,6 +386,7 @@ function preflightObservation(payload: SnapshotPayload): PreflightObservation {
 function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const quickAccessVisible = useQuickAccessVisible();
   const statusAnchor = useRef<HTMLDivElement | null>(null);
+  const primaryControlAnchor = useRef<HTMLDivElement | null>(null);
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryPayload | null>(null);
@@ -567,14 +569,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   }, [preflight, quickAccessVisible, refresh]);
 
   const snapshot = payload?.snapshot;
-  const renderer = snapshot?.gpus.find((gpu) => gpu.selected_for_render === true);
-  const display = snapshot?.displays.find((item) => item.active === true);
   const disconnect = snapshot?.disconnect_readiness;
   const sleepGuard = snapshot?.sleep_guard;
   const progress = connectionProgress(payload);
-  const totalTiming = payload?.diagnostics.timings_ms.find(
-    (timing) => timing.stage === "snapshot_total",
-  );
   const gameUsesEgpu = disconnect?.clients.some((client) => client.kind === "game") ?? false;
   const closeEligibleClientCount = disconnect?.clients.filter(
     (client) => client.kind === "user" && client.close_eligible,
@@ -1017,13 +1014,17 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const returnToStatus = useCallback(() => {
     setShowDiagnostics(false);
     // Wait for the diagnostics section to collapse, then reset Steam's owning
-    // scroll panel and move focus to the status anchor. This avoids focus
-    // falling through to the QAM Back button after this action completes.
+    // scroll panel and move focus to a native in-panel control. A non-focusable
+    // status div leaves controller navigation at Steam's QAM Back control.
     window.setTimeout(() => {
       const anchor = statusAnchor.current;
       if (!anchor) return;
       scrollToTopOfOwningPanel(anchor);
-      anchor.focus({ preventScroll: true });
+      restoreQuickAccessFocus(() =>
+        primaryControlAnchor.current?.querySelector<HTMLElement>(
+          "button, [role='button'], input, select",
+        ) ?? null,
+      );
     }, 0);
   }, []);
 
@@ -1037,34 +1038,32 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   return (
     <>
       <div ref={statusAnchor} tabIndex={-1}>
-      <PanelSection title="Observed state">
-        <DiagnosticRow name="Connection" value={progress.label} />
-        <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
-        <DiagnosticRow name="System health" value={healthStatusLabel(payload?.health, loading)} />
-        <DiagnosticRow
-          name="HDM build"
-          value={payload?.diagnostics.build
-            ? `${payload.diagnostics.build.version} · ${payload.diagnostics.build.revision}`
-            : "Unavailable"}
-        />
-        <DiagnosticRow name="Game" value={label(snapshot?.game_state ?? "unknown")} />
-        <DiagnosticRow name="Render GPU" value={renderer ? label(renderer.role) : "Unknown"} />
-        <DiagnosticRow name="Active display" value={display ? label(display.kind) : "Unknown"} />
-        <DiagnosticRow name="Hardware" value={label(snapshot?.support_tier ?? "unknown")} />
-        <DiagnosticRow
-          name="Snapshot time"
-          value={totalTiming ? `${Math.round(totalTiming.duration_ms)} ms` : "Unknown"}
-        />
+      <PanelSection title="At a glance">
+        {atAGlanceRows({
+          mode: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown"),
+          health: healthStatusLabel(payload?.health, loading),
+          connection: progress.label,
+          game: label(snapshot?.game_state ?? "unknown"),
+        }).map(([name, value]) => (
+          <DiagnosticRow key={name} name={name} value={value} />
+        ))}
         <PanelSectionRow>{progress.detail}</PanelSectionRow>
       </PanelSection>
 
-      <PanelSection title="Quick actions">
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={toggleTroubleshooting}>
-            {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
-          </ButtonItem>
-        </PanelSectionRow>
-        <PanelSectionRow>Status refreshes automatically while this panel is open.</PanelSectionRow>
+      <PanelSection title="Safety & actions">
+        <div ref={primaryControlAnchor}>
+          <PanelSectionRow>
+            <ButtonItem layout="below" onClick={toggleTroubleshooting}>
+              {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
+            </ButtonItem>
+          </PanelSectionRow>
+        </div>
+        {(error || (snapshot?.blockers.length ?? 0) > 0) && (
+          <PanelSectionRow>
+            {error || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.`}
+          </PanelSectionRow>
+        )}
+        <PanelSectionRow>Read-only status refreshes while this panel is open.</PanelSectionRow>
         {sleepGuard?.required && sleepWarningHidden && (
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={showSleepWarning}>
