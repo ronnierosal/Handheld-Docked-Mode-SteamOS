@@ -317,6 +317,30 @@ function healthStatusLabel(health, loading = false) {
     }
 }
 
+const EMPTY_VALUES = {
+    dockedIgpuStatus: null,
+    diagnosticLoggingStatus: null,
+    peripheralStatus: null,
+    actionHistory: null,
+};
+async function collectOptionalDiagnostics(visible, sources) {
+    if (!visible) {
+        return EMPTY_VALUES;
+    }
+    const [dockedIgpuStatus, diagnosticLoggingStatus, peripheralStatus, actionHistory] = await Promise.all([
+        sources.getDockedIgpuStatus().catch(() => null),
+        sources.getDiagnosticLoggingStatus().catch(() => null),
+        sources.getPeripheralStatus().catch(() => null),
+        sources.getActionHistory().catch(() => null),
+    ]);
+    return {
+        dockedIgpuStatus,
+        diagnosticLoggingStatus,
+        peripheralStatus,
+        actionHistory,
+    };
+}
+
 const DISCOVERY_REFRESH_MS = 1_000;
 const SETTLING_REFRESH_MS = 750;
 const STABLE_REFRESH_MS = 3_000;
@@ -782,18 +806,20 @@ function Content({ preflight }) {
             setError("");
         }
         try {
-            const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus, nextActionHistory] = await Promise.all([
+            const [nextPayload, optionalDiagnostics] = await Promise.all([
                 getSnapshot(),
-                getDockedIgpuStatus().catch(() => null),
-                getDiagnosticLoggingStatus().catch(() => null),
-                getPeripheralStatus().catch(() => null),
-                getActionHistory().catch(() => null),
+                collectOptionalDiagnostics(showDiagnostics, {
+                    getDockedIgpuStatus,
+                    getDiagnosticLoggingStatus,
+                    getPeripheralStatus,
+                    getActionHistory,
+                }),
             ]);
             setPayload(nextPayload);
-            setDockedIgpuStatus(nextDockedIgpuStatus);
-            setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
-            setPeripheralStatus(nextPeripheralStatus);
-            setActionHistory(nextActionHistory);
+            setDockedIgpuStatus(optionalDiagnostics.dockedIgpuStatus);
+            setDiagnosticLoggingStatus(optionalDiagnostics.diagnosticLoggingStatus);
+            setPeripheralStatus(optionalDiagnostics.peripheralStatus);
+            setActionHistory(optionalDiagnostics.actionHistory);
             setError("");
             lastSnapshotAt.current = Date.now();
             setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -810,7 +836,7 @@ function Content({ preflight }) {
                 setLoading(false);
             }
         }
-    }, [preflight]);
+    }, [preflight, showDiagnostics]);
     SP_REACT.useEffect(() => {
         let disposed = false;
         let timer = null;

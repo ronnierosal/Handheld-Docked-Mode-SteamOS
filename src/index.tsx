@@ -44,6 +44,7 @@ import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { healthStatusLabel } from "./health-ui";
+import { collectOptionalDiagnostics } from "./optional-diagnostics-refresh";
 import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
 import { canOfferForce, processReleaseOutcomeMessage } from "./process-release-ui";
 import {
@@ -374,18 +375,20 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setError("");
     }
     try {
-      const [nextPayload, nextDockedIgpuStatus, nextDiagnosticLoggingStatus, nextPeripheralStatus, nextActionHistory] = await Promise.all([
+      const [nextPayload, optionalDiagnostics] = await Promise.all([
         getSnapshot(),
-        getDockedIgpuStatus().catch(() => null),
-        getDiagnosticLoggingStatus().catch(() => null),
-        getPeripheralStatus().catch(() => null),
-        getActionHistory().catch(() => null),
+        collectOptionalDiagnostics(showDiagnostics, {
+          getDockedIgpuStatus,
+          getDiagnosticLoggingStatus,
+          getPeripheralStatus,
+          getActionHistory,
+        }),
       ]);
       setPayload(nextPayload);
-      setDockedIgpuStatus(nextDockedIgpuStatus);
-      setDiagnosticLoggingStatus(nextDiagnosticLoggingStatus);
-      setPeripheralStatus(nextPeripheralStatus);
-      setActionHistory(nextActionHistory);
+      setDockedIgpuStatus(optionalDiagnostics.dockedIgpuStatus);
+      setDiagnosticLoggingStatus(optionalDiagnostics.diagnosticLoggingStatus);
+      setPeripheralStatus(optionalDiagnostics.peripheralStatus);
+      setActionHistory(optionalDiagnostics.actionHistory);
       setError("");
       lastSnapshotAt.current = Date.now();
       setPreflightStatus(preflight.reconcile(preflightObservation(nextPayload)));
@@ -400,7 +403,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         setLoading(false);
       }
     }
-  }, [preflight]);
+  }, [preflight, showDiagnostics]);
 
   useEffect(() => {
     let disposed = false;

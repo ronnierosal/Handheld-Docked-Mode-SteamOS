@@ -57,6 +57,12 @@ observation state (mapped or unmapped plus evidence codes). It never exposes
 input paths, sound-card paths, device names, addresses, or private bindings,
 and it grants no controller or audio handoff authority.
 
+While that section is hidden, HDM does not request its separate Docked-iGPU,
+temporary-logging, peripheral-inventory, or action-history statuses. Opening
+the section uses the existing snapshot refresh loop to request them once per
+refresh; hiding it clears those optional values again. This keeps normal
+gameplay observation limited to the essential snapshot.
+
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
 health blockers. It does not add a collection loop, infer a workflow, change
