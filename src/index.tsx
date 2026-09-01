@@ -199,6 +199,25 @@ function showPresentationPreparationConfirmation(
   return modal;
 }
 
+function showPresentationPreparationBlocked(blockers: string[]): void {
+  // The preparation result appears below its controller-focused button. Steam's
+  // Quick Access navigation can leave that row off-screen, so also surface the
+  // outcome immediately without requiring touch scrolling. Keep the message
+  // categorical: integration ownership belongs in diagnostics, not a player
+  // instruction to edit another plugin's files.
+  const ownsPresentationPath = blockers.some((blocker) =>
+    blocker.includes("path") || blocker.includes("integration"),
+  );
+  toaster.toast({
+    title: "Display validation is not ready",
+    body: ownsPresentationPath
+      ? "Another display integration is active. HDM will not replace it."
+      : `Preparation blocked: ${blockers.map(label).join(", ")}.`,
+    critical: true,
+    duration: 12000,
+  });
+}
+
 function showProcessReleaseConfirmation(
   preview: ProcessReleasePreviewPayload,
   onConfirm: () => void,
@@ -683,6 +702,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     try {
       const approval = await approvePresentationPreparation();
       if (!approval.approval_token || approval.blockers.length > 0) {
+        if (approval.blockers.length > 0) {
+          showPresentationPreparationBlocked(approval.blockers);
+        }
         setPresentationMessage(
           approval.blockers.length > 0
             ? `Preparation blocked: ${approval.blockers.map(label).join(", ")}.`
@@ -713,6 +735,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     try {
       const preview = await previewPresentationPreparation();
       if (preview.blockers.length > 0) {
+        showPresentationPreparationBlocked(preview.blockers);
         setPresentationMessage(
           `Preparation blocked: ${preview.blockers.map(label).join(", ")}.`,
         );

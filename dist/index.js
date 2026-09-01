@@ -158,7 +158,12 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
                 : "unavailable",
         },
         { name: "Snapshot schema", value: String(snapshot.schema_version) },
-        { name: "Device profile", value: snapshot.host_profile },
+        {
+            name: "Device profile",
+            value: profiles.host.status === "exact"
+                ? "recognized"
+                : humanize(profiles.host.status),
+        },
         { name: "Support tier", value: humanize(snapshot.support_tier) },
         {
             name: "Profile evidence",
@@ -370,14 +375,14 @@ function connectionProgress(payload) {
     const { snapshot, inference } = payload;
     if (!snapshot.sleep_guard.required) {
         return {
-            label: "Waiting for G1",
-            detail: "No GPD G1 candidate is attached.",
+            label: "Waiting for eGPU",
+            detail: "No compatible eGPU is attached.",
             settling: false,
         };
     }
     if (snapshot.support_tier !== "certified") {
         return {
-            label: "G1 verification blocked",
+            label: "eGPU verification blocked",
             detail: firstHardwareBlocker(payload),
             settling: true,
         };
@@ -385,7 +390,7 @@ function connectionProgress(payload) {
     const external = snapshot.displays.filter((display) => display.kind === "external" && display.connected === true);
     if (external.length === 0) {
         return {
-            label: "G1 detected",
+            label: "eGPU detected",
             detail: "Waiting for a connected TV output.",
             settling: false,
         };
@@ -455,15 +460,15 @@ function processReleaseOutcomeMessage(outcome) {
         return "Process-release approval expired or was rejected. Inspect again.";
     }
     if (outcome.software_blockers_cleared) {
-        return "Software blockers cleared. Physical G1 removal is still not authorized; shut down before disconnecting.";
+        return "Software blockers cleared. Physical eGPU removal is still not authorized; shut down before disconnecting.";
     }
     if (outcome.force_receipt_token) {
-        return "A process still holds the G1. Force close requires a separate confirmation and may lose unsaved work.";
+        return "A process still holds the eGPU. Force close requires a separate confirmation and may lose unsaved work.";
     }
     if (outcome.action_required) {
-        return "Process release needs attention. Acknowledge the result, inspect again, and do not disconnect the G1.";
+        return "Process release needs attention. Acknowledge the result, inspect again, and do not disconnect the eGPU.";
     }
-    return "Software blockers remain. Acknowledge the result and inspect again; do not disconnect the G1.";
+    return "Software blockers remain. Acknowledge the result and inspect again; do not disconnect the eGPU.";
 }
 function canOfferForce(outcome) {
     return Boolean(outcome.accepted
@@ -505,7 +510,7 @@ function warningForBlockedAttempt(observation) {
         && observation.gameUsesEgpu) {
         return {
             kind: "game",
-            title: "Sleep blocked — game is using the G1",
+            title: "Sleep blocked — game is using the eGPU",
             body: "Close the game and restore Portable before disconnecting the eGPU. The sleep request was not started.",
             critical: true,
         };
@@ -515,7 +520,7 @@ function warningForBlockedAttempt(observation) {
         && observation.gameState !== "unknown") {
         return {
             kind: "standard",
-            title: "Sleep blocked while G1 is attached",
+            title: "Sleep blocked while an eGPU is attached",
             body: "This eGPU is known to wake the handheld immediately. Restore Portable and shut down before disconnecting it.",
             critical: false,
         };
@@ -523,7 +528,7 @@ function warningForBlockedAttempt(observation) {
     return {
         kind: "unknown",
         title: "Sleep blocked — safety state is unknown",
-        body: "HDM could not verify that the G1 is safely absent, so the sleep request was not started.",
+        body: "HDM could not verify that the eGPU is safely absent, so the sleep request was not started.",
         critical: true,
     };
 }
@@ -537,6 +542,7 @@ class SleepPreflightCoordinator {
     stopped = false;
     acquireFailed = false;
     lifecycleError = "";
+    blockedAttemptCount = 0;
     constructor(adapter, onBlockedAttempt) {
         this.adapter = adapter;
         this.onBlockedAttempt = onBlockedAttempt;
@@ -552,6 +558,7 @@ class SleepPreflightCoordinator {
             try {
                 this.observerRelease = this.adapter.observeSuspendRequests(() => {
                     if (this.blockerRelease) {
+                        this.blockedAttemptCount += 1;
                         this.onBlockedAttempt(warningForBlockedAttempt(this.observation));
                     }
                 });
@@ -604,6 +611,7 @@ class SleepPreflightCoordinator {
                 state: "unavailable",
                 blocking: false,
                 attemptWarningAvailable: false,
+                blockedAttemptCount: this.blockedAttemptCount,
                 reason,
                 error: this.lifecycleError || "Steam's native suspend blocker could not be resolved.",
             };
@@ -613,6 +621,7 @@ class SleepPreflightCoordinator {
                 state: "active",
                 blocking: true,
                 attemptWarningAvailable: this.observerRelease !== null,
+                blockedAttemptCount: this.blockedAttemptCount,
                 reason,
                 error: this.lifecycleError,
             };
@@ -621,6 +630,7 @@ class SleepPreflightCoordinator {
             state: "inactive",
             blocking: false,
             attemptWarningAvailable: false,
+            blockedAttemptCount: this.blockedAttemptCount,
             reason,
             error: this.lifecycleError,
         };
@@ -688,6 +698,24 @@ const DIAGNOSTIC_LOGGING_OPTIONS = [
     { data: "2_hours", label: "2 hours" },
     { data: "until_reboot", label: "Until reboot" },
 ];
+function scrollToTopOfOwningPanel(anchor) {
+    // A Decky quick-access plugin is hosted inside Steam's scroll container, not
+    // the browser window. Find that container rather than assuming a particular
+    // Steam class name (which changes between client builds).
+    let candidate = anchor.parentElement;
+    while (candidate) {
+        const overflowY = window.getComputedStyle(candidate).overflowY;
+        if ((overflowY === "auto" || overflowY === "scroll")
+            && candidate.scrollHeight > candidate.clientHeight) {
+            candidate.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+        }
+        candidate = candidate.parentElement;
+    }
+    // This remains useful for a future Decky host that does not expose its
+    // scrolling element through the DOM hierarchy above the plugin content.
+    anchor.scrollIntoView({ block: "start", behavior: "smooth" });
+}
 function label(value) {
     return LABELS[value] ?? value.replaceAll("_", " ").replaceAll(".", " ");
 }
@@ -714,8 +742,24 @@ function showPresentationPreparationConfirmation(onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Prepare experimental display validation?", strOKButtonText: "Prepare", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the G1 disconnected, no game running, and the Ally screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
+}
+function showPresentationPreparationBlocked(blockers) {
+    // The preparation result appears below its controller-focused button. Steam's
+    // Quick Access navigation can leave that row off-screen, so also surface the
+    // outcome immediately without requiring touch scrolling. Keep the message
+    // categorical: integration ownership belongs in diagnostics, not a player
+    // instruction to edit another plugin's files.
+    const ownsPresentationPath = blockers.some((blocker) => blocker.includes("path") || blocker.includes("integration"));
+    toaster.toast({
+        title: "Display validation is not ready",
+        body: ownsPresentationPath
+            ? "Another display integration is active. HDM will not replace it."
+            : `Preparation blocked: ${blockers.map(label).join(", ")}.`,
+        critical: true,
+        duration: 12000,
+    });
 }
 function showProcessReleaseConfirmation(preview, onConfirm, onClose) {
     let modal;
@@ -729,7 +773,7 @@ function showProcessReleaseConfirmation(preview, onConfirm, onClose) {
             onConfirm();
         }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: force
                         ? "Force close may lose unsaved work. Only the exact processes that survived the approved graceful attempt are eligible."
-                        : "HDM will request a graceful close only for the exact ordinary user processes listed below." }), preview.targets.map((target, index) => (SP_JSX.jsxs("p", { children: [target.name, " \u2014 ", target.resources.map(label).join(", ")] }, `${target.name}-${index}`))), preview.protected_client_count > 0 && (SP_JSX.jsxs("p", { children: [preview.protected_client_count, " protected client(s) will not be closed."] })), SP_JSX.jsx("p", { children: "Clearing software clients does not authorize physical G1 removal. Shut down before disconnecting the G1." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+                        : "HDM will request a graceful close only for the exact ordinary user processes listed below." }), preview.targets.map((target, index) => (SP_JSX.jsxs("p", { children: [target.name, " \u2014 ", target.resources.map(label).join(", ")] }, `${target.name}-${index}`))), preview.protected_client_count > 0 && (SP_JSX.jsxs("p", { children: [preview.protected_client_count, " protected client(s) will not be closed."] })), SP_JSX.jsx("p", { children: "Clearing software clients does not authorize physical eGPU removal. Shut down before disconnecting the eGPU." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function showDiagnosticLoggingConfirmation(durationLabel, onConfirm, onClose) {
@@ -760,6 +804,7 @@ function preflightObservation(payload) {
 }
 function Content({ preflight }) {
     const quickAccessVisible = useQuickAccessVisible();
+    const statusAnchor = SP_REACT.useRef(null);
     const [payload, setPayload] = SP_REACT.useState(null);
     const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
     const [actionHistory, setActionHistory] = SP_REACT.useState(null);
@@ -811,11 +856,11 @@ function Content({ preflight }) {
                 setProcessAcknowledgementId(status.acknowledgement_id);
             }
             setProcessMessage(status.action_required
-                ? "A prior process-release attempt needs acknowledgement. Do not disconnect the G1."
+                ? "A prior process-release attempt needs acknowledgement. Do not disconnect the eGPU."
                 : `Previous process-release result: ${label(status.code)}.`);
         }).catch(() => {
             if (!disposed) {
-                setProcessMessage("Process-release safety state is unavailable. Do not disconnect the G1.");
+                setProcessMessage("Process-release safety state is unavailable. Do not disconnect the eGPU.");
             }
         });
         return () => {
@@ -978,8 +1023,8 @@ function Content({ preflight }) {
         }
         else if (!inactiveToastShown.current) {
             toaster.toast({
-                title: "G1 sleep protection is inactive",
-                body: sleepGuard.error || "Do not put the handheld to sleep while the G1 is attached.",
+                title: "eGPU sleep protection is inactive",
+                body: sleepGuard.error || "Do not put the handheld to sleep while an eGPU is attached.",
                 critical: true,
                 duration: 10000,
             });
@@ -987,7 +1032,7 @@ function Content({ preflight }) {
         }
         if (!sleepWarningHidden && !warningToastShown.current) {
             toaster.toast({
-                title: gameUsesEgpu ? "Sleep blocked while game uses G1" : "Sleep blocked while G1 is attached",
+                title: gameUsesEgpu ? "Sleep blocked while game uses eGPU" : "Sleep blocked while eGPU is attached",
                 body: "This hardware is known to wake immediately after sleep. Restore Portable and disconnect only after shutdown.",
                 duration: 10000,
             });
@@ -1078,6 +1123,9 @@ function Content({ preflight }) {
         try {
             const approval = await approvePresentationPreparation();
             if (!approval.approval_token || approval.blockers.length > 0) {
+                if (approval.blockers.length > 0) {
+                    showPresentationPreparationBlocked(approval.blockers);
+                }
                 setPresentationMessage(approval.blockers.length > 0
                     ? `Preparation blocked: ${approval.blockers.map(label).join(", ")}.`
                     : "Preparation approval was not issued. Inspect again.");
@@ -1105,6 +1153,7 @@ function Content({ preflight }) {
         try {
             const preview = await previewPresentationPreparation();
             if (preview.blockers.length > 0) {
+                showPresentationPreparationBlocked(preview.blockers);
                 setPresentationMessage(`Preparation blocked: ${preview.blockers.map(label).join(", ")}.`);
                 return;
             }
@@ -1145,7 +1194,7 @@ function Content({ preflight }) {
             await refresh(true);
         }
         catch {
-            setProcessMessage("Process release failed closed. Do not disconnect the G1.");
+            setProcessMessage("Process release failed closed. Do not disconnect the eGPU.");
             if (phase === "force") {
                 setForceReceiptToken("");
             }
@@ -1162,7 +1211,7 @@ function Content({ preflight }) {
             if (!preview.ready || preview.blockers.length > 0 || preview.targets.length === 0) {
                 setProcessMessage(preview.blockers.length > 0
                     ? `Process release blocked: ${preview.blockers.map(label).join(", ")}.`
-                    : "No eligible ordinary user process is holding the G1.");
+                    : "No eligible ordinary user process is holding the eGPU.");
                 return;
             }
             processModal.current?.Close();
@@ -1222,29 +1271,50 @@ function Content({ preflight }) {
             setProcessBusy(false);
         }
     }, [forceReceiptToken, inspectProcessRelease, processAcknowledgementId]);
-    return (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsxs(DFL.PanelSection, { title: "Observed state", children: [SP_JSX.jsx(DiagnosticRow, { name: "Connection", value: progress.label }), SP_JSX.jsx(DiagnosticRow, { name: "Mode", value: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "System health", value: healthStatusLabel(payload?.health, loading) }), SP_JSX.jsx(DiagnosticRow, { name: "HDM build", value: payload?.diagnostics.build
-                            ? `${payload.diagnostics.build.version} · ${payload.diagnostics.build.revision}`
-                            : "Unavailable" }), SP_JSX.jsx(DiagnosticRow, { name: "Game", value: label(snapshot?.game_state ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Render GPU", value: renderer ? label(renderer.role) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Active display", value: display ? label(display.kind) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Hardware", value: label(snapshot?.support_tier ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Snapshot time", value: totalTiming ? `${Math.round(totalTiming.duration_ms)} ms` : "Unknown" }), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
-                            ? "Checking…"
-                            : sleepGuard?.required
-                                ? sleepGuard.active
+    const returnToStatus = SP_REACT.useCallback(() => {
+        setShowDiagnostics(false);
+        // Wait for the diagnostics section to collapse, then reset Steam's owning
+        // scroll panel and move focus to the status anchor. This avoids focus
+        // falling through to the QAM Back button after this action completes.
+        window.setTimeout(() => {
+            const anchor = statusAnchor.current;
+            if (!anchor)
+                return;
+            scrollToTopOfOwningPanel(anchor);
+            anchor.focus({ preventScroll: true });
+        }, 0);
+    }, []);
+    const toggleTroubleshooting = SP_REACT.useCallback(() => {
+        if (!showDiagnostics) {
+            void refresh(true);
+        }
+        setShowDiagnostics((visible) => !visible);
+    }, [refresh, showDiagnostics]);
+    return (SP_JSX.jsx(SP_JSX.Fragment, { children: SP_JSX.jsxs("div", { ref: statusAnchor, tabIndex: -1, children: [SP_JSX.jsxs(DFL.PanelSection, { title: "Observed state", children: [SP_JSX.jsx(DiagnosticRow, { name: "Connection", value: progress.label }), SP_JSX.jsx(DiagnosticRow, { name: "Mode", value: loading ? "Reading…" : label(payload?.inference.mode ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "System health", value: healthStatusLabel(payload?.health, loading) }), SP_JSX.jsx(DiagnosticRow, { name: "HDM build", value: payload?.diagnostics.build
+                                ? `${payload.diagnostics.build.version} · ${payload.diagnostics.build.revision}`
+                                : "Unavailable" }), SP_JSX.jsx(DiagnosticRow, { name: "Game", value: label(snapshot?.game_state ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Render GPU", value: renderer ? label(renderer.role) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Active display", value: display ? label(display.kind) : "Unknown" }), SP_JSX.jsx(DiagnosticRow, { name: "Hardware", value: label(snapshot?.support_tier ?? "unknown") }), SP_JSX.jsx(DiagnosticRow, { name: "Snapshot time", value: totalTiming ? `${Math.round(totalTiming.duration_ms)} ms` : "Unknown" }), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Quick actions", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Status refreshes automatically while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+                                ? "Checking…"
+                                : sleepGuard?.required
+                                    ? sleepGuard.active
+                                        ? "Active"
+                                        : "Inactive"
+                                    : "Not required" }), SP_JSX.jsx(DiagnosticRow, { name: "Steam preflight", value: preflightStatus.state === "active"
+                                ? preflightStatus.attemptWarningAvailable
                                     ? "Active"
-                                    : "Inactive"
-                                : "Not required" }), SP_JSX.jsx(DiagnosticRow, { name: "Steam preflight", value: preflightStatus.state === "active"
-                            ? preflightStatus.attemptWarningAvailable
-                                ? "Active"
-                                : "Blocked; warning unavailable"
-                            : preflightStatus.state === "inactive"
-                                ? "Standby — G1 verified absent"
-                                : "Unavailable" }), preflightStatus.error && (SP_JSX.jsx(DFL.PanelSectionRow, { children: preflightStatus.error })), sleepGuard?.required && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [!sleepWarningHidden && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: gameUsesEgpu
-                                            ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
-                                            : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), closeEligibleClientCount > 0 && !processAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectProcessRelease("graceful"), disabled: processBusy, children: processBusy ? "Checking…" : "Close eligible eGPU processes" }) })), forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void reviewForceClose(), disabled: processBusy, children: "Review force close" }) })), processAcknowledgementId && !forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeProcessResult(), disabled: processBusy, children: "Acknowledge process-release result" }) })), processMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: processMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Process closure always requires confirmation. Software readiness never authorizes physical G1 removal." })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Support bundle", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs, addresses, usernames, home paths, and command lines are excluded or redacted." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void createSupportPreview(), disabled: supportBusy, children: supportBusy ? "Working…" : "Preview redacted support bundle" }) }), supportPreview && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DiagnosticRow, { name: "Preview size", value: `${supportPreview.size_bytes} bytes` }), SP_JSX.jsx(DiagnosticRow, { name: "Recent events", value: String(supportPreview.event_count) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: reviewSupportPreview, disabled: supportBusy, children: "Review exact redacted JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void copySupportPreview(), disabled: supportBusy, children: "Copy reviewed JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void saveApprovedSupportPreview(), disabled: supportBusy, children: "Save reviewed bundle to Downloads" }) })] })), supportMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: supportMessage })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Diagnostics only", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "HDM 0.2 observes state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, or Gamescope. It can close only exact eligible eGPU processes after explicit approval." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void refresh(), disabled: loading, children: loading ? "Reading…" : "Refresh" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => setShowDiagnostics((value) => !value), children: showDiagnostics ? "Hide troubleshooting details" : "Show troubleshooting details" }) }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), showDiagnostics && (SP_JSX.jsxs(DFL.PanelSection, { title: "Troubleshooting details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden." }), optionalDiagnosticsDeferred && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "Additional troubleshooting checks wait until HDM confirms no game is running." })), overlayRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), dockedIgpuStatus?.acknowledgement_required && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeDockedIgpuWatch(), children: "Acknowledge Docked-iGPU watcher state" }) })), dockedIgpuMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: dockedIgpuMessage })), SP_JSX.jsx(DFL.DropdownItem, { label: "Verbose logging duration", description: "Temporary, sanitized, capped, and off by default", rgOptions: DIAGNOSTIC_LOGGING_OPTIONS, selectedOption: diagnosticLoggingDuration, disabled: diagnosticLoggingBusy || diagnosticLoggingStatus?.enabled === true, onChange: (option) => {
-                            setDiagnosticLoggingDuration(option.data);
-                        } }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: diagnosticLoggingStatus?.enabled
-                                ? () => void stopDiagnosticLogging()
-                                : requestDiagnosticLogging, disabled: diagnosticLoggingBusy, children: diagnosticLoggingStatus?.enabled
-                                ? "Disable verbose diagnostics"
-                                : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage })] }))] }));
+                                    : "Blocked; warning unavailable"
+                                : preflightStatus.state === "inactive"
+                                    ? "Standby — eGPU verified absent"
+                                    : "Unavailable" }), SP_JSX.jsx(DiagnosticRow, { name: "Blocked sleep attempts", value: preflightStatus.blockedAttemptCount
+                                ? `${preflightStatus.blockedAttemptCount} observed this session`
+                                : "None observed this session" }), preflightStatus.error && (SP_JSX.jsx(DFL.PanelSectionRow, { children: preflightStatus.error })), sleepGuard?.required && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [!sleepWarningHidden && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: gameUsesEgpu
+                                                ? "A game is using the eGPU. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
+                                                : "The attached eGPU is known to wake this handheld immediately after sleep. Sleep remains blocked until the eGPU is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), closeEligibleClientCount > 0 && !processAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectProcessRelease("graceful"), disabled: processBusy, children: processBusy ? "Checking…" : "Close eligible eGPU processes" }) })), forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void reviewForceClose(), disabled: processBusy, children: "Review force close" }) })), processAcknowledgementId && !forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeProcessResult(), disabled: processBusy, children: "Acknowledge process-release result" }) })), processMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: processMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Process closure always requires confirmation. Software readiness never authorizes physical eGPU removal." })] }), (error || (snapshot?.blockers.length ?? 0) > 0) && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), SP_JSX.jsxs(DFL.PanelSection, { title: "Support bundle", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs, addresses, usernames, home paths, and command lines are excluded or redacted." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void createSupportPreview(), disabled: supportBusy, children: supportBusy ? "Working…" : "Preview redacted support bundle" }) }), supportPreview && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DiagnosticRow, { name: "Preview size", value: `${supportPreview.size_bytes} bytes` }), SP_JSX.jsx(DiagnosticRow, { name: "Recent events", value: String(supportPreview.event_count) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: reviewSupportPreview, disabled: supportBusy, children: "Review exact redacted JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void copySupportPreview(), disabled: supportBusy, children: "Copy reviewed JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void saveApprovedSupportPreview(), disabled: supportBusy, children: "Save reviewed bundle to Downloads" }) })] })), supportMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: supportMessage })] }), showDiagnostics && (SP_JSX.jsxs(DFL.PanelSection, { title: "Troubleshooting details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden." }), optionalDiagnosticsDeferred && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "Additional troubleshooting checks wait until HDM confirms no game is running." })), overlayRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), dockedIgpuStatus?.acknowledgement_required && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeDockedIgpuWatch(), children: "Acknowledge Docked-iGPU watcher state" }) })), dockedIgpuMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: dockedIgpuMessage })), SP_JSX.jsx(DFL.DropdownItem, { label: "Verbose logging duration", description: "Temporary, sanitized, capped, and off by default", rgOptions: DIAGNOSTIC_LOGGING_OPTIONS, selectedOption: diagnosticLoggingDuration, disabled: diagnosticLoggingBusy || diagnosticLoggingStatus?.enabled === true, onChange: (option) => {
+                                setDiagnosticLoggingDuration(option.data);
+                            } }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: diagnosticLoggingStatus?.enabled
+                                    ? () => void stopDiagnosticLogging()
+                                    : requestDiagnosticLogging, disabled: diagnosticLoggingBusy, children: diagnosticLoggingStatus?.enabled
+                                    ? "Disable verbose diagnostics"
+                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
 }
 function showBlockedAttempt(warning, onClose) {
     let modal;
@@ -1261,6 +1331,22 @@ var index = definePlugin(() => {
     let warningModal = null;
     let warningTimer = null;
     const preflight = new SleepPreflightCoordinator(createDeckySteamSuspendAdapter(), (warning) => {
+        let toastDelivered = false;
+        try {
+            // Steam may silently discard a modal during the transient Power-menu
+            // lifecycle. Show a durable native toast first, then still offer the
+            // controller-confirmable modal after that menu has closed.
+            toaster.toast({
+                title: warning.title,
+                body: warning.body,
+                critical: true,
+                duration: 30000,
+            });
+            toastDelivered = true;
+        }
+        catch {
+            // The modal/fallback path below remains independently available.
+        }
         if (warningTimer !== null) {
             window.clearTimeout(warningTimer);
         }
@@ -1277,12 +1363,14 @@ var index = definePlugin(() => {
                     });
                 },
                 showFallbackToast: (fallback) => {
-                    toaster.toast({
-                        title: fallback.title,
-                        body: fallback.body,
-                        critical: true,
-                        duration: 15000,
-                    });
+                    if (!toastDelivered) {
+                        toaster.toast({
+                            title: fallback.title,
+                            body: fallback.body,
+                            critical: true,
+                            duration: 30000,
+                        });
+                    }
                 },
             });
         }, BLOCKED_ATTEMPT_MODAL_DELAY_MS);
