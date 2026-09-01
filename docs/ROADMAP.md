@@ -414,7 +414,9 @@ they are not authorization for a separate optimizer or launcher.
   evidence. **Implemented (optional input):** one independently collected
   peripheral observation now contributes controller/audio health only when it
   proves usable built-in input/current output; incomplete evidence is Attention
-  Required and known built-in loss is Degraded. Snapshot wiring remains deferred.
+  Required and known built-in loss is Degraded. The snapshot service now has
+  fail-closed optional workflow/peripheral observer inputs, but no production
+  observer is constructed yet.
   Current link up/down is neither throughput proof nor removal authority.
 - **Implemented (pure contract):** the shared telemetry admission contract
   requires a typed bounded metric set, declared collection interval, measured

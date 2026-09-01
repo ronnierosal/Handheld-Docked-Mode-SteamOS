@@ -87,9 +87,11 @@ Health aggregation can also accept one independent private peripheral
 observation. Only exact, verified usable built-in input and current audio output
 produce Ready components; incomplete mapping, default-output, or input evidence
 is Attention Required, and a known loss of the built-in controller fallback is
-Degraded. The normal snapshot path remains unchanged until a future owner
-supplies that separate observation, so sysfs inventory alone cannot improve
-health or authorize handoff.
+Degraded. The snapshot service accepts optional authoritative workflow and
+peripheral observers, samples each at most once per snapshot, and reports a
+configured observer failure as Attention Required. No default production
+observer is constructed yet, so sysfs inventory alone cannot improve health or
+authorize handoff.
 
 Runtime host/eGPU resolution is catalog-driven. Each explicit entry contains
 only a profile ID, conservative capability metadata, and—in the eGPU case—a

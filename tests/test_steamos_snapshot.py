@@ -23,7 +23,15 @@ from hdm.application.snapshot import (  # noqa: E402
     report_to_public_dict,
 )
 from hdm.api import DiagnosticsApi  # noqa: E402
+from hdm.domain.control_plane import WorkflowState  # noqa: E402
+from hdm.domain.health import HealthState  # noqa: E402
 from hdm.domain.models import GameState, OperatingMode, SupportTier  # noqa: E402
+from hdm.domain.peripheral_handoff import (  # noqa: E402
+    AudioOutput,
+    AudioPeripheralState,
+    ControllerPeripheralState,
+    PeripheralObservation,
+)
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 
 
@@ -66,6 +74,44 @@ class TickingMonotonic:
         return self.value
 
 
+class FixedPeripheral:
+    def __init__(self, value):
+        self.value = value
+        self.calls = 0
+
+    def observe(self):
+        self.calls += 1
+        if isinstance(self.value, Exception):
+            raise self.value
+        return self.value
+
+
+def usable_peripherals():
+    return PeripheralObservation(
+        1,
+        "peripheral-generation",
+        "peripheral-sample",
+        ControllerPeripheralState(
+            True, True, "", "builtin", True, True, True, "external", True, True
+        ),
+        AudioPeripheralState(
+            True,
+            True,
+            "",
+            AudioOutput.INTERNAL,
+            "current",
+            True,
+            "external-audio",
+            True,
+            True,
+            "portable-audio",
+            True,
+            True,
+            True,
+        ),
+    )
+
+
 def certified_topology():
     root = "0000:04:00.0"
     ancestry = ("0000:00:03.1", root)
@@ -100,6 +146,90 @@ def certified_topology():
 
 
 class SteamOsSnapshotTests(unittest.TestCase):
+    def test_health_includes_one_authoritative_workflow_and_peripheral_sample(self):
+        internal = DrmCardRecord(
+            "card4",
+            "0000:01:00.0",
+            "0x1002",
+            "0x0001",
+            True,
+            "amdgpu",
+            (DrmConnectorRecord("card4", "eDP-1", "connected", "enabled"),),
+        )
+        discovery = SteamOsDiscovery(
+            drm=Fixed((internal,)),
+            gamescope=Fixed(
+                GamescopeScan(
+                    GamescopeProcessRecord(
+                        50436,
+                        ("/usr/bin/gamescope", "-O", "*,eDP-1"),
+                        ("*", "eDP-1"),
+                        "",
+                        "",
+                        True,
+                    ),
+                    1,
+                )
+            ),
+            game_scopes=Fixed(GameScopeScan(GameState.IDLE)),
+            pci_usb4=FixedTopology((), ()),
+            host=Fixed(HostRecord("ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "RC72LA")),
+            clock=lambda: datetime(2026, 8, 31, tzinfo=timezone.utc),
+        )
+        peripherals = FixedPeripheral(usable_peripherals())
+
+        report = SnapshotService(
+            discovery,
+            workflow_observation=lambda: WorkflowState.RETURNING_TO_PORTABLE,
+            peripheral_observation=peripherals,
+        ).observe()
+
+        self.assertEqual(peripherals.calls, 1)
+        self.assertEqual(report.health.state, HealthState.RECOVERING)
+        self.assertEqual(report.workflow, WorkflowState.RETURNING_TO_PORTABLE)
+        self.assertIsNotNone(report.peripheral)
+        self.assertEqual(
+            {component["component"] for component in report_to_dict(report)["health"]["components"]},
+            {"placement", "session", "display", "workflow", "controller", "audio"},
+        )
+
+    def test_health_fails_closed_when_configured_health_observers_fail(self):
+        internal = DrmCardRecord(
+            "card4",
+            "0000:01:00.0",
+            "0x1002",
+            "0x0001",
+            True,
+            "amdgpu",
+            (DrmConnectorRecord("card4", "eDP-1", "connected", "enabled"),),
+        )
+        discovery = SteamOsDiscovery(
+            drm=Fixed((internal,)),
+            gamescope=Fixed(
+                GamescopeScan(
+                    GamescopeProcessRecord(50436, ("gamescope",), ("eDP-1",), "", "", True), 1
+                )
+            ),
+            game_scopes=Fixed(GameScopeScan(GameState.IDLE)),
+            pci_usb4=FixedTopology((), ()),
+            host=Fixed(HostRecord("ASUSTeK COMPUTER INC.", "ROG Ally X RC72LA", "RC72LA")),
+            clock=lambda: datetime(2026, 8, 31, tzinfo=timezone.utc),
+        )
+
+        report = SnapshotService(
+            discovery,
+            workflow_observation=lambda: (_ for _ in ()).throw(RuntimeError("unavailable")),
+            peripheral_observation=FixedPeripheral(RuntimeError("unavailable")),
+        ).observe()
+
+        self.assertEqual(report.health.state, HealthState.ATTENTION_REQUIRED)
+        self.assertTrue(report.workflow_unavailable)
+        self.assertTrue(report.peripheral_unavailable)
+        self.assertEqual(
+            set(report.health.blockers),
+            {"health.workflow_unknown", "health.controller_unknown", "health.audio_unknown"},
+        )
+
     def test_active_or_unknown_game_defers_expensive_egpu_client_scan(self):
         internal = DrmCardRecord(
             "card0",

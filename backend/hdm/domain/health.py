@@ -110,6 +110,9 @@ def assess_snapshot_health(
     placement: PlacementState,
     peripheral: PeripheralObservation | None = None,
     workflow: WorkflowState | None = None,
+    *,
+    peripheral_unavailable: bool = False,
+    workflow_unavailable: bool = False,
 ) -> HealthAssessment:
     """Assess only current read-only snapshot evidence.
 
@@ -125,9 +128,18 @@ def assess_snapshot_health(
         _session_component(snapshot),
         _display_component(snapshot),
     ]
-    workflow_component = _workflow_component(workflow)
-    if workflow_component is not None:
-        components.append(workflow_component)
+    if workflow_unavailable:
+        components.append(
+            HealthComponentObservation(
+                HealthComponent.WORKFLOW,
+                HealthEvidenceState.UNKNOWN,
+                "workflow.observation_unavailable",
+            )
+        )
+    else:
+        workflow_component = _workflow_component(workflow)
+        if workflow_component is not None:
+            components.append(workflow_component)
     if placement in {
         PlacementState.BOOSTED_HANDHELD,
         PlacementState.DOCKED_EGPU,
@@ -135,7 +147,22 @@ def assess_snapshot_health(
         components.append(_egpu_link_component(snapshot))
     if snapshot.disconnect_readiness.applicable:
         components.append(_storage_component(snapshot))
-    if peripheral is not None:
+    if peripheral_unavailable:
+        components.extend(
+            (
+                HealthComponentObservation(
+                    HealthComponent.CONTROLLER,
+                    HealthEvidenceState.UNKNOWN,
+                    "controller.observation_unavailable",
+                ),
+                HealthComponentObservation(
+                    HealthComponent.AUDIO,
+                    HealthEvidenceState.UNKNOWN,
+                    "audio.observation_unavailable",
+                ),
+            )
+        )
+    elif peripheral is not None:
         components.extend((_controller_component(peripheral), _audio_component(peripheral)))
     return assess_health(tuple(components))
 
