@@ -85,6 +85,28 @@ const DIAGNOSTIC_LOGGING_OPTIONS = [
   { data: "until_reboot", label: "Until reboot" },
 ] satisfies Array<{ data: DiagnosticLoggingDuration; label: string }>;
 
+function scrollToTopOfOwningPanel(anchor: HTMLElement): void {
+  // A Decky quick-access plugin is hosted inside Steam's scroll container, not
+  // the browser window. Find that container rather than assuming a particular
+  // Steam class name (which changes between client builds).
+  let candidate = anchor.parentElement;
+  while (candidate) {
+    const overflowY = window.getComputedStyle(candidate).overflowY;
+    if (
+      (overflowY === "auto" || overflowY === "scroll")
+      && candidate.scrollHeight > candidate.clientHeight
+    ) {
+      candidate.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    candidate = candidate.parentElement;
+  }
+
+  // This remains useful for a future Decky host that does not expose its
+  // scrolling element through the DOM hierarchy above the plugin content.
+  anchor.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
 function label(value: string): string {
   return LABELS[value] ?? value.replaceAll("_", " ").replaceAll(".", " ");
 }
@@ -824,11 +846,14 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
 
   const returnToStatus = useCallback(() => {
     setShowDiagnostics(false);
-    // Decky's QAM panel owns the actual scrolling container.  Scrolling this
-    // anchor brings controller focus back to the first useful status section
-    // without relying on touch input or a browser-window scroll position.
+    // Wait for the diagnostics section to collapse, then reset Steam's owning
+    // scroll panel and move focus to the status anchor. This avoids focus
+    // falling through to the QAM Back button after this action completes.
     window.setTimeout(() => {
-      statusAnchor.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      const anchor = statusAnchor.current;
+      if (!anchor) return;
+      scrollToTopOfOwningPanel(anchor);
+      anchor.focus({ preventScroll: true });
     }, 0);
   }, []);
 
@@ -841,7 +866,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
 
   return (
     <>
-      <div ref={statusAnchor} />
+      <div ref={statusAnchor} tabIndex={-1} />
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
         <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
