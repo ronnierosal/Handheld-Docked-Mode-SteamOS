@@ -3,7 +3,6 @@ import {
   ButtonItem,
   ConfirmModal,
   DropdownItem,
-  Focusable,
   PanelSection,
   PanelSectionRow,
   ScrollPanel,
@@ -833,8 +832,15 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }, 0);
   }, []);
 
+  const toggleTroubleshooting = useCallback(() => {
+    if (!showDiagnostics) {
+      void refresh(true);
+    }
+    setShowDiagnostics((visible) => !visible);
+  }, [refresh, showDiagnostics]);
+
   return (
-    <Focusable flow-children="vertical" noFocusRing>
+    <>
       <div ref={statusAnchor} />
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
@@ -859,15 +865,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
 
       <PanelSection title="Quick actions">
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={() => void refresh()} disabled={loading}>
-            {loading ? "Reading…" : "Refresh status"}
+          <ButtonItem layout="below" onClick={toggleTroubleshooting}>
+            {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
           </ButtonItem>
         </PanelSectionRow>
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={() => setShowDiagnostics((value) => !value)}>
-            {showDiagnostics ? "Hide troubleshooting" : "Troubleshooting"}
-          </ButtonItem>
-        </PanelSectionRow>
+        <PanelSectionRow>Status refreshes automatically while this panel is open.</PanelSectionRow>
         {sleepGuard?.required && sleepWarningHidden && (
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={showSleepWarning}>
@@ -1103,7 +1105,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
-    </Focusable>
+    </>
   );
 }
 
