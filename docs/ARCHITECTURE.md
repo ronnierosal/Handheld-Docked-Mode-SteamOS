@@ -399,6 +399,9 @@ Action Required; trusted
 hardware-test authorization is an injected backend port, not caller data.
 Existing explicit finish/review and simulation-promotion
 prohibitions remain authoritative; no catalog update is automatic.
+Its future delivery contract is deliberately identity-free: stage, categorical
+code, selected dimensions, outcomes, and action/review flags only. No session,
+game, profile, evidence, time, or authorization identity crosses it.
 
 ## Application layer
 

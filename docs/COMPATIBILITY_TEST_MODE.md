@@ -21,6 +21,12 @@ user context; missing or failed observer evidence stops the session and turns
 temporary diagnostics off. Trusted hardware-test authorization remains an
 injected backend boundary rather than frontend-supplied data.
 
+An identity-free status mapper is ready for future controller-first delivery. It
+contains only categorical stage, code, selected dimensions, recorded outcomes,
+and Action Required/review flags. It exposes no session ID, AppID, profile ID,
+evidence generation, clock value, or authorization state, and is not yet wired
+to a Decky RPC or UI.
+
 Compatibility Test Mode is currently a dormant session policy, simulator, and
 read-only baseline/external-render evidence collector. A baseline requires a
 stable exact Steam session before and after active internal-GPU evidence; idle,
