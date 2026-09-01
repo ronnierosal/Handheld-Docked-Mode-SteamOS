@@ -16,8 +16,10 @@ requires trusted-runner authorization, explicit finish, and human review. No
 Decky UI or production plugin construction exists. An application-only
 lifecycle owns one ephemeral session and applies its temporary-diagnostics
 directives exactly; it cannot trigger a collector, catalog write, or hardware
-transition. Trusted hardware-test authorization remains an injected backend
-boundary rather than frontend-supplied data.
+transition. It may call its injected baseline collector with a backend-owned
+user context; missing or failed observer evidence stops the session and turns
+temporary diagnostics off. Trusted hardware-test authorization remains an
+injected backend boundary rather than frontend-supplied data.
 
 Compatibility Test Mode is currently a dormant session policy, simulator, and
 read-only baseline/external-render evidence collector. A baseline requires a

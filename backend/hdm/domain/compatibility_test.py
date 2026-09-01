@@ -383,7 +383,10 @@ def require_compatibility_action(
     expired = _expired(session, now_ms)
     if expired is not None:
         return expired
-    if session.stage is not CompatibilityTestStage.ACTIVE:
+    if session.stage not in {
+        CompatibilityTestStage.AWAITING_BASELINE,
+        CompatibilityTestStage.ACTIVE,
+    }:
         return _action_required(session, "compatibility.action_out_of_order")
     if not re.fullmatch(r"compatibility\.[a-z0-9_.-]{1,80}", reason_code):
         raise ValueError("compatibility action reason must be categorical")

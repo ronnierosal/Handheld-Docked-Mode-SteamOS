@@ -21,6 +21,7 @@ from ..domain.compatibility_test import (
     record_egpu_handoff_result,
     record_save_result,
     reconcile_compatibility_expiry,
+    require_compatibility_action,
     start_compatibility_test,
 )
 from ..domain.game_compatibility import (
@@ -34,6 +35,7 @@ from .diagnostic_logging import (
     DiagnosticLoggingController,
     DiagnosticLoggingDuration,
 )
+from .compatibility_baseline import CompatibilityBaselineCapture
 
 
 class CompatibilityHardwareAuthorizationPort(Protocol):
@@ -44,6 +46,14 @@ class CompatibilityHardwareAuthorizationPort(Protocol):
 
 class CompatibilitySessionIdPort(Protocol):
     def new_session_id(self) -> str: ...
+
+
+class CompatibilityBaselinePort(Protocol):
+    def capture(self, *, user_uid: int) -> CompatibilityBaselineCapture: ...
+
+
+class CompatibilityUserContextPort(Protocol):
+    def current_user_uid(self) -> int: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,11 +77,15 @@ class CompatibilityTestLifecycle:
         clock: MonotonicClockPort,
         session_ids: CompatibilitySessionIdPort,
         hardware_authorization: CompatibilityHardwareAuthorizationPort,
+        baseline_collector: CompatibilityBaselinePort | None = None,
+        user_context: CompatibilityUserContextPort | None = None,
     ) -> None:
         self._diagnostics = diagnostics
         self._clock = clock
         self._session_ids = session_ids
         self._hardware_authorization = hardware_authorization
+        self._baseline_collector = baseline_collector
+        self._user_context = user_context
         self._session: CompatibilityTestSession | None = None
         self._lock = threading.Lock()
 
@@ -110,6 +124,28 @@ class CompatibilityTestLifecycle:
         return self._advance(lambda session, now: record_compatibility_baseline(
             session, baseline, now_ms=now
         ))
+
+    def capture_observed_baseline(self) -> CompatibilityTestSession | None:
+        """Capture through injected read-only ports; delivery never supplies identity."""
+        with self._lock:
+            self._reconcile_locked()
+            if self._session is None:
+                return None
+            if self._session.stage is not CompatibilityTestStage.AWAITING_BASELINE:
+                return self._session
+            capture = self._capture_baseline_locked()
+            now = self._now_locked()
+            self._session = (
+                record_compatibility_baseline(
+                    self._session, capture.baseline, now_ms=now
+                )
+                if capture.accepted and capture.baseline is not None
+                else require_compatibility_action(
+                    self._session, capture.code, now_ms=now
+                )
+            )
+            self._apply_logging_directives_locked()
+            return self._session
 
     def record_egpu_handoff(
         self,
@@ -200,6 +236,22 @@ class CompatibilityTestLifecycle:
             return self._hardware_authorization.hardware_test_authorized() is True
         except Exception:
             return False
+
+    def _capture_baseline_locked(self) -> CompatibilityBaselineCapture:
+        if self._baseline_collector is None or self._user_context is None:
+            return CompatibilityBaselineCapture(
+                False, "compatibility.baseline_observer_unavailable"
+            )
+        try:
+            user_uid = self._user_context.current_user_uid()
+            result = self._baseline_collector.capture(user_uid=user_uid)
+        except Exception:
+            result = None
+        if not isinstance(result, CompatibilityBaselineCapture):
+            return CompatibilityBaselineCapture(
+                False, "compatibility.baseline_observer_unavailable"
+            )
+        return result
 
     def _now_locked(self) -> int:
         value = self._clock.now_ms()

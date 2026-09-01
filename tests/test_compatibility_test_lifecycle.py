@@ -12,6 +12,9 @@ from hdm.application.compatibility_test_lifecycle import (  # noqa: E402
     CompatibilityTestLifecycle,
     CompatibilityTestStart,
 )
+from hdm.application.compatibility_baseline import (  # noqa: E402
+    CompatibilityBaselineCapture,
+)
 from hdm.application.diagnostic_logging import (  # noqa: E402
     DiagnosticLoggingController,
 )
@@ -58,6 +61,23 @@ class Authorization:
         return self.value
 
 
+class UserContext:
+    def current_user_uid(self):
+        return 1000
+
+
+class BaselineCollector:
+    def __init__(self, value):
+        self.value = value
+        self.user_uid = None
+
+    def capture(self, *, user_uid):
+        self.user_uid = user_uid
+        if isinstance(self.value, Exception):
+            raise self.value
+        return self.value
+
+
 def start_request(kind=CompatibilityEvidenceKind.SIMULATION):
     return CompatibilityTestStart(
         CompatibilityTestOptions(),
@@ -81,7 +101,7 @@ def baseline():
 
 
 class CompatibilityTestLifecycleTests(unittest.TestCase):
-    def lifecycle(self, *, authorized=False):
+    def lifecycle(self, *, authorized=False, baseline_collector=None):
         clock = Clock()
         events = BoundedEventLog()
         diagnostics = DiagnosticLoggingController(
@@ -94,6 +114,8 @@ class CompatibilityTestLifecycleTests(unittest.TestCase):
                 clock=clock,
                 session_ids=SessionIds(),
                 hardware_authorization=authorization,
+                baseline_collector=baseline_collector,
+                user_context=UserContext() if baseline_collector is not None else None,
             ),
             clock,
             diagnostics,
@@ -168,6 +190,32 @@ class CompatibilityTestLifecycleTests(unittest.TestCase):
 
         self.assertEqual(authorization.calls, 1)
         self.assertIsNone(lifecycle.status())
+        self.assertFalse(diagnostics.status().enabled)
+
+    def test_observed_baseline_uses_trusted_context_and_stops_on_failure(self):
+        collector = BaselineCollector(
+            CompatibilityBaselineCapture(
+                True, "compatibility.baseline_captured", baseline()
+            )
+        )
+        lifecycle, _clock, diagnostics, _authorization = self.lifecycle(
+            baseline_collector=collector
+        )
+        lifecycle.start(start_request(), user_confirmed=True)
+
+        active = lifecycle.capture_observed_baseline()
+
+        self.assertEqual(active.stage, CompatibilityTestStage.ACTIVE)
+        self.assertEqual(collector.user_uid, 1000)
+        self.assertTrue(diagnostics.status().enabled)
+
+        unavailable, _clock, diagnostics, _authorization = self.lifecycle()
+        unavailable.start(start_request(), user_confirmed=True)
+        stopped = unavailable.capture_observed_baseline()
+        self.assertEqual(stopped.stage, CompatibilityTestStage.ACTION_REQUIRED)
+        self.assertEqual(
+            stopped.reason_code, "compatibility.baseline_observer_unavailable"
+        )
         self.assertFalse(diagnostics.status().enabled)
 
 
