@@ -471,3 +471,19 @@ and recovery work but do not deploy or invoke process signals,
 display/GPU/audio/controller mutation, original-sleep continuation, reboot,
 suspend, or physical-removal actions. The first future live presentation
 transition remains R3 and requires its documented supervised rollback tests.
+
+### Interrupted docked sleep recovery checkpoint
+
+- **Implemented (local-only contract):** existing canonical sleep restart
+  recovery remains the single durable authority and never resumes original
+  sleep. A redacted projection exposes only its acknowledged terminal restart
+  result. A separate pure classifier records G1 absence, game/session absence,
+  and verified handheld display/input/audio only when each fact is supplied as
+  explicit categorical evidence. It treats stale checkpoints and incomplete
+  evidence as non-restored; it does not infer a crash, wake cause, or success.
+- **Hardware Validation Required:** production startup recovery must take one
+  fresh post-wake sample through the owner-checked canonical service, then
+  supply independently verified display, controller, and audio evidence before
+  showing a restored-handheld outcome. A supervised scenario is required for
+  sleep with the G1 removed while asleep. No remote suspend, removal, recovery,
+  or deployment is authorized by this contract.

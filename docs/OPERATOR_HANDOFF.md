@@ -58,6 +58,14 @@ each independently before relying on this snapshot.
   notices are non-blocking and deduplicated; power, battery, thermal, throttle,
   budget, and sustained-churn inference remain unimplemented/Unknown. No health
   display enables a transition or Safe Undock. See [Power and Link Health](POWER_LINK_HEALTH.md).
+- **Implemented (local-only contract):** interrupted docked-sleep recovery has
+  a privacy-safe checkpoint projection over the existing canonical sleep
+  journal plus a pure post-wake evidence classifier. It emits at most one
+  controller-friendly notice per durable checkpoint in a UI process. “Handheld
+  restored” requires exact G1 absence plus independently verified handheld
+  display, input, and audio; game/session outcome is never inferred. There is
+  no startup wiring, sleep listener, topology watcher, recovery mechanism, or
+  Ally deployment. Current unattended captures cannot supply this proof.
 
 ## SSH access
 

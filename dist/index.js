@@ -212,6 +212,14 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
                 : "not applicable",
         },
         {
+            name: "eGPU link metrics",
+            value: snapshot.egpu_link.applicable
+                && typeof snapshot.egpu_link.speed_gtps === "number"
+                && typeof snapshot.egpu_link.width_lanes === "number"
+                ? `${snapshot.egpu_link.speed_gtps} GT/s · x${snapshot.egpu_link.width_lanes} lanes · current values, not a performance rating`
+                : "not reported",
+        },
+        {
             name: "External display",
             value: externalDisplay
                 ? `connected ${yesNoUnknown(externalDisplay.connected)} · active ${yesNoUnknown(externalDisplay.active)} · ${humanize(externalDisplay.confidence)}`
@@ -326,6 +334,53 @@ function healthStatusLabel(health, loading = false) {
         default:
             return "Unavailable";
     }
+}
+
+function isEgpuRelevantPlacement(mode) {
+    return ["boosted_handheld", "docked_igpu", "docked_egpu", "tv_docked"].includes(mode);
+}
+function reasonFor(payload) {
+    const link = payload.snapshot.egpu_link;
+    return link.reason || link.error || "link_unverified";
+}
+/**
+ * Turn read-only link observations into sparse player notifications. A link
+ * sample has no removal, recovery, or cable-fault authority; it can only ask
+ * the player to review the current observation.
+ */
+function decideLinkHealthNotification(previous, payload) {
+    const link = payload.snapshot.egpu_link;
+    if (!link.applicable) {
+        return { memory: null, notification: null };
+    }
+    if (!isEgpuRelevantPlacement(payload.inference.mode)) {
+        return { memory: previous, notification: null };
+    }
+    const current = { state: link.state, reason: reasonFor(payload) };
+    if (previous === null) {
+        return { memory: current, notification: null };
+    }
+    if (previous.state === current.state && previous.reason === current.reason) {
+        return { memory: current, notification: null };
+    }
+    if (current.state === "up") {
+        return {
+            memory: current,
+            notification: {
+                title: "eGPU link observed again",
+                body: "HDM is preserving the current setup. Verify the display and controls before changing it.",
+                critical: false,
+            },
+        };
+    }
+    return {
+        memory: current,
+        notification: {
+            title: current.state === "down" ? "eGPU link is down" : "eGPU link needs verification",
+            body: "HDM is preserving the current setup. Avoid disconnecting until the link is stable.",
+            critical: false,
+        },
+    };
 }
 
 /** Small, controller-first presentation helpers for the Quick Access panel. */
@@ -880,6 +935,7 @@ function Content({ preflight }) {
     const refreshInFlight = SP_REACT.useRef(false);
     const warningToastShown = SP_REACT.useRef(false);
     const inactiveToastShown = SP_REACT.useRef(false);
+    const linkHealthNotification = SP_REACT.useRef(null);
     const supportModal = SP_REACT.useRef(null);
     const presentationModal = SP_REACT.useRef(null);
     const tvSwitchModal = SP_REACT.useRef(null);
@@ -950,6 +1006,17 @@ function Content({ preflight }) {
         }
         try {
             const nextPayload = await getSnapshot();
+            const linkDecision = decideLinkHealthNotification(linkHealthNotification.current, nextPayload);
+            linkHealthNotification.current = linkDecision.memory;
+            if (linkDecision.notification) {
+                try {
+                    toaster.toast(linkDecision.notification);
+                }
+                catch {
+                    // A transient QAM toast-host failure must not turn a successful
+                    // read-only snapshot into an apparent hardware failure.
+                }
+            }
             const optionalDiagnostics = await collectOptionalDiagnostics(shouldCollectOptionalDiagnostics(quickAccessVisible && showDiagnostics, nextPayload.snapshot.game_state), {
                 getDockedIgpuStatus,
                 getDiagnosticLoggingStatus,

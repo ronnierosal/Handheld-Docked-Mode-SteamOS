@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..application.canonical_sleep import CanonicalSleepResult, CanonicalSleepStatus
+from ..application.sleep_recovery_checkpoint import SleepRecoveryCheckpoint
 
 
 def result_to_payload(result: CanonicalSleepResult) -> dict[str, object]:
@@ -36,4 +37,16 @@ def status_to_payload(status: CanonicalSleepStatus) -> dict[str, object]:
         "acknowledgement_required": status.acknowledgement_required,
         "action_required": status.action_required,
         "durable": status.durable,
+    }
+
+
+def recovery_checkpoint_to_payload(
+    checkpoint: SleepRecoveryCheckpoint,
+) -> dict[str, object]:
+    """Deliver a restart outcome without journal, hardware, or session identity."""
+    return {
+        "schema_version": 1,
+        "kind": checkpoint.kind.value,
+        "code": checkpoint.code,
+        "acknowledgement_required": checkpoint.acknowledgement_required,
     }
