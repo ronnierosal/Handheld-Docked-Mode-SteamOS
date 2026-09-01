@@ -9,7 +9,8 @@ install -m 0755 /home/deck/Downloads/ally_hdm_deploy_helper.py /var/lib/handheld
 install -m 0644 /home/deck/Downloads/hdm-deploy-public-key.pem /var/lib/handheld-dock-mode/deploy-public-key.pem
 cat >/etc/sudoers.d/hdm-deploy-plugin <<'EOF'
 # Developer-only HDM package installer.  The binary accepts only signed,
-# fixed-name archives in /home/deck/Downloads and makes no session changes.
+# fixed-name archives in /home/deck/Downloads, then restarts only the fixed
+# Decky plugin loader. It never invokes Gamescope or hardware/session actions.
 deck ALL=(root) NOPASSWD: /var/lib/handheld-dock-mode/hdm-deploy-plugin HDM-update-*.zip HDM-update-*.zip.sig
 EOF
 chmod 0440 /etc/sudoers.d/hdm-deploy-plugin
