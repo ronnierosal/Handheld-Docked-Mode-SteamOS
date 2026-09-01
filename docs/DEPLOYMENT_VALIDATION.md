@@ -59,6 +59,18 @@ workflow artifact. Before using one, compare its workflow commit with
 installed QAM **HDM build** row after Decky's native install. CI artifacts are
 not releases and must not be installed automatically.
 
+After downloading and unzipping that artifact, the local-only verifier can
+perform those archive checks together before installation:
+
+```text
+python scripts/verify_validation_artifact.py <unpacked-artifact-directory>
+```
+
+It reports `verified` only when there is exactly one HDM package, its checksum
+matches, its full source revision matches the embedded build metadata, and the
+embedded version agrees with the packaged manifest. It never opens SSH,
+installs a plugin, or modifies the Ally.
+
 ## Validation ladder
 
 Each stage must pass before proceeding. A failure returns to diagnosis; it does

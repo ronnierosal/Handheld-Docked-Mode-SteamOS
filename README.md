@@ -160,6 +160,11 @@ it is not a GitHub Release, public installer, or automatic deployment. Use it
 only when its workflow commit, `source-revision.txt`, and the installed QAM
 **HDM build** label agree.
 
+After unzipping a downloaded artifact, run
+`python scripts/verify_validation_artifact.py <artifact-directory>` from a
+source checkout. It verifies the package checksum and its embedded build label
+before any Decky installation; it does not contact or modify a handheld.
+
 Hardware validation must follow the staged
 [deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md), beginning
 with one clean, provenance-recorded package and the G1 disconnected.
