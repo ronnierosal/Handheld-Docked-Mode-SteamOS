@@ -26,6 +26,11 @@ Support-bundle collection is explicit and previewed before export. Wake evidence
 is collected only for that preview; it is not part of HDM's regular snapshot or
 polling loop.
 
+The remote-capture parser accepts wake evidence only when it matches this exact
+aggregate schema and bounded count range. A malformed, extra-field, or
+identity-bearing wake payload is rejected rather than retained as diagnostic
+evidence.
+
 ## Supervised validation gate
 
 Actual suspend investigation is D6-only. With the player present and a known

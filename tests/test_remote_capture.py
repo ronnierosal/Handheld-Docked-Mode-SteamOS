@@ -17,6 +17,25 @@ import remote_capture  # noqa: E402
 
 
 class RemoteCaptureTests(unittest.TestCase):
+    @staticmethod
+    def _collector():
+        return {
+            "read_only": True,
+            "remote_files_written": False,
+            "transport": "ssh_stdin",
+            "execution_privilege": "unprivileged",
+        }
+
+    @staticmethod
+    def _wake_diagnostics():
+        return {
+            "applicable": True,
+            "bridge_wakeup": "enabled",
+            "function_wakeup": {"enabled": 2, "disabled": 1, "unknown": 0},
+            "function_runtime": {"active": 2, "suspended": 1, "unknown": 0},
+            "reason": "wake.read_only_capability_observed",
+        }
+
     def test_destination_rejects_ssh_option_injection(self):
         for host in ("-oProxyCommand=bad", "ally;reboot", "ally name"):
             with self.subTest(host=host), self.assertRaises(ValueError):
@@ -126,6 +145,34 @@ class RemoteCaptureTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, "forbidden field"):
             remote_capture.parse_capture(json.dumps(value), "a" * 64)
+
+    def test_parser_accepts_only_the_documented_wake_diagnostics_schema(self):
+        value = {
+            "schema_version": 1,
+            "collector": self._collector(),
+            "wake_diagnostics": self._wake_diagnostics(),
+        }
+
+        parsed = remote_capture.parse_capture(json.dumps(value), "a" * 64)
+        self.assertEqual(parsed["wake_diagnostics"]["bridge_wakeup"], "enabled")
+
+    def test_parser_rejects_malformed_wake_diagnostics_before_use_as_evidence(self):
+        for changes in (
+            {"bridge_wakeup": "maybe"},
+            {"reason": "wake source 0000:01:00.0"},
+            {"function_wakeup": {"enabled": 65, "disabled": 0, "unknown": 0}},
+            {"unexpected": "field"},
+        ):
+            with self.subTest(changes=changes):
+                wake = self._wake_diagnostics()
+                wake.update(changes)
+                value = {
+                    "schema_version": 1,
+                    "collector": self._collector(),
+                    "wake_diagnostics": wake,
+                }
+                with self.assertRaisesRegex(ValueError, "wake diagnostics"):
+                    remote_capture.parse_capture(json.dumps(value), "a" * 64)
 
     def test_save_is_exclusive_and_bounded(self):
         value = {

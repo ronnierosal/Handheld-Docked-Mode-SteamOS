@@ -18,6 +18,7 @@ PAYLOAD = Path(__file__).with_name("remote_capture_payload.py")
 MAX_CAPTURE_BYTES = 512 * 1024
 HOST_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 USER_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+CODE_RE = re.compile(r"^[a-z0-9_.-]{1,96}$")
 FORBIDDEN_KEYS = frozenset(
     {
         "address",
@@ -97,6 +98,37 @@ def _validate_safe_shape(value: Any) -> None:
             _validate_safe_shape(item)
 
 
+def _validate_wake_diagnostics(value: Any) -> None:
+    """Accept only the documented aggregate, identity-free wake schema."""
+    if value is None:
+        return
+    if not isinstance(value, dict) or set(value) != {
+        "applicable",
+        "bridge_wakeup",
+        "function_wakeup",
+        "function_runtime",
+        "reason",
+    }:
+        raise ValueError("remote wake diagnostics schema is unsupported")
+    if not isinstance(value["applicable"], bool):
+        raise ValueError("remote wake diagnostics applicability is invalid")
+    if value["bridge_wakeup"] not in {"enabled", "disabled", "unknown"}:
+        raise ValueError("remote wake diagnostics bridge state is invalid")
+    if not isinstance(value["reason"], str) or not CODE_RE.fullmatch(value["reason"]):
+        raise ValueError("remote wake diagnostics reason is invalid")
+    for key in ("function_wakeup", "function_runtime"):
+        counts = value[key]
+        expected_keys = (
+            {"enabled", "disabled", "unknown"}
+            if key == "function_wakeup"
+            else {"active", "suspended", "unknown"}
+        )
+        if not isinstance(counts, dict) or set(counts) != expected_keys:
+            raise ValueError("remote wake diagnostics aggregate is invalid")
+        if any(type(count) is not int or count < 0 or count > 64 for count in counts.values()):
+            raise ValueError("remote wake diagnostics count is invalid")
+
+
 def parse_capture(
     stdout: str,
     payload_sha256: str,
@@ -127,6 +159,7 @@ def parse_capture(
         raise ValueError("remote capture did not run with the requested privilege")
     collector["payload_sha256"] = payload_sha256
     _validate_safe_shape(value)
+    _validate_wake_diagnostics(value.get("wake_diagnostics"))
     return value
 
 
