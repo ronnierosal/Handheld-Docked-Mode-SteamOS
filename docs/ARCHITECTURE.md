@@ -35,6 +35,13 @@ usable-state observations are available. Unknown evidence is Attention Required
 rather than a healthy guess; degraded evidence takes precedence over a pending
 recovery signal.
 
+The runtime-budget policy is also pure and currently unconsumed by a production
+scheduler. It classifies transition safety, direct player requests, and the
+bounded placement watch as necessary work, while deferring background telemetry
+and throttling optional explicit diagnostics during a running or unknown game.
+It provides no clock, collector, loop, or mechanism authority; future callers
+must re-observe before executing deferred work.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,

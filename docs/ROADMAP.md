@@ -370,8 +370,11 @@ they are not authorization for a separate optimizer or launcher.
 - Expand the implemented typed health aggregation from current placement,
   session, display, storage, and explicit unknown eGPU-link evidence to
   independently verified controller, audio, and kernel link-health evidence.
-- Define a single low-overhead telemetry port and performance budget, with
-  opt-in diagnostics separated from normal runtime observation.
+- The implemented pure runtime-budget policy defers nonessential background
+  telemetry during running/unknown game state and throttles optional explicit
+  diagnostics. Add one shared low-overhead telemetry port and scheduler
+  consumer only when its collection cost and game-impact measurements are
+  defined.
 - The implemented pure logical-action router maps Safe Undock, Return to
   Handheld, and Recovery from Decky/controller/device-button surfaces to the
   existing request vocabulary. Add a controller-driven Safe Undock delivery
