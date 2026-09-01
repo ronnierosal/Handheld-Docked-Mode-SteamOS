@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.application.compatibility_render import (  # noqa: E402
+    CompatibilityExternalHandoffCollector,
     CompatibilityRenderEvidenceCollector,
 )
 from hdm.domain.compatibility_test import (  # noqa: E402
@@ -29,7 +31,10 @@ from hdm.domain.game_render_activity import (  # noqa: E402
     GameRenderActivityStatus,
 )
 from hdm.domain.game_runtime import GameRuntimeKind  # noqa: E402
-from hdm.domain.game_session import ActiveGameIdentity  # noqa: E402
+from hdm.domain.game_session import (  # noqa: E402
+    ActiveGameIdentity,
+    GameSessionObservation,
+)
 from hdm.domain.models import GameState  # noqa: E402
 
 
@@ -96,6 +101,21 @@ class Renderer:
         return self.value
 
 
+class Sessions:
+    def __init__(self, *values):
+        self.values = iter(values)
+
+    def observe(self):
+        value = next(self.values)
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+
+def running_session(sample_id="b" * 64):
+    return GameSessionObservation(GameState.RUNNING, "c" * 64, sample_id, IDENTITY)
+
+
 class CompatibilityRenderEvidenceTests(unittest.TestCase):
     def test_exact_active_docked_egpu_evidence_records_but_does_not_review(self):
         renderer = Renderer(evidence())
@@ -150,6 +170,26 @@ class CompatibilityRenderEvidenceTests(unittest.TestCase):
                 for value in (mismatch, failed)
             )
         )
+
+    def test_external_capture_requires_a_stable_exact_game_session(self):
+        capture = CompatibilityExternalHandoffCollector(
+            sessions=Sessions(running_session(), running_session("d" * 64)),
+            render_collector=CompatibilityRenderEvidenceCollector(Renderer(evidence())),
+        )
+        accepted = capture.capture_external_handoff(
+            session(), user_uid=1000, now_ms=102
+        )
+        changed = CompatibilityExternalHandoffCollector(
+            sessions=Sessions(
+                running_session(),
+                replace(running_session("d" * 64), generation="e" * 64),
+            ),
+            render_collector=CompatibilityRenderEvidenceCollector(Renderer(evidence())),
+        ).capture_external_handoff(session(), user_uid=1000, now_ms=102)
+
+        self.assertEqual(accepted.egpu_handoff, EgpuHandoffStatus.VERIFIED)
+        self.assertEqual(changed.stage, CompatibilityTestStage.ACTION_REQUIRED)
+        self.assertEqual(changed.reason_code, "compatibility.external_game_changed")
 
 
 if __name__ == "__main__":

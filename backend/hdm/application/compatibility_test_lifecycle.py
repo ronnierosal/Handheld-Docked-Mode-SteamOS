@@ -56,6 +56,16 @@ class CompatibilityUserContextPort(Protocol):
     def current_user_uid(self) -> int: ...
 
 
+class CompatibilityExternalHandoffPort(Protocol):
+    def capture_external_handoff(
+        self,
+        session: CompatibilityTestSession,
+        *,
+        user_uid: int,
+        now_ms: int,
+    ) -> CompatibilityTestSession: ...
+
+
 @dataclass(frozen=True, slots=True)
 class CompatibilityTestStart:
     options: CompatibilityTestOptions
@@ -78,6 +88,7 @@ class CompatibilityTestLifecycle:
         session_ids: CompatibilitySessionIdPort,
         hardware_authorization: CompatibilityHardwareAuthorizationPort,
         baseline_collector: CompatibilityBaselinePort | None = None,
+        external_handoff_collector: CompatibilityExternalHandoffPort | None = None,
         user_context: CompatibilityUserContextPort | None = None,
     ) -> None:
         self._diagnostics = diagnostics
@@ -85,6 +96,7 @@ class CompatibilityTestLifecycle:
         self._session_ids = session_ids
         self._hardware_authorization = hardware_authorization
         self._baseline_collector = baseline_collector
+        self._external_handoff_collector = external_handoff_collector
         self._user_context = user_context
         self._session: CompatibilityTestSession | None = None
         self._lock = threading.Lock()
@@ -161,6 +173,28 @@ class CompatibilityTestLifecycle:
             observation_generation=observation_generation,
             now_ms=now,
         ))
+
+    def capture_observed_egpu_handoff(self) -> CompatibilityTestSession | None:
+        """Use injected read-only evidence; delivery cannot supply game identity."""
+        with self._lock:
+            self._reconcile_locked()
+            if self._session is None:
+                return None
+            if (
+                self._session.stage is not CompatibilityTestStage.ACTIVE
+                or not self._session.options.test_egpu_handoff
+            ):
+                return self._session
+            if self._external_handoff_collector is None or self._user_context is None:
+                self._session = require_compatibility_action(
+                    self._session,
+                    "compatibility.external_observer_unavailable",
+                    now_ms=self._now_locked(),
+                )
+            else:
+                self._session = self._capture_external_handoff_locked()
+            self._apply_logging_directives_locked()
+            return self._session
 
     def record_save(
         self,
@@ -250,6 +284,23 @@ class CompatibilityTestLifecycle:
         if not isinstance(result, CompatibilityBaselineCapture):
             return CompatibilityBaselineCapture(
                 False, "compatibility.baseline_observer_unavailable"
+            )
+        return result
+
+    def _capture_external_handoff_locked(self) -> CompatibilityTestSession:
+        assert self._session is not None
+        try:
+            user_uid = self._user_context.current_user_uid()
+            result = self._external_handoff_collector.capture_external_handoff(
+                self._session, user_uid=user_uid, now_ms=self._now_locked()
+            )
+        except Exception:
+            result = None
+        if not isinstance(result, CompatibilityTestSession):
+            return require_compatibility_action(
+                self._session,
+                "compatibility.external_observer_unavailable",
+                now_ms=self._now_locked(),
             )
         return result
 

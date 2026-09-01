@@ -78,6 +78,18 @@ class BaselineCollector:
         return self.value
 
 
+class ExternalCollector:
+    def __init__(self, value):
+        self.value = value
+        self.user_uid = None
+
+    def capture_external_handoff(self, session, *, user_uid, now_ms):
+        self.user_uid = user_uid
+        if isinstance(self.value, Exception):
+            raise self.value
+        return self.value(session, now_ms) if callable(self.value) else self.value
+
+
 def start_request(kind=CompatibilityEvidenceKind.SIMULATION):
     return CompatibilityTestStart(
         CompatibilityTestOptions(),
@@ -101,7 +113,9 @@ def baseline():
 
 
 class CompatibilityTestLifecycleTests(unittest.TestCase):
-    def lifecycle(self, *, authorized=False, baseline_collector=None):
+    def lifecycle(
+        self, *, authorized=False, baseline_collector=None, external_collector=None
+    ):
         clock = Clock()
         events = BoundedEventLog()
         diagnostics = DiagnosticLoggingController(
@@ -115,7 +129,12 @@ class CompatibilityTestLifecycleTests(unittest.TestCase):
                 session_ids=SessionIds(),
                 hardware_authorization=authorization,
                 baseline_collector=baseline_collector,
-                user_context=UserContext() if baseline_collector is not None else None,
+                external_handoff_collector=external_collector,
+                user_context=(
+                    UserContext()
+                    if baseline_collector is not None or external_collector is not None
+                    else None
+                ),
             ),
             clock,
             diagnostics,
@@ -215,6 +234,42 @@ class CompatibilityTestLifecycleTests(unittest.TestCase):
         self.assertEqual(stopped.stage, CompatibilityTestStage.ACTION_REQUIRED)
         self.assertEqual(
             stopped.reason_code, "compatibility.baseline_observer_unavailable"
+        )
+        self.assertFalse(diagnostics.status().enabled)
+
+    def test_observed_external_handoff_uses_trusted_context_and_stops_on_failure(self):
+        external = ExternalCollector(
+            lambda session, now: session.__class__(
+                **{
+                    field: getattr(session, field)
+                    for field in session.__dataclass_fields__
+                    if field not in {"egpu_handoff", "observed_render_gpu", "observation_generations", "reason_code"}
+                },
+                egpu_handoff=EgpuHandoffStatus.VERIFIED,
+                observed_render_gpu=ObservedRenderGpu.EXTERNAL,
+                observation_generations=(*session.observation_generations, "external-generation"),
+                reason_code="compatibility.handoff_recorded",
+            )
+        )
+        lifecycle, _clock, diagnostics, _authorization = self.lifecycle(
+            external_collector=external
+        )
+        lifecycle.start(start_request(), user_confirmed=True)
+        lifecycle.record_baseline(baseline())
+
+        active = lifecycle.capture_observed_egpu_handoff()
+
+        self.assertEqual(active.egpu_handoff, EgpuHandoffStatus.VERIFIED)
+        self.assertEqual(external.user_uid, 1000)
+        self.assertTrue(diagnostics.status().enabled)
+
+        unavailable, _clock, diagnostics, _authorization = self.lifecycle()
+        unavailable.start(start_request(), user_confirmed=True)
+        unavailable.record_baseline(baseline())
+        stopped = unavailable.capture_observed_egpu_handoff()
+        self.assertEqual(stopped.stage, CompatibilityTestStage.ACTION_REQUIRED)
+        self.assertEqual(
+            stopped.reason_code, "compatibility.external_observer_unavailable"
         )
         self.assertFalse(diagnostics.status().enabled)
 

@@ -389,11 +389,13 @@ Its read-only baseline collector requires an exact stable Steam session before
 and after active internal-GPU evidence, retains only the evidence generation,
 and rejects an idle, unknown, raced, or Docked-eGPU placement. The external
 collector then requires that same-AppID baseline plus active G1 counters in a
-Docked-eGPU snapshot, then records only a hashed generation and categorical
-result. Its application-only lifecycle serializes one ephemeral session and
+Docked-eGPU snapshot and its own exact-session bracket, then records only a
+hashed generation and categorical result. Its application-only lifecycle
+serializes one ephemeral session and
 enables or disables temporary diagnostics exactly as the session policy
 requires, and invokes the injected baseline collector only with a backend-owned
-user context. A missing/failed observer becomes Action Required; trusted
+user context. A missing/failed observer or post-sample session race becomes
+Action Required; trusted
 hardware-test authorization is an injected backend port, not caller data.
 Existing explicit finish/review and simulation-promotion
 prohibitions remain authoritative; no catalog update is automatic.

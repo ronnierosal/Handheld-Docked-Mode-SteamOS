@@ -25,8 +25,9 @@ Compatibility Test Mode is currently a dormant session policy, simulator, and
 read-only baseline/external-render evidence collector. A baseline requires a
 stable exact Steam session before and after active internal-GPU evidence; idle,
 unknown, raced, or external-placement evidence does not create a baseline. It
-does not dock, undock, close a game, save, relaunch, signal a process, request
-sleep, or publish a catalog result.
+uses the same exact-session bracket around external-GPU evidence, so a session
+race cannot record a false eGPU result. It does not dock, undock, close a game,
+save, relaunch, signal a process, request sleep, or publish a catalog result.
 
 ## Session flow
 
