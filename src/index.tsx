@@ -43,6 +43,7 @@ import {
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
+import { healthStatusLabel } from "./health-ui";
 import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
 import { canOfferForce, processReleaseOutcomeMessage } from "./process-release-ui";
 import {
@@ -802,6 +803,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
         <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
+        <DiagnosticRow name="System health" value={healthStatusLabel(payload?.health, loading)} />
         <DiagnosticRow name="Game" value={label(snapshot?.game_state ?? "unknown")} />
         <DiagnosticRow name="Render GPU" value={renderer ? label(renderer.role) : "Unknown"} />
         <DiagnosticRow name="Active display" value={display ? label(display.kind) : "Unknown"} />

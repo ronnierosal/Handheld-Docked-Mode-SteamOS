@@ -35,12 +35,14 @@ python scripts/build_plugin.py
 ```
 
 The distributable archive is written under `out/`. Its Quick Access view shows
-the inferred mode, running-game state, render GPU role, active display kind,
-hardware support tier, blockers, sleep-protection state, and read-only eGPU
-disconnect readiness. It also shows progressive connection readiness and the
-total snapshot duration. Refresh and warning-preference controls do not change
-system state or release the inhibitor. Support export writes only after an exact
-redacted preview and one-time approval.
+the inferred mode, categorical system health, running-game state, render GPU
+role, active display kind, hardware support tier, blockers, sleep-protection
+state, and read-only eGPU disconnect readiness. It also shows progressive
+connection readiness and the total snapshot duration. System health reuses the
+same snapshot and does not create another collection loop. Refresh and
+warning-preference controls do not change system state or release the
+inhibitor. Support export writes only after an exact redacted preview and
+one-time approval.
 
 An optional controller-friendly troubleshooting section is off by default. It
 derives categorical state, confidence, blocker codes, client categories,
