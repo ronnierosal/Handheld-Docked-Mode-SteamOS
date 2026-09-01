@@ -15,6 +15,7 @@ from ..domain.control_plane import (
 )
 from ..domain.inference import infer_placement
 from ..domain.manual_transition import evidence_from_snapshot, plan_manual_transition
+from ..domain.transition_journal import JournalEventKind
 from ..ports.transition import TransitionObservationPort
 from ..ports.transition_journal import TransitionJournalPort
 from ..profiles.registry import resolve_runtime_profiles
@@ -52,6 +53,23 @@ class SupervisedTransitionExecution:
     operation_id: str = ""
     outcome: TransitionOutcome | None = None
     durable: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SupervisedTransitionStatus:
+    """Durable, identity-minimized result for an interrupted Decky RPC.
+
+    A Gamescope restart can replace the visible UI before the original execute
+    RPC response is deliverable.  The transition journal, rather than that
+    response, is authoritative.  This status deliberately exposes only a
+    categorical state/code and the exact terminal acknowledgement identity.
+    """
+
+    code: str
+    acknowledgement_required: bool = False
+    action_required: bool = False
+    operation_id: str = ""
+    durable: bool = True
 
 
 class SupervisedPresentationTransitionService:
@@ -206,12 +224,50 @@ class SupervisedPresentationTransitionService:
                 current is None
                 or not current.terminal
                 or current.operation_id != operation_id
+                or not self._is_presentation_journal(current)
             ):
                 return False
             self._journal_store.clear_terminal(operation_id)
             return True
         except (OSError, ValueError):
             return False
+
+    def status(self) -> SupervisedTransitionStatus:
+        """Read the durable outcome after a restart without issuing a mutation.
+
+        Incomplete journal state is deliberately not interpreted as success.
+        A delivery owner may offer its separately gated recovery entry point,
+        but must not issue another transition from this inspection method.
+        """
+        try:
+            current = self._journal_store.load_current()
+        except Exception:
+            return SupervisedTransitionStatus(
+                "transition.journal_unavailable",
+                action_required=True,
+                durable=False,
+            )
+        if current is None:
+            return SupervisedTransitionStatus("transition.idle")
+        if not self._is_presentation_journal(current):
+            return SupervisedTransitionStatus(
+                "transition.foreign_journal",
+                action_required=True,
+            )
+        if not current.terminal:
+            return SupervisedTransitionStatus(
+                "transition.recovery_required",
+                action_required=True,
+                operation_id=current.operation_id,
+            )
+        terminal = current.entries[-1]
+        return SupervisedTransitionStatus(
+            terminal.code,
+            acknowledgement_required=True,
+            action_required=terminal.kind
+            in (JournalEventKind.BLOCKED, JournalEventKind.FAILED),
+            operation_id=current.operation_id,
+        )
 
     def recover_interrupted(self) -> RuntimeTransitionResult:
         return self._orchestrator.recover_interrupted()
@@ -266,6 +322,21 @@ class SupervisedPresentationTransitionService:
             "journal.acknowledgement_required"
             if current.terminal
             else "journal.recovery_required"
+        )
+
+    @staticmethod
+    def _is_presentation_journal(journal) -> bool:
+        """Refuse to surface or clear a different workflow's journal.
+
+        The common journal store is also used by sleep and process-release
+        workflows.  Their operation must remain Action Required here instead
+        of being mislabeled as a display result after a UI restart.
+        """
+        return bool(
+            journal.entries
+            and journal.entries[0].code == "request.accepted"
+            and dict(journal.entries[0].details).get("capability")
+            == "presentation_transition"
         )
 
     def _observe(self):

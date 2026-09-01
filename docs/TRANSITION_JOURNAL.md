@@ -70,6 +70,22 @@ mechanism call. If a step may have started, it attempts source recovery using a
 fresh observation and records verified recovery or Action Required. It never
 continues the interrupted target request.
 
+### Restart-safe presentation acknowledgement
+
+A Gamescope restart may replace the visible Decky UI before the original
+supervised-transition RPC can return. The RPC result is therefore never the
+authority for a display transition. After the UI returns, its delivery adapter
+must read the presentation service's durable status and show one categorical
+result: `transition.idle`, `transition.recovery_required`, a terminal journal
+code, `transition.foreign_journal`, or `transition.journal_unavailable`.
+
+Only a terminal presentation journal carries an acknowledgement ID. An
+incomplete journal is Action Required and cannot be cleared; it must enter the
+existing explicit recovery path. A foreign sleep/process-release journal is
+also Action Required and is never acknowledged or described as a presentation
+result. Status inspection does not restart Gamescope, retry a target, or create
+automatic attach authority.
+
 The exact transition binding and experimental approval identity are not written
 to this privacy-safe journal.
 

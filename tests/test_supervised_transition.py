@@ -15,6 +15,7 @@ from hdm.application.experimental_transition import (  # noqa: E402
 from hdm.application.supervised_transition import (  # noqa: E402
     SupervisedPresentationTransitionService,
 )
+from hdm.delivery.presentation_transition import status_to_payload  # noqa: E402
 from hdm.application.transition_orchestrator import RuntimeTransitionResult  # noqa: E402
 from hdm.domain.control_plane import (  # noqa: E402
     PlacementState,
@@ -241,6 +242,7 @@ class SupervisedTransitionTests(unittest.TestCase):
             workflow_state=WorkflowState.IDLE,
             placement=PlacementState.PORTABLE,
             code="request.accepted",
+            details=(("capability", "presentation_transition"),),
         )
         journal = append_journal_entry(
             journal,
@@ -263,6 +265,7 @@ class SupervisedTransitionTests(unittest.TestCase):
             workflow_state=WorkflowState.IDLE,
             placement=PlacementState.PORTABLE,
             code="request.accepted",
+            details=(("capability", "presentation_transition"),),
         )
         value, _, _ = service(
             Observations(VersionedObservation("generation-1", snapshot())),
@@ -273,6 +276,146 @@ class SupervisedTransitionTests(unittest.TestCase):
         )
         self.assertIn("journal.recovery_required", preview.blockers)
         self.assertFalse(preview.approval_token)
+
+    def test_status_survives_lost_execute_response_with_recovery_required(self):
+        journal = append_journal_entry(
+            TransitionJournal("operation-0001", "request-0001"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="request.accepted",
+            details=(("capability", "presentation_transition"),),
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.OBSERVED,
+            occurred_at="2026-08-31T12:00:01Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.observed",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.VALIDATED,
+            occurred_at="2026-08-31T12:00:02Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.validated",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.PLANNED,
+            occurred_at="2026-08-31T12:00:03Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.planned",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.STEP_STARTED,
+            occurred_at="2026-08-31T12:00:04Z",
+            workflow_state=WorkflowState.CONNECTING,
+            placement=PlacementState.PORTABLE,
+            code="step.started",
+            details=(("step_code", "presentation_apply_docked_egpu"),),
+        )
+        value, _, _ = service(Observations(), journal=journal)
+
+        status = value.status()
+        self.assertEqual(status.code, "transition.recovery_required")
+        self.assertTrue(status.action_required)
+        self.assertFalse(status.acknowledgement_required)
+        self.assertEqual(status.operation_id, "operation-0001")
+        self.assertFalse(value.acknowledge(status.operation_id))
+
+    def test_terminal_presentation_status_is_acknowledgeable_and_private(self):
+        journal = append_journal_entry(
+            TransitionJournal("operation-0001", "request-0001"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="request.accepted",
+            details=(("capability", "presentation_transition"),),
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.OBSERVED,
+            occurred_at="2026-08-31T12:00:01Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.observed",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.VALIDATED,
+            occurred_at="2026-08-31T12:00:02Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.validated",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.PLANNED,
+            occurred_at="2026-08-31T12:00:03Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.planned",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.STEP_STARTED,
+            occurred_at="2026-08-31T12:00:04Z",
+            workflow_state=WorkflowState.CONNECTING,
+            placement=PlacementState.PORTABLE,
+            code="step.started",
+            details=(("step_code", "presentation_apply_docked_egpu"),),
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.FAILED,
+            occurred_at="2026-08-31T12:00:05Z",
+            workflow_state=WorkflowState.ACTION_REQUIRED,
+            placement=PlacementState.PORTABLE,
+            code="recovery.failed",
+        )
+        value, _, store = service(Observations(), journal=journal)
+
+        payload = status_to_payload(value.status())
+        self.assertEqual(payload["code"], "recovery.failed")
+        self.assertTrue(payload["acknowledgement_required"])
+        self.assertTrue(payload["action_required"])
+        self.assertEqual(payload["acknowledgement_id"], "operation-0001")
+        self.assertNotIn("request_id", payload)
+        self.assertTrue(value.acknowledge(payload["acknowledgement_id"]))
+        self.assertIsNone(store.current)
+
+    def test_status_refuses_foreign_terminal_journal(self):
+        journal = append_journal_entry(
+            TransitionJournal("sleep-operation-1", "sleep-request-1"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="sleep.requested",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.BLOCKED,
+            occurred_at="2026-08-31T12:00:01Z",
+            workflow_state=WorkflowState.ACTION_REQUIRED,
+            placement=PlacementState.PORTABLE,
+            code="sleep.blocked",
+        )
+        value, _, store = service(Observations(), journal=journal)
+
+        status = value.status()
+        self.assertEqual(status.code, "transition.foreign_journal")
+        self.assertTrue(status.action_required)
+        self.assertFalse(status.acknowledgement_required)
+        self.assertFalse(value.acknowledge("sleep-operation-1"))
+        self.assertIs(store.current, journal)
 
     def test_interrupted_recovery_delegates_to_orchestrator(self):
         value, orchestrator, _ = service(Observations())
