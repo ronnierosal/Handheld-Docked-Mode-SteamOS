@@ -288,6 +288,25 @@ quoting changes. Every operation needs a deadline and machine-readable result.
 Production HDM must not listen for remote development commands. SSH remains the
 maintainer's external development boundary.
 
+## Package staging automation
+
+`scripts/stage_decky_update.py` may upload one already-built HDM ZIP to the
+fixed Decky user's `Downloads` directory and read back its SHA-256. It accepts
+only a complete archive carrying a committed revision and derives its remote
+filename exclusively from that verified metadata:
+
+```text
+python scripts/stage_decky_update.py out/HandheldDockMode-0.2.0.zip \
+  --host <handheld-ip> --identity-file <ssh-key>
+```
+
+It is deliberately **staging only**. It does not call an undocumented Decky
+endpoint, modify the live plugin directory, reload Decky, or mutate the active
+session. Decky's documented plugin distribution surface is its authenticated
+native ZIP/URL installer; no supported non-interactive installation API is
+currently available. The operator selects the staged, checksum-verified ZIP in
+Decky's native installer until such an API is published and reviewed.
+
 ## Stop conditions
 
 Stop all mutations and preserve evidence if any of these occurs:
