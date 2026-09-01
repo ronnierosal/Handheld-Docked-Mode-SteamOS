@@ -1007,7 +1007,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </PanelSectionRow>
           {optionalDiagnosticsDeferred && (
             <PanelSectionRow>
-              Additional troubleshooting checks are deferred until no game is running.
+              Additional troubleshooting checks wait until HDM confirms no game is running.
             </PanelSectionRow>
           )}
           {overlayRows.map((row) => (
