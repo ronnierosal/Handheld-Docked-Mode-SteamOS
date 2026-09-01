@@ -28,6 +28,7 @@ from hdm.application.game_evidence_support import (  # noqa: E402
     SupportGameEvidence,
     SupportRenderEvidence,
 )
+from hdm.application.support_bundle import WakeDiagnosticsSupportStatus  # noqa: E402
 from hdm.domain.control_plane import PlacementState  # noqa: E402
 from hdm.domain.game_gpu_client import GameEgpuClientStatus  # noqa: E402
 from hdm.domain.game_render_activity import GameRenderActivityStatus  # noqa: E402
@@ -318,6 +319,29 @@ class MainProcessDeliveryTests(unittest.TestCase):
         ]
 
         self.assertEqual(rows[0]["code"], "game_evidence.incomplete")
+
+    def test_support_preview_includes_categorical_wake_diagnostics_only(self):
+        plugin, _service = self.plugin()
+        plugin.get_snapshot = support_snapshot
+        plugin._support_wake_diagnostics = lambda: WakeDiagnosticsSupportStatus(
+            applicable=True,
+            bridge_wakeup="enabled",
+            function_wakeup_enabled=1,
+            function_wakeup_disabled=2,
+            function_wakeup_unknown=0,
+            function_runtime_active=2,
+            function_runtime_suspended=1,
+            function_runtime_unknown=0,
+            reason="wake.read_only_capability_observed",
+        )
+
+        result = asyncio.run(plugin.preview_support_bundle())
+        payload = json.loads(result["preview_json"])
+        encoded = json.dumps(payload, sort_keys=True).lower()
+
+        self.assertEqual(payload["wake_diagnostics"]["bridge_wakeup"], "enabled")
+        self.assertNotIn("0000:", encoded)
+        self.assertNotIn("power/wakeup", encoded)
 
     def test_docked_igpu_status_is_categorical_and_identity_free(self):
         plugin, _service = self.plugin()

@@ -6,10 +6,10 @@ change any wake-source setting while unattended.
 
 ## Read-only evidence
 
-The remote capture payload may resolve the exact certified G1 profile and read
-only the existing PCI `power/wakeup` and `power/runtime_status` attributes for
-the verified bridge and its verified PCI functions. Its public output contains
-only:
+The remote capture payload and an explicitly requested redacted support-bundle
+preview may resolve the exact certified G1 profile and read only the existing
+PCI `power/wakeup` and `power/runtime_status` attributes for the verified bridge
+and its verified PCI functions. Their public output contains only:
 
 - whether the exact G1 topology was applicable;
 - the categorical bridge wake-capability state;
@@ -21,6 +21,10 @@ raw sysfs values are not exported. An enabled capability is not proof that the
 device caused a wake; a disabled or unreadable value is not proof that sleep is
 safe. This evidence cannot release the G1 sleep guard, authorize disconnect, or
 change device configuration.
+
+Support-bundle collection is explicit and previewed before export. Wake evidence
+is collected only for that preview; it is not part of HDM's regular snapshot or
+polling loop.
 
 ## Supervised validation gate
 

@@ -16,6 +16,7 @@ from hdm.application.support_bundle import (  # noqa: E402
     SupportBundlePreviewStore,
     SupportBundleService,
     SupportBundleContext,
+    WakeDiagnosticsSupportStatus,
     PeripheralSupportStatus,
 )
 from hdm.domain.control_plane import PlacementState, WorkflowState  # noqa: E402
@@ -323,6 +324,30 @@ class SupportBundleTests(unittest.TestCase):
         self.assertEqual(
             bundle.payload["peripheral_status"]["audio"]["exact"], False)
         for private in ("controller-private", "audio-private", "binding", "event1", "card0"):
+            self.assertNotIn(private, bundle.json_text)
+
+    def test_wake_diagnostics_context_is_categorical_and_omits_pci_identity(self):
+        bundle = SupportBundleService().build(
+            adversarial_report(), (), {},
+            context=SupportBundleContext(
+                wake_diagnostics=WakeDiagnosticsSupportStatus(
+                    applicable=True,
+                    bridge_wakeup="enabled",
+                    function_wakeup_enabled=2,
+                    function_wakeup_disabled=1,
+                    function_wakeup_unknown=0,
+                    function_runtime_active=2,
+                    function_runtime_suspended=1,
+                    function_runtime_unknown=0,
+                    reason="wake.read_only_capability_observed",
+                )
+            ),
+        )
+
+        self.assertEqual(bundle.payload["wake_diagnostics"]["bridge_wakeup"], "enabled")
+        self.assertEqual(bundle.payload["wake_diagnostics"]["function_runtime"]["suspended"], 1)
+        self.assertIn("wake_diagnostics", bundle.payload["manifest"]["contents"])
+        for private in ("0000:01:00.0", "0000:02:00.0", "power/wakeup", "runtime_status"):
             self.assertNotIn(private, bundle.json_text)
 
 

@@ -196,11 +196,43 @@ class PeripheralSupportStatus:
 
 
 @dataclass(frozen=True, slots=True)
+class WakeDiagnosticsSupportStatus:
+    """Categorical G1 wake evidence; never PCI identities or raw sysfs values."""
+
+    applicable: bool
+    bridge_wakeup: str
+    function_wakeup_enabled: int
+    function_wakeup_disabled: int
+    function_wakeup_unknown: int
+    function_runtime_active: int
+    function_runtime_suspended: int
+    function_runtime_unknown: int
+    reason: str
+
+    def __post_init__(self) -> None:
+        if self.bridge_wakeup not in {"enabled", "disabled", "unknown"}:
+            raise ValueError("wake diagnostic bridge state is invalid")
+        counts = (
+            self.function_wakeup_enabled,
+            self.function_wakeup_disabled,
+            self.function_wakeup_unknown,
+            self.function_runtime_active,
+            self.function_runtime_suspended,
+            self.function_runtime_unknown,
+        )
+        if any(not isinstance(value, int) or value < 0 or value > 64 for value in counts):
+            raise ValueError("wake diagnostic count is invalid")
+        if not _CODE_RE.fullmatch(self.reason):
+            raise ValueError("wake diagnostic reason is invalid")
+
+
+@dataclass(frozen=True, slots=True)
 class SupportBundleContext:
     transition_journals: tuple[TransitionJournal, ...] = field(default_factory=tuple)
     game_compatibility: tuple[GameCompatibilityRecord, ...] = field(default_factory=tuple)
     hardware_compatibility: tuple[HardwareCompatibilityRecord, ...] = field(default_factory=tuple)
     peripheral_status: PeripheralSupportStatus | None = None
+    wake_diagnostics: WakeDiagnosticsSupportStatus | None = None
 
     def __post_init__(self) -> None:
         if len(self.transition_journals) > 4:
@@ -435,6 +467,24 @@ def _support_context(context: SupportBundleContext) -> dict[str, Any]:
             }
             if context.peripheral_status is not None else None
         ),
+        "wake_diagnostics": (
+            {
+                "applicable": context.wake_diagnostics.applicable,
+                "bridge_wakeup": context.wake_diagnostics.bridge_wakeup,
+                "function_wakeup": {
+                    "enabled": context.wake_diagnostics.function_wakeup_enabled,
+                    "disabled": context.wake_diagnostics.function_wakeup_disabled,
+                    "unknown": context.wake_diagnostics.function_wakeup_unknown,
+                },
+                "function_runtime": {
+                    "active": context.wake_diagnostics.function_runtime_active,
+                    "suspended": context.wake_diagnostics.function_runtime_suspended,
+                    "unknown": context.wake_diagnostics.function_runtime_unknown,
+                },
+                "reason": context.wake_diagnostics.reason,
+            }
+            if context.wake_diagnostics is not None else None
+        ),
     }
 
 
@@ -481,6 +531,7 @@ class SupportBundleService:
                     "game_compatibility",
                     "hardware_compatibility",
                     "peripheral_status",
+                    "wake_diagnostics",
                 ],
             },
             "versions": sanitize_value(

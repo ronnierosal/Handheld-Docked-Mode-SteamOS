@@ -18,6 +18,9 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from hdm.adapters.steamos.discovery import SteamOsDiscovery  # noqa: E402
+from hdm.adapters.steamos.drm import DrmDiscovery  # noqa: E402
+from hdm.adapters.steamos.pci import PciUsb4Discovery  # noqa: E402
+from hdm.adapters.steamos.wake_diagnostics import WakeDiagnosticsDiscovery  # noqa: E402
 from hdm.adapters.steamos.commands import UserServiceCommandRunner  # noqa: E402
 from hdm.adapters.steamos.gamescope import GamescopeDiscovery  # noqa: E402
 from hdm.adapters.steamos.gamescope_session import (  # noqa: E402
@@ -90,6 +93,7 @@ from hdm.application.support_bundle import (  # noqa: E402
     SupportBundleContext,
     SupportBundlePreviewStore,
     SupportBundleService,
+    WakeDiagnosticsSupportStatus,
 )
 from hdm.delivery.support_export import SupportBundleFileWriter  # noqa: E402
 from hdm.delivery.gamescope_integration import GamescopeIntegrationStore  # noqa: E402
@@ -113,6 +117,7 @@ from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
 from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
 from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
+from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
 
 
 class Plugin:
@@ -323,11 +328,20 @@ class Plugin:
     async def preview_support_bundle(self) -> dict[str, object]:
         """Return a redacted preview and one-time approval token."""
         report = await self.get_snapshot()
+        peripheral_status = None
         try:
             peripheral = await asyncio.to_thread(self._peripherals.observe)
-            context = SupportBundleContext(peripheral_status=peripheral_support_status(peripheral))
+            peripheral_status = peripheral_support_status(peripheral)
         except Exception:
-            context = SupportBundleContext()
+            pass
+        try:
+            wake_diagnostics = await asyncio.to_thread(self._support_wake_diagnostics)
+        except Exception:
+            wake_diagnostics = None
+        context = SupportBundleContext(
+            peripheral_status=peripheral_status,
+            wake_diagnostics=wake_diagnostics,
+        )
         await asyncio.to_thread(self._record_support_game_evidence)
         self._events.append(
             severity="info",
@@ -352,6 +366,27 @@ class Plugin:
             "event_count": bundle.event_count,
             "manifest": dict(bundle.payload["manifest"]),
         }
+
+    @staticmethod
+    def _support_wake_diagnostics() -> WakeDiagnosticsSupportStatus:
+        """Read exact G1 wake capability state for an explicit support preview."""
+        pci = PciUsb4Discovery()
+        g1 = match_gpd_g1(DrmDiscovery().scan(), pci.scan_pci(), pci.scan_usb4())
+        observed = WakeDiagnosticsDiscovery().observe(
+            g1.root_bdf if g1.verified else "",
+            g1.pci_functions if g1.verified else (),
+        )
+        return WakeDiagnosticsSupportStatus(
+            applicable=observed.applicable,
+            bridge_wakeup=observed.bridge_wakeup.value,
+            function_wakeup_enabled=observed.function_wakeup_enabled,
+            function_wakeup_disabled=observed.function_wakeup_disabled,
+            function_wakeup_unknown=observed.function_wakeup_unknown,
+            function_runtime_active=observed.function_runtime_active,
+            function_runtime_suspended=observed.function_runtime_suspended,
+            function_runtime_unknown=observed.function_runtime_unknown,
+            reason=observed.reason or "wake.observation_unavailable",
+        )
 
     async def save_support_bundle(self, preview_token: str) -> dict[str, object]:
         """Save only the exact bundle represented by a one-time preview token."""
