@@ -12,6 +12,8 @@ from .models import (
     DisplayObservation,
     EgpuClientKind,
     EgpuClientObservation,
+    EgpuLinkObservation,
+    EgpuLinkState,
     EgpuResourceKind,
     Evidence,
     GameState,
@@ -104,6 +106,13 @@ def snapshot_to_dict(snapshot: ObservedSnapshot) -> dict[str, Any]:
             "confidence": snapshot.sleep_guard.confidence.value,
             "reason": snapshot.sleep_guard.reason,
             "error": snapshot.sleep_guard.error,
+        },
+        "egpu_link": {
+            "applicable": snapshot.egpu_link.applicable,
+            "state": snapshot.egpu_link.state.value,
+            "confidence": snapshot.egpu_link.confidence.value,
+            "reason": snapshot.egpu_link.reason,
+            "error": snapshot.egpu_link.error,
         },
         "blockers": [
             {"code": blocker.code, "message": blocker.message}
@@ -230,6 +239,14 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         reason=str(sleep_guard_value.get("reason", "")),
         error=str(sleep_guard_value.get("error", "")),
     )
+    link_value = value.get("egpu_link", {})
+    egpu_link = EgpuLinkObservation(
+        applicable=_required_bool(link_value.get("applicable", False), "egpu_link.applicable"),
+        state=EgpuLinkState(link_value.get("state", "unknown")),
+        confidence=Confidence(link_value.get("confidence", "unknown")),
+        reason=str(link_value.get("reason", "")),
+        error=str(link_value.get("error", "")),
+    )
     blockers = tuple(
         Blocker(code=str(blocker["code"]), message=str(blocker["message"]))
         for blocker in value.get("blockers", [])
@@ -245,5 +262,6 @@ def snapshot_from_dict(value: dict[str, Any]) -> ObservedSnapshot:
         gamescope=gamescope,
         disconnect_readiness=readiness,
         sleep_guard=sleep_guard,
+        egpu_link=egpu_link,
         blockers=blockers,
     )

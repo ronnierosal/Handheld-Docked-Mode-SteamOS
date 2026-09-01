@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 
@@ -17,6 +18,11 @@ from hdm.domain.health import (  # noqa: E402
     HealthState,
     assess_health,
     assess_snapshot_health,
+)
+from hdm.domain.models import (  # noqa: E402
+    Confidence,
+    EgpuLinkObservation,
+    EgpuLinkState,
 )
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 
@@ -94,6 +100,16 @@ class HealthAggregationTests(unittest.TestCase):
         )
         self.assertEqual(health.state, HealthState.ATTENTION_REQUIRED)
         self.assertIn("health.egpu_link_unknown", health.blockers)
+
+    def test_observed_link_up_completes_current_health_scope(self):
+        snapshot = replace(
+            snapshot_from_dict(fixture("tv-docked.json")),
+            egpu_link=EgpuLinkObservation(
+                True, EgpuLinkState.UP, Confidence.OBSERVED, "egpu.link_observed"
+            ),
+        )
+        health = assess_snapshot_health(snapshot, PlacementState.DOCKED_EGPU)
+        self.assertEqual(health.state, HealthState.READY)
 
     def test_storage_use_is_degraded(self):
         value = fixture("tv-docked.json")

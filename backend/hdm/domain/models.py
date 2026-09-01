@@ -69,6 +69,12 @@ class EgpuPresence(StrEnum):
     UNKNOWN = "unknown"
 
 
+class EgpuLinkState(StrEnum):
+    UP = "up"
+    DOWN = "down"
+    UNKNOWN = "unknown"
+
+
 class SleepGuardAction(StrEnum):
     ACQUIRE = "acquire"
     RELEASE = "release"
@@ -171,6 +177,15 @@ class SleepGuardObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class EgpuLinkObservation:
+    applicable: bool
+    state: EgpuLinkState
+    confidence: Confidence
+    reason: str = ""
+    error: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class ObservedSnapshot:
     schema_version: int
     observed_at: str
@@ -186,6 +201,11 @@ class ObservedSnapshot:
     sleep_guard: SleepGuardObservation = field(
         default_factory=lambda: SleepGuardObservation(
             False, False, Confidence.UNKNOWN
+        )
+    )
+    egpu_link: EgpuLinkObservation = field(
+        default_factory=lambda: EgpuLinkObservation(
+            False, EgpuLinkState.UNKNOWN, Confidence.UNKNOWN
         )
     )
     blockers: tuple[Blocker, ...] = field(default_factory=tuple)

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from .control_plane import PlacementState
-from .models import Confidence, ObservedSnapshot
+from .models import Confidence, EgpuLinkState, ObservedSnapshot
 
 
 class HealthState(StrEnum):
@@ -110,8 +110,8 @@ def assess_snapshot_health(
 
     This initial bridge deliberately leaves controller/audio out until their
     mechanisms have independent usable-state observations. External placements
-    retain an unknown eGPU-link component until the pending kernel link-health
-    collector can prove it; a connected eGPU is not silently considered healthy.
+    retain an unknown eGPU-link component until the read-only collector can
+    observe an exact bridge; a connected eGPU is not silently considered healthy.
     """
     components = [
         _placement_component(placement),
@@ -122,13 +122,7 @@ def assess_snapshot_health(
         PlacementState.BOOSTED_HANDHELD,
         PlacementState.DOCKED_EGPU,
     }:
-        components.append(
-            HealthComponentObservation(
-                HealthComponent.EGPU_LINK,
-                HealthEvidenceState.UNKNOWN,
-                "egpu.link_health_unobserved",
-            )
-        )
+        components.append(_egpu_link_component(snapshot))
     if snapshot.disconnect_readiness.applicable:
         components.append(_storage_component(snapshot))
     return assess_health(tuple(components))
@@ -212,3 +206,20 @@ def _storage_component(snapshot: ObservedSnapshot) -> HealthComponentObservation
             "storage.egpu_in_use",
         )
     return HealthComponentObservation(HealthComponent.STORAGE, HealthEvidenceState.READY)
+
+
+def _egpu_link_component(snapshot: ObservedSnapshot) -> HealthComponentObservation:
+    link = snapshot.egpu_link
+    if link.applicable and link.state is EgpuLinkState.UP:
+        return HealthComponentObservation(
+            HealthComponent.EGPU_LINK, HealthEvidenceState.READY, link.reason
+        )
+    if link.applicable and link.state is EgpuLinkState.DOWN:
+        return HealthComponentObservation(
+            HealthComponent.EGPU_LINK, HealthEvidenceState.DEGRADED, link.reason
+        )
+    return HealthComponentObservation(
+        HealthComponent.EGPU_LINK,
+        HealthEvidenceState.UNKNOWN,
+        link.error or "egpu.link_health_unobserved",
+    )

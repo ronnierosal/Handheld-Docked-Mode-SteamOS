@@ -194,6 +194,7 @@ class SteamOsSnapshotTests(unittest.TestCase):
                 "usb4",
                 "host",
                 "egpu_identity",
+                "egpu_link",
                 "disconnect_clients",
                 "snapshot_total",
             ],

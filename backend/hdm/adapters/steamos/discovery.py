@@ -14,6 +14,8 @@ from ...domain.models import (
     DisplayKind,
     DisplayObservation,
     Evidence,
+    EgpuLinkObservation,
+    EgpuLinkState,
     GameState,
     GamescopeObservation,
     GpuObservation,
@@ -31,6 +33,7 @@ from .egpu_clients import EgpuClientDiscovery, EgpuClientScan
 from .game_scopes import GameScopeScan, SystemdGameScopeDiscovery
 from .gamescope import GamescopeDiscovery, GamescopeScan
 from .host import HostDiscovery, HostRecord
+from .link_health import PcieLinkHealthDiscovery
 from .pci import PciDeviceRecord, PciUsb4Discovery, Usb4DeviceRecord
 from .sleep_inhibitor import InhibitorLeaseStatus
 
@@ -78,6 +81,7 @@ class SteamOsDiscovery:
         pci_usb4: PciUsb4Discovery | None = None,
         host: HostDiscovery | None = None,
         egpu_clients: EgpuClientDiscovery | None = None,
+        link_health: PcieLinkHealthDiscovery | None = None,
         sleep_guard_status: Callable[[], InhibitorLeaseStatus] | None = None,
         clock: Callable[[], datetime] = _default_clock,
         monotonic_ns: Callable[[], int] = perf_counter_ns,
@@ -88,6 +92,7 @@ class SteamOsDiscovery:
         self._pci_usb4 = pci_usb4 or PciUsb4Discovery()
         self._host = host or HostDiscovery()
         self._egpu_clients = egpu_clients or EgpuClientDiscovery()
+        self._link_health = link_health or PcieLinkHealthDiscovery()
         self._sleep_guard_status = sleep_guard_status or (
             lambda: InhibitorLeaseStatus(
                 False, "Sleep guard is available only through the Decky lifecycle."
@@ -124,6 +129,15 @@ class SteamOsDiscovery:
         g1 = timed(
             "egpu_identity",
             lambda: match_gpd_g1(cards, pci_devices, usb4_devices),
+        )
+        egpu_link = timed(
+            "egpu_link",
+            lambda: self._link_health.observe(g1.root_bdf)
+            if g1.verified
+            else EgpuLinkObservation(
+                g1.detected, EgpuLinkState.UNKNOWN, Confidence.UNKNOWN,
+                error="egpu.link_identity_unverified" if g1.detected else "",
+            ),
         )
 
         if g1.verified:
@@ -183,6 +197,7 @@ class SteamOsDiscovery:
             gamescope=gamescope,
             disconnect_readiness=disconnect_readiness,
             sleep_guard=sleep_guard,
+            egpu_link=egpu_link,
             blockers=blockers,
         )
         timings.append(

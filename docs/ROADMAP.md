@@ -367,9 +367,11 @@ These items are intentionally deferred until the safe transition/recovery and
 hardware-validation gates above are closed. They must extend the existing core;
 they are not authorization for a separate optimizer or launcher.
 
-- Expand the implemented typed health aggregation from current placement,
-  session, display, storage, and explicit unknown eGPU-link evidence to
-  independently verified controller, audio, and kernel link-health evidence.
+- Expand the implemented typed health aggregation from placement, session,
+  display, storage, and current exact-bridge PCIe link observation to
+  independently verified controller, audio, link-quality, and recovery
+  evidence. Current link up/down is neither throughput proof nor removal
+  authority.
 - The implemented pure runtime-budget policy defers nonessential background
   telemetry during running/unknown game state and throttles optional explicit
   diagnostics. Add one shared low-overhead telemetry port and scheduler
