@@ -39,6 +39,7 @@ import {
   type SupportBundlePreviewPayload,
 } from "./backend";
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
+import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
 import { diagnosticOverlayRows } from "./diagnostics-overlay";
 import { connectionProgress, refreshDelayForSnapshot } from "./refresh-policy";
 import { canOfferForce, processReleaseOutcomeMessage } from "./process-release-ui";
@@ -1089,8 +1090,20 @@ export default definePlugin(() => {
       // acknowledgement dialog so it is not discarded with that transient menu.
       warningTimer = window.setTimeout(() => {
         warningTimer = null;
-        warningModal = showBlockedAttempt(warning, () => {
-          warningModal = null;
+        deliverBlockedAttempt(warning, {
+          showModal: () => {
+            warningModal = showBlockedAttempt(warning, () => {
+              warningModal = null;
+            });
+          },
+          showFallbackToast: (fallback) => {
+            toaster.toast({
+              title: fallback.title,
+              body: fallback.body,
+              critical: true,
+              duration: 15000,
+            });
+          },
         });
       }, BLOCKED_ATTEMPT_MODAL_DELAY_MS);
     },

@@ -332,8 +332,10 @@ Exit: rollback and disconnect-loss tests pass before certification.
 dimensions, exact-profile evidence, and intentional human-reviewed promotion
 gates are unit tested. Explicit opt-in verbose logging durations, expiry,
 rotation, reboot/reset behavior, Decky status/countdown, confirmation, and
-disable controls are implemented and simulated. No catalog collection UI,
-persistence, publication, or support upload is enabled.
+disable controls are implemented and simulated. Fixed-path atomic catalog
+persistence and backend-only reviewed-evidence transactions are implemented but
+remain unconstructed by Decky. No catalog collection UI, publication, or support
+upload is enabled.
 
 - Add an opt-in overlay and bounded verbose logging with a maximum TTL that
   cannot survive reboot.

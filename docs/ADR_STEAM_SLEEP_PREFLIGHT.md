@@ -89,6 +89,12 @@ The plugin runs in an invisible SharedJSContext, so that context's global
 synchronously from the pre-request hook is not accepted because Steam may
 discard it with the Power menu.
 
+If the deferred modal host rejects the render, HDM emits one critical
+attempted-action toast as a presentation-only fallback. A toast failure is
+contained and never reaches the Steam hook; neither fallback can release the
+native blocker or invoke a sleep API. The modal remains the preferred path
+because it requires acknowledgement.
+
 **Never show this explanation again** may continue to hide the passive panel
 explanation. It does not hide feedback for an attempted blocked action, disable
 either lease, or change safety state.
@@ -128,6 +134,8 @@ harness must prove:
 - verified G1 absence releases only HDM's blocker
 - later G1 presence or unknown state reacquires exactly once
 - blocked attempts show standard, game, and unknown-state warnings correctly
+- modal-host failure emits one critical fallback toast without changing either
+  sleep lease or invoking a sleep API
 - warning suppression cannot affect enforcement or attempted-action feedback
 - resolver failure reports unavailable and never claims full protection
 - dismount unpatches and releases exactly once

@@ -95,6 +95,27 @@ function createDeckySteamSuspendAdapter() {
     return createSteamSuspendAdapter(() => DFL.findModuleExport((candidate) => isSteamSuspendStore(candidate)), (object, property, handler) => DFL.beforePatch(object, property, handler));
 }
 
+/**
+ * Keep enforcement independent from a particular Decky modal host. A visible
+ * fallback is preferable to silently losing the explanation when that host
+ * rejects a modal from Steam's transient Power-menu lifecycle.
+ */
+function deliverBlockedAttempt(warning, delivery) {
+    try {
+        delivery.showModal();
+        return "modal";
+    }
+    catch {
+        try {
+            delivery.showFallbackToast(warning);
+            return "fallback";
+        }
+        catch {
+            return "unavailable";
+        }
+    }
+}
+
 function humanize(value) {
     return value.replaceAll("_", " ").replaceAll(".", " ");
 }
@@ -1136,8 +1157,20 @@ var index = definePlugin(() => {
         // acknowledgement dialog so it is not discarded with that transient menu.
         warningTimer = window.setTimeout(() => {
             warningTimer = null;
-            warningModal = showBlockedAttempt(warning, () => {
-                warningModal = null;
+            deliverBlockedAttempt(warning, {
+                showModal: () => {
+                    warningModal = showBlockedAttempt(warning, () => {
+                        warningModal = null;
+                    });
+                },
+                showFallbackToast: (fallback) => {
+                    toaster.toast({
+                        title: fallback.title,
+                        body: fallback.body,
+                        critical: true,
+                        duration: 15000,
+                    });
+                },
             });
         }, BLOCKED_ATTEMPT_MODAL_DELAY_MS);
     });
