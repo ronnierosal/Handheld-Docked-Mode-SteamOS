@@ -61,6 +61,13 @@ class ActionHistoryTests(unittest.TestCase):
         self.assertNotIn("0000:01:00.0", rendered)
         self.assertNotIn("secret", rendered)
 
+    def test_projects_verified_topology_events_without_details(self):
+        entry = project_action_history(
+            (event("topology.egpu_attached", "topology"),)
+        )[0]
+        self.assertEqual(entry.kind, ActionHistoryKind.TOPOLOGY)
+        self.assertEqual(entry.outcome, ActionHistoryOutcome.SUCCEEDED)
+
     def test_history_is_bounded_and_adjacent_duplicates_do_not_spam(self):
         rows = tuple(
             event("sleep.started", "sleep", timestamp=str(index))

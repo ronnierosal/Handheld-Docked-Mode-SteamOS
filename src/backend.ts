@@ -147,7 +147,7 @@ export const getPeripheralStatus = callable<[], PeripheralStatusPayload>("get_pe
 
 export interface ActionHistoryEntryPayload {
   occurred_at: string;
-  kind: "transition" | "recovery" | "sleep" | "process_release" | "peripheral" | "presentation";
+  kind: "topology" | "transition" | "recovery" | "sleep" | "process_release" | "peripheral" | "presentation";
   outcome: "started" | "succeeded" | "recovered" | "blocked" | "failed" | "attention_required";
   code: string;
 }

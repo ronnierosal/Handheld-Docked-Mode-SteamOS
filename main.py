@@ -6,6 +6,7 @@ import asyncio
 import os
 import socket
 import sys
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -55,6 +56,7 @@ from hdm.adapters.transition_runtime import (  # noqa: E402
     BoundedDeadlineWaiter,
     SnapshotTransitionObservationAdapter,
     SystemMonotonicClock,
+    versioned_snapshot_observation,
 )
 from hdm.application.game_evidence_support import (  # noqa: E402
     SupportGameEvidenceService,
@@ -69,6 +71,11 @@ from hdm.application.diagnostic_logging import (  # noqa: E402
     DiagnosticVerbosity,
 )
 from hdm.application.action_history import project_action_history  # noqa: E402
+from hdm.application.snapshot import report_to_public_dict  # noqa: E402
+from hdm.application.topology_event_detection import (  # noqa: E402
+    TopologyDetectionStatus,
+    detect_topology_event,
+)
 from hdm.application.docked_igpu_exit import DockedIgpuGameExitWatcher  # noqa: E402
 from hdm.application.docked_igpu_lifecycle import DockedIgpuWatchLifecycle  # noqa: E402
 from hdm.application.docked_igpu_promotion import DockedIgpuPromotionFacade  # noqa: E402
@@ -136,6 +143,8 @@ class Plugin:
         self._last_docked_igpu_lifecycle_code = ""
         self._last_sleep_guard_log: tuple[str, bool, str] | None = None
         self._events = BoundedEventLog()
+        self._topology_lock = threading.Lock()
+        self._topology_observation = None
         self._diagnostic_logging = DiagnosticLoggingController(
             self._events,
             boot_session_id=self._boot_session_id,
@@ -151,9 +160,27 @@ class Plugin:
 
     async def get_snapshot(self) -> dict[str, object]:
         """Return the existing privacy-safe, read-only diagnostics payload."""
-        payload = await asyncio.to_thread(self._api.get_snapshot)
+        report = await asyncio.to_thread(self._api.get_snapshot_report)
+        payload = report_to_public_dict(report)
+        await asyncio.to_thread(self._record_topology_observation, report.snapshot)
         await asyncio.to_thread(self._record_verbose_snapshot, payload)
         return payload
+
+    def _record_topology_observation(self, snapshot) -> None:
+        """Log only verified snapshot deltas; never execute recovery from them."""
+        current = versioned_snapshot_observation(snapshot)
+        with self._topology_lock:
+            previous = self._topology_observation
+            self._topology_observation = current
+        detection = detect_topology_event(previous, current)
+        if detection.status is not TopologyDetectionStatus.DETECTED:
+            return
+        self._events.append(
+            severity="info",
+            code=detection.reason_code,
+            component="topology",
+            stage="observation",
+        )
 
     async def get_peripheral_status(self) -> dict[str, object]:
         """Read identity-free controller/audio evidence without any handoff action."""

@@ -18,6 +18,7 @@ MAX_ACTION_HISTORY_ENTRIES = 20
 
 
 class ActionHistoryKind(StrEnum):
+    TOPOLOGY = "topology"
     TRANSITION = "transition"
     RECOVERY = "recovery"
     SLEEP = "sleep"
@@ -36,6 +37,7 @@ class ActionHistoryOutcome(StrEnum):
 
 
 _COMPONENTS = {
+    "topology": ActionHistoryKind.TOPOLOGY,
     "transition": ActionHistoryKind.TRANSITION,
     "recovery": ActionHistoryKind.RECOVERY,
     "sleep": ActionHistoryKind.SLEEP,

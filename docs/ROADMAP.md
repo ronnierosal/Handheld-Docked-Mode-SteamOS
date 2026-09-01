@@ -421,8 +421,9 @@ they are not authorization for a separate optimizer or launcher.
   short controller-friendly timeline from the existing bounded HDM event log.
   It stores nothing new and exports only action kind, outcome, code, and time;
   detail fields and correlation IDs stay private. The optional Decky
-  troubleshooting view renders at most three entries through a read-only RPC;
-  controller-visible acceptance remains.
+  troubleshooting view renders at most three entries through a read-only RPC.
+  The existing snapshot refresh also records only verified topology candidates
+  there; no detection result is a recovery or transition authority.
 
 ## Smallest safe next milestone
 

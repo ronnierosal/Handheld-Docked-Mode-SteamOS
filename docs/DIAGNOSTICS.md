@@ -59,6 +59,8 @@ The same optional section may show up to three recent actions from the existing
 bounded in-memory event log. Each row contains only time, a categorical action
 kind, outcome, and event code. It persists nothing new and never exposes event
 details, correlation IDs, hardware identity, or process identity.
+Verified snapshot attach, removal, and display-loss candidates may appear as
+topology actions; recording one never starts recovery or changes hardware state.
 
 Support Preview includes the same bounded categorical peripheral state when the
 read-only observer is available. It includes only complete/exact flags and

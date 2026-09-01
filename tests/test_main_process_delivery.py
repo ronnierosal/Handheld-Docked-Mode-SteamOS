@@ -17,6 +17,7 @@ from hdm.application.guarded_process_release import (  # noqa: E402
     GuardedProcessReleasePreview,
     GuardedProcessReleaseStatus,
 )
+from hdm.application.snapshot import SnapshotReport  # noqa: E402
 from hdm.application.docked_igpu_lifecycle import (  # noqa: E402
     DockedIgpuLifecycleStage,
     DockedIgpuLifecycleStatus,
@@ -30,6 +31,8 @@ from hdm.application.game_evidence_support import (  # noqa: E402
 )
 from hdm.application.support_bundle import WakeDiagnosticsSupportStatus  # noqa: E402
 from hdm.domain.control_plane import PlacementState  # noqa: E402
+from hdm.domain.inference import infer_operating_mode  # noqa: E402
+from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.domain.game_gpu_client import GameEgpuClientStatus  # noqa: E402
 from hdm.domain.game_render_activity import GameRenderActivityStatus  # noqa: E402
 from hdm.domain.game_runtime import GameRuntimeKind  # noqa: E402
@@ -134,6 +137,17 @@ class SupportEvidenceService:
         )
 
 
+class SnapshotApi:
+    def __init__(self, *snapshots):
+        self._snapshots = iter(snapshots)
+        self.calls = 0
+
+    def get_snapshot_report(self):
+        self.calls += 1
+        snapshot = next(self._snapshots)
+        return SnapshotReport(snapshot, infer_operating_mode(snapshot))
+
+
 class DockedIgpuScheduler:
     def __init__(self, *, acknowledgement=True):
         self.value = DockedIgpuLifecycleStatus(
@@ -224,6 +238,46 @@ class MainProcessDeliveryTests(unittest.TestCase):
             boot_session_id=lambda: "boot-session-test",
         )
         return plugin, service
+
+    def test_verified_topology_delta_is_recorded_without_recovery(self):
+        plugin, service = self.plugin()
+        portable = snapshot_from_dict(
+            json.loads((ROOT / "tests" / "fixtures" / "portable.json").read_text())
+        )
+        docked = snapshot_from_dict(
+            json.loads((ROOT / "tests" / "fixtures" / "tv-docked.json").read_text())
+        )
+
+        plugin._record_topology_observation(portable)
+        plugin._record_topology_observation(docked)
+        history = asyncio.run(plugin.get_action_history())
+
+        self.assertEqual(service.preview_calls, [])
+        self.assertEqual(service.executions, [])
+        self.assertEqual(len(history["entries"]), 1)
+        self.assertEqual(history["entries"][0]["kind"], "topology")
+        self.assertEqual(history["entries"][0]["code"], "topology.egpu_attached")
+
+    def test_snapshot_delivery_observes_existing_report_once_per_refresh(self):
+        plugin, _service = self.plugin()
+        portable = snapshot_from_dict(
+            json.loads((ROOT / "tests" / "fixtures" / "portable.json").read_text())
+        )
+        docked = snapshot_from_dict(
+            json.loads((ROOT / "tests" / "fixtures" / "tv-docked.json").read_text())
+        )
+        api = SnapshotApi(portable, docked)
+        plugin._api = api
+
+        asyncio.run(plugin.get_snapshot())
+        asyncio.run(plugin.get_snapshot())
+        history = asyncio.run(plugin.get_action_history())
+
+        self.assertEqual(api.calls, 2)
+        self.assertEqual(
+            [entry["code"] for entry in history["entries"]],
+            ["topology.egpu_attached"],
+        )
 
     def test_preview_and_approval_use_enum_and_opaque_receipt_only(self):
         plugin, service = self.plugin()

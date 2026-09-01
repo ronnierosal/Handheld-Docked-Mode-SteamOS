@@ -245,8 +245,10 @@ into an attach, eGPU-removal, or external-display-loss candidate. It requires
 an exact host profile on both snapshots and exact resource continuity; an
 unproven disappearance is explicitly Unverified rather than treated as a
 removal. The detector is not a watcher, scheduler, RPC, or recovery trigger.
-Future event sources must still route candidates through the shared policy and
-transition authority.
+The existing Decky snapshot refresh records a detected candidate in the bounded
+identity-free action history only; it performs no recovery, mutation, or
+transition request. Future action-bearing event sources must still route
+candidates through the shared policy and transition authority.
 
 A dormant application-level unexpected-undock coordinator now binds one raw
 eGPU/display-loss event to an exact semantic generation and independent sample,

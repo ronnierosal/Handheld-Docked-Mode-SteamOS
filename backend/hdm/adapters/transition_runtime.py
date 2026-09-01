@@ -16,27 +16,31 @@ class SnapshotTransitionObservationAdapter:
         self._discovery = discovery
 
     def observe(self) -> VersionedObservation:
-        snapshot = self._discovery.collect_snapshot()
-        complete = snapshot_to_dict(snapshot)
-        semantic = dict(complete)
-        semantic.pop("observed_at", None)
-        encoded = json.dumps(
-            semantic,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-        ).encode("utf-8")
-        sample = json.dumps(
-            complete,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-        ).encode("utf-8")
-        return VersionedObservation(
-            hashlib.sha256(encoded).hexdigest(),
-            snapshot,
-            hashlib.sha256(sample).hexdigest(),
-        )
+        return versioned_snapshot_observation(self._discovery.collect_snapshot())
+
+
+def versioned_snapshot_observation(snapshot) -> VersionedObservation:
+    """Bind one already-collected snapshot without triggering another scan."""
+    complete = snapshot_to_dict(snapshot)
+    semantic = dict(complete)
+    semantic.pop("observed_at", None)
+    encoded = json.dumps(
+        semantic,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    sample = json.dumps(
+        complete,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    return VersionedObservation(
+        hashlib.sha256(encoded).hexdigest(),
+        snapshot,
+        hashlib.sha256(sample).hexdigest(),
+    )
 
 
 class SystemMonotonicClock:
