@@ -7,6 +7,7 @@ event details, correlation IDs, or any hardware/process identity.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Iterable
@@ -15,6 +16,7 @@ from .support_bundle import SupportEvent
 
 
 MAX_ACTION_HISTORY_ENTRIES = 20
+ACTION_CODE_RE = re.compile(r"^[a-z0-9_.-]{1,96}$")
 
 
 class ActionHistoryKind(StrEnum):
@@ -57,6 +59,8 @@ class ActionHistoryEntry:
     def __post_init__(self) -> None:
         if not self.occurred_at or not self.code:
             raise ValueError("action-history time and code are required")
+        if not ACTION_CODE_RE.fullmatch(self.code):
+            raise ValueError("action-history code is invalid")
 
 
 def project_action_history(

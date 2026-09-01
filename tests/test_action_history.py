@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.application.action_history import (  # noqa: E402
+    ActionHistoryEntry,
     ActionHistoryKind,
     ActionHistoryOutcome,
     project_action_history,
@@ -28,6 +29,13 @@ def event(
 
 
 class ActionHistoryTests(unittest.TestCase):
+    def test_public_action_code_is_bounded_and_categorical(self):
+        with self.assertRaisesRegex(ValueError, "code is invalid"):
+            ActionHistoryEntry(
+                "time", ActionHistoryKind.SLEEP, ActionHistoryOutcome.BLOCKED,
+                "sleep blocked / private path",
+            )
+
     def test_projects_action_events_newest_first_with_categorical_outcomes(self):
         history = project_action_history(
             (
