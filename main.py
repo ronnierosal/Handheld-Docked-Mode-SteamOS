@@ -72,6 +72,7 @@ from hdm.application.diagnostic_logging import (  # noqa: E402
 )
 from hdm.application.action_history import project_action_history  # noqa: E402
 from hdm.application.snapshot import report_to_public_dict  # noqa: E402
+from hdm.application.attach_readiness import AttachReadinessLifecycle  # noqa: E402
 from hdm.application.topology_event_detection import (  # noqa: E402
     TopologyDetectionStatus,
     detect_topology_event,
@@ -116,6 +117,7 @@ from hdm.delivery.diagnostic_logging import (  # noqa: E402
     diagnostic_logging_status_to_payload,
 )
 from hdm.delivery.action_history import action_history_to_payload  # noqa: E402
+from hdm.delivery.attach_readiness import attach_readiness_to_payload  # noqa: E402
 from hdm.delivery.docked_igpu_lifecycle import lifecycle_status_to_payload  # noqa: E402
 from hdm.delivery.peripheral_support import peripheral_support_status  # noqa: E402
 from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
@@ -145,6 +147,7 @@ class Plugin:
         self._events = BoundedEventLog()
         self._topology_lock = threading.Lock()
         self._topology_observation = None
+        self._attach_readiness = AttachReadinessLifecycle()
         self._diagnostic_logging = DiagnosticLoggingController(
             self._events,
             boot_session_id=self._boot_session_id,
@@ -162,25 +165,30 @@ class Plugin:
         """Return the existing privacy-safe, read-only diagnostics payload."""
         report = await asyncio.to_thread(self._api.get_snapshot_report)
         payload = report_to_public_dict(report)
-        await asyncio.to_thread(self._record_topology_observation, report.snapshot)
+        attach_status = await asyncio.to_thread(
+            self._record_topology_observation, report.snapshot
+        )
+        payload["attach_readiness"] = attach_readiness_to_payload(attach_status)
         await asyncio.to_thread(self._record_verbose_snapshot, payload)
         return payload
 
-    def _record_topology_observation(self, snapshot) -> None:
+    def _record_topology_observation(self, snapshot):
         """Log only verified snapshot deltas; never execute recovery from them."""
         current = versioned_snapshot_observation(snapshot)
         with self._topology_lock:
             previous = self._topology_observation
             self._topology_observation = current
         detection = detect_topology_event(previous, current)
+        status = self._attach_readiness.update(detection, current)
         if detection.status is not TopologyDetectionStatus.DETECTED:
-            return
+            return status
         self._events.append(
             severity="info",
             code=detection.reason_code,
             component="topology",
             stage="observation",
         )
+        return status
 
     async def get_peripheral_status(self) -> dict[str, object]:
         """Read identity-free controller/audio evidence without any handoff action."""

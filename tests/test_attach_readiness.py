@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.application.attach_readiness import (  # noqa: E402
+    AttachReadinessLifecycle,
     AttachReadinessStage,
     arm_attach_readiness,
     observe_attach_readiness,
@@ -99,6 +100,20 @@ class AttachReadinessTests(unittest.TestCase):
 
         self.assertEqual(result.stage, AttachReadinessStage.GAME_RUNNING)
         self.assertEqual(result.code, "attach.game_running")
+
+    def test_lifecycle_uses_only_existing_snapshot_updates(self):
+        before = observed("portable", "sample-a", snapshot("portable.json"))
+        attached = observed("attached", "sample-b", snapshot("connected-internal.json"))
+        lifecycle = AttachReadinessLifecycle()
+
+        armed = lifecycle.update(detect_topology_event(before, attached), attached)
+        ready = lifecycle.update(
+            detect_topology_event(attached, observed("attached", "sample-c", attached.snapshot)),
+            observed("attached", "sample-c", attached.snapshot),
+        )
+
+        self.assertEqual(armed.stage, AttachReadinessStage.SETTLING)
+        self.assertEqual(ready.stage, AttachReadinessStage.READY_IDLE)
 
 
 if __name__ == "__main__":

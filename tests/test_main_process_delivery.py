@@ -5,6 +5,7 @@ import importlib.util
 import json
 import sys
 import types
+from dataclasses import replace
 import unittest
 from pathlib import Path
 
@@ -266,18 +267,21 @@ class MainProcessDeliveryTests(unittest.TestCase):
         docked = snapshot_from_dict(
             json.loads((ROOT / "tests" / "fixtures" / "tv-docked.json").read_text())
         )
-        api = SnapshotApi(portable, docked)
+        fresh_docked = replace(docked, observed_at="2026-08-30T19:02:25-07:00")
+        api = SnapshotApi(portable, docked, fresh_docked)
         plugin._api = api
 
         asyncio.run(plugin.get_snapshot())
         asyncio.run(plugin.get_snapshot())
+        delivered = asyncio.run(plugin.get_snapshot())
         history = asyncio.run(plugin.get_action_history())
 
-        self.assertEqual(api.calls, 2)
+        self.assertEqual(api.calls, 3)
         self.assertEqual(
             [entry["code"] for entry in history["entries"]],
             ["topology.egpu_attached"],
         )
+        self.assertEqual(delivered["attach_readiness"]["stage"], "ready_idle")
 
     def test_preview_and_approval_use_enum_and_opaque_receipt_only(self):
         plugin, service = self.plugin()

@@ -8,6 +8,7 @@ transition owner must still obtain its own fresh binding and consent.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -19,6 +20,7 @@ from .topology_event_detection import TopologyDetectionStatus, TopologyEventDete
 
 
 class AttachReadinessStage(StrEnum):
+    IDLE = "idle"
     SETTLING = "settling"
     WAITING_FOR_EXTERNAL_DISPLAY = "waiting_for_external_display"
     READY_IDLE = "ready_idle"
@@ -113,5 +115,43 @@ def _status(stage: AttachReadinessStage, code: str) -> AttachReadinessStatus:
     return AttachReadinessStatus(
         stage,
         code,
-        750 if stage is AttachReadinessStage.SETTLING else 1_000,
+        (
+            30_000
+            if stage is AttachReadinessStage.IDLE
+            else 750 if stage is AttachReadinessStage.SETTLING else 1_000
+        ),
     )
+
+
+class AttachReadinessLifecycle:
+    """Serialize the one private attach watch beside an existing snapshot loop."""
+
+    def __init__(self) -> None:
+        self._watch: AttachReadinessWatch | None = None
+        self._status = _status(AttachReadinessStage.IDLE, "attach.idle")
+        self._lock = threading.Lock()
+
+    def status(self) -> AttachReadinessStatus:
+        with self._lock:
+            return self._status
+
+    def update(
+        self,
+        detection: TopologyEventDetection,
+        current: VersionedObservation,
+    ) -> AttachReadinessStatus:
+        """Consume an already-collected snapshot; never collect or mutate."""
+        with self._lock:
+            if (
+                detection.status is TopologyDetectionStatus.DETECTED
+                and detection.event is TopologyEvent.EGPU_ATTACHED
+            ):
+                self._watch = arm_attach_readiness(detection, current)
+                self._status = (
+                    _status(AttachReadinessStage.SETTLING, "attach.observed")
+                    if self._watch is not None
+                    else _status(AttachReadinessStage.ACTION_REQUIRED, "attach.arm_unverified")
+                )
+            elif self._watch is not None:
+                self._status = observe_attach_readiness(self._watch, current)
+            return self._status

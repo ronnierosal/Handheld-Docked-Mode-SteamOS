@@ -22,7 +22,8 @@ GPU migration. A future transition owner must independently re-observe its own
 exact binding, apply the unified transition engine, and require any needed
 player consent.
 
-The watch is implemented and simulated only. No plugin wiring, topology
-watcher, RPC, or automatic attach behavior exists. Hardware validation requires
-the D3 read-only attach stage first, followed by the separately supervised
-transition stages in [Deployment and validation strategy](DEPLOYMENT_VALIDATION.md).
+The watch is implemented and simulated. It is delivered only as a categorical
+field of the existing snapshot refresh, with no extra RPC, poll, event source,
+or automatic attach behavior. Hardware validation requires the D3 read-only
+attach stage first, followed by the separately supervised transition stages in
+[Deployment and validation strategy](DEPLOYMENT_VALIDATION.md).

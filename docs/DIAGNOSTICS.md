@@ -61,6 +61,10 @@ health blockers. It does not add a collection loop, infer a workflow, change
 placement, or authorize any action. Older payloads show health as unavailable
 rather than guessing.
 
+The same snapshot may include a categorical eGPU attach-readiness status. It
+uses the already collected topology delta and next snapshot only; it does not
+add an RPC or polling loop, create a transition permit, or automatically dock.
+
 The same optional section may show up to three recent actions from the existing
 bounded in-memory event log. Each row contains only time, a categorical action
 kind, outcome, and event code. It persists nothing new and never exposes event

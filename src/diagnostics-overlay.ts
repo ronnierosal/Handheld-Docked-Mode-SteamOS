@@ -56,6 +56,12 @@ export function diagnosticOverlayRows(
         ? payload.health.blockers.map(humanize).join(", ")
         : "none",
     },
+    {
+      name: "eGPU attach",
+      value: payload.attach_readiness
+        ? `${humanize(payload.attach_readiness.stage)} · ${humanize(payload.attach_readiness.code)}`
+        : "unavailable",
+    },
     { name: "Snapshot schema", value: String(snapshot.schema_version) },
     { name: "Device profile", value: snapshot.host_profile },
     { name: "Support tier", value: humanize(snapshot.support_tier) },

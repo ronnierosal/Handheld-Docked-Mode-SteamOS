@@ -134,6 +134,12 @@ export interface SnapshotPayload {
     }>;
     blockers: string[];
   };
+  attach_readiness?: {
+    schema_version: number;
+    stage: "idle" | "settling" | "waiting_for_external_display" | "ready_idle" | "game_running" | "action_required";
+    code: string;
+    poll_after_ms: number;
+  };
   diagnostics: {
     schema_version: number;
     timings_ms: Array<{

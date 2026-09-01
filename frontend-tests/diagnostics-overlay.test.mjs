@@ -89,6 +89,12 @@ function payload() {
       ],
       blockers: ["health.egpu_link_unknown"],
     },
+    attach_readiness: {
+      schema_version: 1,
+      stage: "ready_idle",
+      code: "attach.ready_idle",
+      poll_after_ms: 1000,
+    },
     diagnostics: {
       schema_version: 2,
       timings_ms: [{ stage: "snapshot_total", duration_ms: 25.4 }],
@@ -147,6 +153,8 @@ test("overlay exposes useful categorical state without raw identities", () => {
   assert.match(text, /System health/);
   assert.match(text, /attention required/);
   assert.match(text, /health egpu link unknown/);
+  assert.match(text, /eGPU attach/);
+  assert.match(text, /ready idle · attach ready idle/);
   assert.match(text, /Docked-iGPU watch/);
   assert.match(text, /promotion ready/);
   assert.match(text, /Promotion inspection/);
