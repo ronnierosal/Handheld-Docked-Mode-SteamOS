@@ -372,8 +372,11 @@ they are not authorization for a separate optimizer or launcher.
   independently verified controller, audio, and kernel link-health evidence.
 - Define a single low-overhead telemetry port and performance budget, with
   opt-in diagnostics separated from normal runtime observation.
-- Define logical controller-action adapters and a controller-driven Safe Undock
-  entry point that calls the canonical request facade only.
+- The implemented pure logical-action router maps Safe Undock, Return to
+  Handheld, and Recovery from Decky/controller/device-button surfaces to the
+  existing request vocabulary. Add a controller-driven Safe Undock delivery
+  adapter only after it can call the canonical request facade without parallel
+  execution logic.
 - Add device mode-profile data (including display preference separately from
   game render target) without selecting a display or changing a game setting.
 - Add a game-adapter interface with backup, atomic change, validation, and

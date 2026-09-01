@@ -44,6 +44,7 @@ class RequestSource(StrEnum):
     AUTOMATIC = "automatic"
     STEAM_MENU = "steam_menu"
     PHYSICAL_BUTTON = "physical_button"
+    CONTROLLER = "controller"
 
 
 class CapabilitySupport(StrEnum):

@@ -33,6 +33,12 @@ There is no mechanism adapter, Decky RPC, or live handoff authority. The Ally X
 and GPD G1 profile values remain Unknown or Experimental and authorize no
 unsupervised controller/audio change.
 
+A pure logical-action router now maps a future controller Safe Undock chord,
+Decky action, or device-button action to the same typed `UNDOCK` request intent
+with only the delivery source differing. It has no Decky route, hotkey listener,
+transition executor, or mechanism authority. Performance-profile actions remain
+explicitly unavailable rather than being misrouted into an undock request.
+
 The optional troubleshooting overlay can request a separate identity-free
 status payload. It displays only mapped/unmapped state and categorical evidence
 codes; it never receives private bindings, inventory paths, device names, or
@@ -78,12 +84,14 @@ audio node identity.
 1. Add fixture parsers for SteamOS input/audio variants and a separate,
    controller-visible supervised mapping workflow. Persisted mapping use must
    remain private and require fresh inventory matching.
-2. Re-plan from the same semantic generation and a new sample immediately
+2. Add controller chord delivery only as an adapter to the typed logical-action
+   router; it must never implement a parallel Safe Undock path.
+3. Re-plan from the same semantic generation and a new sample immediately
    before each step.
-3. Execute one typed step through the shared transition journal.
-4. Observe and verify the exact target.
-5. On failure, restore the exact rollback binding and verify recovery.
-6. Add privacy-safe diagnostics before supervised hardware experiments.
+4. Execute one typed step through the shared transition journal.
+5. Observe and verify the exact target.
+6. On failure, restore the exact rollback binding and verify recovery.
+7. Add privacy-safe diagnostics before supervised hardware experiments.
 
 Implementation and simulation do not verify controller ordering, built-in
 suppression, Bluetooth disconnect/power-off, TV audio selection, or portable
