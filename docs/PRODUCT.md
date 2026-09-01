@@ -65,6 +65,9 @@ Physical controls and UI affordances resolve to typed logical requests such as
 Safe Undock, Return to Handheld, Recovery, or Change Performance Profile. They
 must all enter the same authoritative transition engine. A controller hotkey
 is therefore a future delivery adapter, not a parallel detach implementation.
+The physical power button remains platform-owned: HDM must not delay, suppress,
+or synthesize ordinary Sleep merely to recognize a gesture. See [physical
+power-button Safe Undock feasibility](POWER_BUTTON_SAFE_UNDOCK.md).
 
 Current scope does not include TDP control, automatic graphics tuning, game
 configuration writes, Steam Library badges, travel automation, or controller

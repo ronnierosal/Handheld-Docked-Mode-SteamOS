@@ -48,6 +48,11 @@ each independently before relying on this snapshot.
 - Next concrete work: review the locally built Quick Access package with the
   maintainer; before any install, obtain a maintainer-approved exact deployment
   plan with the G1 disconnected and player-visible recovery available.
+- Physical power-button double-press Safe Undock is infeasible at the current
+  boundary: HDM cannot observe first/second press edges without risking ordinary
+  Steam Sleep behavior. Keep the button Steam-owned; the specified future
+  fallback is verified **Guide + Y** hold routed to the ordinary `UNDOCK`
+  request. See [physical power-button feasibility](POWER_BUTTON_SAFE_UNDOCK.md).
 
 ## SSH access
 
