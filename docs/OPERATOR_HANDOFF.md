@@ -166,6 +166,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   intentionally shows "Not connected" rather than guessing hardware state.
   This adds no RPC, collection, timer, action, hardware claim, or deployment.
   Back-to-top collapses both detail panels and restores focus inside the panel.
+- **Offline Readiness UI checkpoint (read-only presentation):** Quick Access
+  can now map only the public categories Ready to try offline, Needs attention,
+  Online check needed, and Unknown. It never promises offline launch/play and
+  never renders raw reason codes or game/account/AppID/path/time data. Current
+  snapshot delivery remains unwired, so it deliberately says “Not connected.”
+  Source review, privacy/cost/freshness admission, a collector, persistence,
+  and launch authority remain unimplemented.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

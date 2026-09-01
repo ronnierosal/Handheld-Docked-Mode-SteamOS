@@ -113,6 +113,23 @@ class OfflineReadinessTests(unittest.TestCase):
         self.assertNotIn("title", payload)
         self.assertNotIn("path", payload)
 
+    def test_every_public_status_remains_identity_minimized(self):
+        for status, reason in (
+            (OfflineReadinessStatus.READY_TO_TRY_OFFLINE, "local_readiness_confirmed"),
+            (OfflineReadinessStatus.NEEDS_ATTENTION, "update_pending"),
+            (OfflineReadinessStatus.ONLINE_CHECK_NEEDED, "drm"),
+            (OfflineReadinessStatus.UNKNOWN, "offline_evidence_stale"),
+        ):
+            with self.subTest(status=status):
+                payload = offline_readiness_to_public_dict(
+                    OfflineReadinessAssessment(status, (reason,))
+                )
+                self.assertEqual(payload["status"], status.value)
+                self.assertEqual(payload["reason_codes"], [reason])
+                rendered = repr(payload)
+                for private in ("appid", "account", "title", "path", "observed_at"):
+                    self.assertNotIn(private, rendered)
+
     def test_duplicate_evidence_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "duplicated"):
             OfflineReadinessEvidence(

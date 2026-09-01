@@ -25,6 +25,11 @@ export interface JourneyStatusPayload {
   prepared_docked_idle?: { state: string; code: string };
   safe_undock?: { state: string; code: string };
   unexpected_removal_recovery?: { state: string; code: string };
+  offline_readiness?: {
+    schema_version: number;
+    status: string;
+    reason_codes: string[];
+  };
 }
 
 export interface JourneyStatusRow {
@@ -58,6 +63,12 @@ const JOURNEY_STATES: Record<string, Record<string, [string, string]>> = {
     recovery_incomplete: ["Recovery incomplete", "Handheld fallback evidence is incomplete."],
     needs_supervised_diagnosis: ["Needs supervised diagnosis", "Evidence is unknown, stale, or contradictory."],
   },
+  offline_readiness: {
+    ready_to_try_offline: ["Ready to try offline", "Current local evidence is encouraging, but offline play is not guaranteed."],
+    needs_attention: ["Needs attention", "Resolve local readiness concerns before relying on offline play."],
+    online_check_needed: ["Online check needed", "This may need an online check; offline play is not guaranteed."],
+    unknown: ["Unknown", "Fresh reviewed offline evidence is unavailable."],
+  },
 };
 
 export function journeyStatusRows(
@@ -68,10 +79,12 @@ export function journeyStatusRows(
     ["prepared_docked_idle", "Prepared state"],
     ["safe_undock", "Safe Undock evidence"],
     ["unexpected_removal_recovery", "Recovery"],
+    ["offline_readiness", "Offline readiness"],
   ];
   return rows.map(([key, name]) => {
     const value = journey?.[key];
-    const presentation = value && JOURNEY_STATES[key][value.state];
+    const state = value && ("status" in value ? value.status : value.state);
+    const presentation = state && JOURNEY_STATES[key][state];
     return presentation
       ? { name, value: presentation[0], detail: presentation[1] }
       : {

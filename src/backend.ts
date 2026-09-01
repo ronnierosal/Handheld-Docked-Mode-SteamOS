@@ -148,6 +148,11 @@ export interface SnapshotPayload {
     prepared_docked_idle?: { state: string; code: string };
     safe_undock?: { state: string; code: string };
     unexpected_removal_recovery?: { state: string; code: string };
+    offline_readiness?: {
+      schema_version: number;
+      status: "ready_to_try_offline" | "needs_attention" | "online_check_needed" | "unknown";
+      reason_codes: string[];
+    };
   };
   diagnostics: {
     schema_version: number;
