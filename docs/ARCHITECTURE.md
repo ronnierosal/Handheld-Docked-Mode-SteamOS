@@ -60,6 +60,15 @@ state, while player-requested diagnostics use the narrower diagnostic delay.
 Samples contain only typed numeric metrics; this contract has no collector,
 scheduler, optimization, TDP, or mutation authority.
 
+Future game configuration is bounded by a pure Game Adapter change contract.
+Only a reviewed adapter can begin a typed, allowlisted setting change. The
+future mechanism must compare the expected opaque revision, create an exact
+backup, write a distinct staged revision atomically, validate that staged
+revision, then confirm commit. A failure after backup requires verified rollback
+before terminal success is possible. No adapter is yet constructed: the domain
+contract accepts no paths, bytes, commands, PIDs, arbitrary setting names, or
+frontend-provided game identity.
+
 The target model also keeps **placement** separate from **workflow phase**.
 Portable, Docked-iGPU, Boosted Handheld, and Docked-eGPU are placement results;
 Connecting, PreparingToDisconnect, SafeToDisconnect, ReturningToPortable,

@@ -389,8 +389,11 @@ they are not authorization for a separate optimizer or launcher.
   goals. It resolves only exact stable observed modes and has no display,
   GPU, power, audio, controller, or game-setting mechanism authority. Future
   consumers still require capability proof and TRY/VERIFY.
-- Add a game-adapter interface with backup, atomic change, validation, and
-  rollback requirements before any game configuration mechanism is approved.
+- **Implemented (pure contract):** a reviewed Game Adapter must use typed
+  allowlisted settings and exact opaque revisions. Its future mechanism is
+  constrained to compare-before-write, backup, atomic staging, validation,
+  commit confirmation, and verified rollback on failure. No game adapter,
+  config writer, game-setting UI, or frontend authority exists yet.
 - Research community-settings licensing/attribution and Steam integration
   boundaries before collecting, redistributing, or presenting recommendations.
 
