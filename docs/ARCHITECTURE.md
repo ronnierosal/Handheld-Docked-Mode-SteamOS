@@ -129,6 +129,12 @@ contradictory, inactive, or game-active evidence; eligibility is still only
 evidence for a future unified engine. It has no device mechanism or delivery
 authority. See [Combined handoff eligibility](COMBINED_HANDOFF_ELIGIBILITY.md).
 
+A pure prepared-docked-idle contract compares two caller-supplied monotonic
+samples after combined eligibility. It can report only not-yet-stable,
+invalidated, or a five-second fresh idle evidence result; it owns no timer,
+scheduler, state persistence, permit, or mechanism. See
+[Prepared docked idle eligibility](PREPARED_DOCKED_IDLE.md).
+
 The first control-plane slice now defines typed placement and workflow states,
 request/plan/deadline/failure/recovery values, conservative host/eGPU capability
 composition, and a strict bounded transaction-journal schema. Decky now uses the

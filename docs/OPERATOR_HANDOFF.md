@@ -122,6 +122,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   stale, contradictory, inactive, or game-active facts fail closed; a partial
   future attempt is rollback-required. No mechanism, plan, permit, RPC, or
   hardware proof is added.
+- **Stage 1.4 checkpoint (pure revalidation contract):** caller-supplied
+  combined-eligible Idle observations can yield prepared evidence only after a
+  new same-attachment/same-generation sample at least five seconds later.
+  Activity, uncertainty, stale/inconsistent facts, binding/generation changes,
+  or reused samples never mature. The contract has no timer, scheduler,
+  persistence, action, permit, RPC, or Safe Undock authority.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
