@@ -22,6 +22,10 @@ each independently before relying on this snapshot.
 
 ## Checkpoint and worker-integration policy
 
+The ordered bounded queue and required check-in template are in
+[Worker queue](WORK_QUEUE.md). It enables continuation only when a worker is
+triggered; it is not an autonomous scheduler.
+
 For every meaningful verified checkpoint, update the appropriate tracked
 continuity, product, or roadmap note with the current goal, completed change,
 exact verification, evidence status (**Implemented**, **Simulated**, or

@@ -15,6 +15,7 @@ project; eGPUBridge is reference evidence, not the architecture to reproduce.
 - Ordered status and dependencies: `docs/ROADMAP.md`
 - Hardware deployment gates: `docs/DEPLOYMENT_VALIDATION.md`
 - Maintainer/agent SSH and current deployment handoff: `docs/OPERATOR_HANDOFF.md`
+- Bounded worker ownership, checkpoints, and integration: `docs/WORK_QUEUE.md`
 - Current executable behavior: code plus tests; docs and memory never override it
 
 ## Required rules
