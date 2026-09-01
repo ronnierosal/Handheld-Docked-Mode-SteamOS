@@ -300,6 +300,7 @@ function preflightObservation(payload: SnapshotPayload): PreflightObservation {
 
 function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const quickAccessVisible = useQuickAccessVisible();
+  const statusAnchor = useRef<HTMLDivElement | null>(null);
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryPayload | null>(null);
@@ -821,8 +822,19 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
   }, [forceReceiptToken, inspectProcessRelease, processAcknowledgementId]);
 
+  const returnToStatus = useCallback(() => {
+    setShowDiagnostics(false);
+    // Decky's QAM panel owns the actual scrolling container.  Scrolling this
+    // anchor brings controller focus back to the first useful status section
+    // without relying on touch input or a browser-window scroll position.
+    window.setTimeout(() => {
+      statusAnchor.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, 0);
+  }, []);
+
   return (
     <>
+      <div ref={statusAnchor} />
       <PanelSection title="Observed state">
         <DiagnosticRow name="Connection" value={progress.label} />
         <DiagnosticRow name="Mode" value={loading ? "Reading…" : label(payload?.inference.mode ?? "unknown")} />
@@ -842,6 +854,26 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           value={totalTiming ? `${Math.round(totalTiming.duration_ms)} ms` : "Unknown"}
         />
         <PanelSectionRow>{progress.detail}</PanelSectionRow>
+      </PanelSection>
+
+      <PanelSection title="Quick actions">
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => void refresh()} disabled={loading}>
+            {loading ? "Reading…" : "Refresh status"}
+          </ButtonItem>
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setShowDiagnostics((value) => !value)}>
+            {showDiagnostics ? "Hide troubleshooting" : "Troubleshooting"}
+          </ButtonItem>
+        </PanelSectionRow>
+        {sleepGuard?.required && sleepWarningHidden && (
+          <PanelSectionRow>
+            <ButtonItem layout="below" onClick={showSleepWarning}>
+              Show sleep warning again
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
       </PanelSection>
 
       <PanelSection title="Sleep protection">
@@ -995,29 +1027,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         {supportMessage && <PanelSectionRow>{supportMessage}</PanelSectionRow>}
       </PanelSection>
 
-      <PanelSection title="Diagnostics only">
-        <PanelSectionRow>
-          HDM 0.2 observes state and blocks sleep while the G1 is attached. It cannot switch displays, GPUs, or Gamescope. It can close only exact eligible eGPU processes after explicit approval.
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={() => void refresh()} disabled={loading}>
-            {loading ? "Reading…" : "Refresh"}
-          </ButtonItem>
-        </PanelSectionRow>
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={() => setShowDiagnostics((value) => !value)}>
-            {showDiagnostics ? "Hide troubleshooting details" : "Show troubleshooting details"}
-          </ButtonItem>
-        </PanelSectionRow>
-        {sleepGuard?.required && sleepWarningHidden && (
-          <PanelSectionRow>
-            <ButtonItem layout="below" onClick={showSleepWarning}>
-              Show sleep warning again
-            </ButtonItem>
-          </PanelSectionRow>
-        )}
-      </PanelSection>
-
       {showDiagnostics && (
         <PanelSection title="Troubleshooting details">
           <PanelSectionRow>
@@ -1085,6 +1094,14 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           {presentationMessage && <PanelSectionRow>{presentationMessage}</PanelSectionRow>}
         </PanelSection>
       )}
+
+      <PanelSection title="Navigation">
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={returnToStatus}>
+            Back to top
+          </ButtonItem>
+        </PanelSectionRow>
+      </PanelSection>
     </>
   );
 }
