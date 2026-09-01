@@ -30,6 +30,7 @@ BACKUPS = PLUGIN_PARENT / ".hdm-deploy-backups"
 # SteamOS keeps /usr immutable.  /var/lib/handheld-dock-mode is the existing
 # root-owned, mode-0700 HDM runtime authority and survives system updates.
 PUBLIC_KEY = Path("/var/lib/handheld-dock-mode/deploy-public-key.pem")
+SYSTEMCTL = "/usr/bin/systemctl"
 PACKAGE_RE = re.compile(r"HDM-update-([0-9]+(?:\.[0-9]+){2}(?:[-+][A-Za-z0-9.-]+)?)-([0-9a-f]{12})\.zip")
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
 MAX_UNPACKED_BYTES = 96 * 1024 * 1024
@@ -112,6 +113,20 @@ def validate_and_extract(package: Path, temporary_root: Path, expected_version: 
     return extracted
 
 
+def restart_plugin_loader() -> None:
+    """Reload only Decky's plugin service after a completed replacement."""
+    for arguments in (("restart", "plugin_loader.service"), ("is-active", "--quiet", "plugin_loader.service")):
+        result = subprocess.run(
+            [SYSTEMCTL, *arguments],
+            text=True,
+            capture_output=True,
+            timeout=45,
+            check=False,
+        )
+        if result.returncode:
+            raise DeploymentError("plugin loader restart could not be verified")
+
+
 def install(package_name: str, signature_name: str) -> dict[str, str]:
     match = PACKAGE_RE.fullmatch(package_name)
     if match is None or signature_name != f"{package_name}.sig":
@@ -136,11 +151,25 @@ def install(package_name: str, signature_name: str) -> dict[str, str]:
                 os.replace(TARGET, backup)
                 moved_old = True
             os.replace(staged, TARGET)
+            restart_plugin_loader()
         except OSError as error:
             if moved_old and not TARGET.exists() and backup.exists():
                 os.replace(backup, TARGET)
             raise DeploymentError("plugin replacement failed; rollback attempted") from error
-    return {"state": "installed", "version": match.group(1), "revision": match.group(2), "backup": str(backup) if moved_old else "none"}
+        except (DeploymentError, subprocess.SubprocessError) as error:
+            # If the replacement reached the loader but the loader did not
+            # return healthy, restore the exact old tree and retry only that
+            # same fixed service.  Never touch Gamescope or session state.
+            failed = BACKUPS / f"{PLUGIN_NAME}-{match.group(1)}-{match.group(2)}.loader-failed"
+            if moved_old and TARGET.exists() and backup.exists() and not failed.exists():
+                os.replace(TARGET, failed)
+                os.replace(backup, TARGET)
+                try:
+                    restart_plugin_loader()
+                except (DeploymentError, subprocess.SubprocessError):
+                    pass
+            raise DeploymentError("plugin loader restart failed; rollback attempted") from error
+    return {"state": "installed", "version": match.group(1), "revision": match.group(2), "backup": str(backup) if moved_old else "none", "loader": "active"}
 
 
 def main() -> int:

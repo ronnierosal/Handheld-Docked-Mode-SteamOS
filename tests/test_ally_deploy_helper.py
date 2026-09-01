@@ -66,3 +66,10 @@ class AllyDeployHelperTests(unittest.TestCase):
         self.assertNotIn("systemctl", installer)
         self.assertNotIn("gamescope", installer.casefold())
         self.assertNotIn("decky", installer.casefold())
+
+    def test_helper_restarts_only_the_fixed_plugin_loader_after_replacement(self):
+        source = (ROOT / "scripts" / "ally_hdm_deploy_helper.py").read_text(encoding="utf-8")
+        self.assertIn('("restart", "plugin_loader.service")', source)
+        self.assertIn('("is-active", "--quiet", "plugin_loader.service")', source)
+        self.assertIn("plugin loader restart failed; rollback attempted", source)
+        self.assertNotIn("gamescope-session", source.casefold())
