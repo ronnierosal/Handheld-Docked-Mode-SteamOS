@@ -61,6 +61,19 @@ This is a bounded prefix comparison only. It does not prove the recovered
 archive was installed, and it does not replace independent checksum review or
 an explicit rollback decision.
 
+Once both candidate and recovered rollback artifact directories are available,
+check the pair before the supervised D2 checklist:
+
+```text
+python scripts/verify_d2_artifacts.py <candidate-artifact-directory> \
+  <rollback-artifact-directory> \
+  --rollback-revision-prefix e73d249db568
+```
+
+`verified_for_supervised_review` is artifact readiness only. It does not make
+this record stageable until the maintainer confirms the D2 physical and
+lifecycle preconditions.
+
 ## Supervised D2 checklist
 
 1. Obtain or independently verify the rollback archive/provenance matching the

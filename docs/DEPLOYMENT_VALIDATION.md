@@ -112,6 +112,22 @@ Verify manifest, root flag, bundled backend/frontend versions, public RPC
 allowlist, archive paths, and package hash. Compare the complete artifact with
 the rollback candidate.
 
+Before D2, the artifact/provenance portion of that comparison can be checked
+locally as one bounded pair:
+
+```text
+python scripts/verify_d2_artifacts.py <candidate-artifact-directory> \
+  <rollback-artifact-directory> \
+  --rollback-revision-prefix <captured-12-character-revision>
+```
+
+It verifies each archive through the existing package verifier and binds the
+rollback archive to the redacted captured public label. Its only success state
+is `verified_for_supervised_review`: it does not verify that either archive is
+installed, the G1 is disconnected, a player is present, or D2 is authorized.
+Any invalid directory, archive, checksum, metadata, or rollback-label mismatch
+stops locally without exposing paths or raw archive details.
+
 ### D2 — Device baseline, G1 disconnected
 
 With the player available for the initial install:

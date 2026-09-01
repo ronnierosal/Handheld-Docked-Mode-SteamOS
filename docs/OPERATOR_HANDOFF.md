@@ -233,6 +233,12 @@ do not leave a growing queue of completed worktree commits unintegrated.
   artifact is considered for rollback; a match remains only prefix provenance,
   not installation, hardware, or certification evidence. It opens no SSH and
   performs no install, deployment, device, or session action.
+- **D2 paired-artifact readiness checkpoint (local-only):** a bounded verifier
+  now confirms candidate and recovered rollback validation artifacts together,
+  binding the latter to the captured public build label. Its sole success is
+  `verified_for_supervised_review`; no result proves installation, player
+  presence, G1 disconnection, lifecycle health, or D2 authorization. It opens
+  no SSH and makes no device/session change.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
