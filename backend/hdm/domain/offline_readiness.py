@@ -97,6 +97,53 @@ class OfflineEvidenceAdmissionKind(StrEnum):
     REJECT = "reject"
 
 
+class OfflineEvidenceSourceKind(StrEnum):
+    LOCAL_STEAM_METADATA = "local_steam_metadata"
+    LOCAL_LAUNCHER_METADATA = "local_launcher_metadata"
+
+
+class OfflineEvidenceField(StrEnum):
+    INSTALL = "install"
+    DOWNLOAD = "download"
+    ENTITLEMENT = "entitlement"
+    CLOUD_SAVE = "cloud_save"
+    LOCAL_BLOCKERS = "local_blockers"
+    ONLINE_REQUIREMENTS = "online_requirements"
+
+
+class OfflineEvidenceSourceReviewKind(StrEnum):
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+@dataclass(frozen=True, slots=True)
+class OfflineEvidenceSourceDeclaration:
+    """Review-only declaration; it carries no path, title, AppID, or command."""
+
+    kind: OfflineEvidenceSourceKind
+    read_only: bool
+    uses_network: bool
+    persists_data: bool
+    identity_minimized: bool
+    fields: tuple[OfflineEvidenceField, ...]
+
+    def __post_init__(self) -> None:
+        if not self.fields or len(self.fields) > len(OfflineEvidenceField):
+            raise ValueError("offline evidence source fields are invalid")
+        if len(set(self.fields)) != len(self.fields):
+            raise ValueError("offline evidence source fields are duplicated")
+
+
+@dataclass(frozen=True, slots=True)
+class OfflineEvidenceSourceReview:
+    kind: OfflineEvidenceSourceReviewKind
+    reason_code: str
+
+    def __post_init__(self) -> None:
+        if self.reason_code not in PUBLIC_REASON_CODES:
+            raise ValueError("offline evidence source review reason is not public")
+
+
 @dataclass(frozen=True, slots=True)
 class OfflineEvidenceCollectionContract:
     """Review and cost declaration for a future local evidence source.
@@ -258,6 +305,38 @@ def admit_offline_evidence_collection(
         OfflineEvidenceAdmissionKind.ADMIT,
         "local_readiness_confirmed",
     )
+
+
+def review_offline_evidence_source(
+    declaration: OfflineEvidenceSourceDeclaration,
+) -> OfflineEvidenceSourceReview:
+    """Approve only a local, read-only, identity-minimized declared source."""
+    if not declaration.read_only or declaration.uses_network or declaration.persists_data:
+        return OfflineEvidenceSourceReview(
+            OfflineEvidenceSourceReviewKind.REJECTED,
+            "offline_evidence_privacy_unreviewed",
+        )
+    if not declaration.identity_minimized:
+        return OfflineEvidenceSourceReview(
+            OfflineEvidenceSourceReviewKind.REJECTED,
+            "offline_evidence_privacy_unreviewed",
+        )
+    return OfflineEvidenceSourceReview(
+        OfflineEvidenceSourceReviewKind.APPROVED,
+        "local_readiness_confirmed",
+    )
+
+
+def admit_reviewed_offline_evidence_source(
+    declaration: OfflineEvidenceSourceDeclaration,
+    contract: OfflineEvidenceCollectionContract,
+    game_state: GameState,
+) -> OfflineEvidenceAdmission:
+    """Compose source review with the existing bounded collection admission."""
+    review = review_offline_evidence_source(declaration)
+    if review.kind is OfflineEvidenceSourceReviewKind.REJECTED:
+        return OfflineEvidenceAdmission(OfflineEvidenceAdmissionKind.REJECT, review.reason_code)
+    return admit_offline_evidence_collection(contract, game_state)
 
 
 def classify_fresh_offline_readiness(

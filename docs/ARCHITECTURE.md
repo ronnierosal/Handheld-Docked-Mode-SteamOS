@@ -88,6 +88,12 @@ portable-recovery categories to deduplicated calm wording only. It owns neither
 evidence collection nor notification delivery, and cannot make a recovery or
 hardware claim. See [Recovery explanation policy](RECOVERY_EXPLANATION_POLICY.md).
 
+Offline Readiness source review composes a local/read-only/non-networked,
+identity-minimized declaration with the existing cost/freshness/game-aware
+admission policy. It is a pure declaration review, not a Steam/launcher
+collector or delivery mechanism. See
+[Offline Readiness source review boundary](OFFLINE_EVIDENCE_SOURCE_REVIEW.md).
+
 Future game configuration is bounded by a pure Game Adapter change contract.
 Only a reviewed adapter can begin a typed, allowlisted setting change. The
 future mechanism must compare the expected opaque revision, create an exact

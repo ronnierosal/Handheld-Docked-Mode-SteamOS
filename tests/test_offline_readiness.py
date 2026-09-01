@@ -18,14 +18,20 @@ from hdm.domain.offline_readiness import (  # noqa: E402
     OfflineReadinessObservation,
     OfflineEvidenceAdmissionKind,
     OfflineEvidenceCollectionContract,
+    OfflineEvidenceField,
+    OfflineEvidenceSourceDeclaration,
+    OfflineEvidenceSourceKind,
+    OfflineEvidenceSourceReviewKind,
     OfflineReadinessAssessment,
     OfflineReadinessStatus,
     OnlineCheckRequirement,
     SteamEntitlementState,
     admit_offline_evidence_collection,
+    admit_reviewed_offline_evidence_source,
     classify_fresh_offline_readiness,
     classify_offline_readiness,
     offline_readiness_to_public_dict,
+    review_offline_evidence_source,
 )
 from hdm.domain.models import GameState  # noqa: E402
 
@@ -53,7 +59,51 @@ def contract(**changes) -> OfflineEvidenceCollectionContract:
     return replace(value, **changes)
 
 
+def source(**changes) -> OfflineEvidenceSourceDeclaration:
+    values = {
+        "kind": OfflineEvidenceSourceKind.LOCAL_STEAM_METADATA,
+        "read_only": True,
+        "uses_network": False,
+        "persists_data": False,
+        "identity_minimized": True,
+        "fields": (
+            OfflineEvidenceField.INSTALL,
+            OfflineEvidenceField.DOWNLOAD,
+            OfflineEvidenceField.ENTITLEMENT,
+            OfflineEvidenceField.CLOUD_SAVE,
+        ),
+    }
+    values.update(changes)
+    return OfflineEvidenceSourceDeclaration(**values)
+
+
 class OfflineReadinessTests(unittest.TestCase):
+    def test_source_review_approves_only_local_read_only_minimized_declarations(self):
+        review = review_offline_evidence_source(source())
+        self.assertEqual(review.kind, OfflineEvidenceSourceReviewKind.APPROVED)
+        self.assertEqual(review.reason_code, "local_readiness_confirmed")
+        for changes in (
+            {"read_only": False},
+            {"uses_network": True},
+            {"persists_data": True},
+            {"identity_minimized": False},
+        ):
+            with self.subTest(changes=changes):
+                rejected = review_offline_evidence_source(source(**changes))
+                self.assertEqual(rejected.kind, OfflineEvidenceSourceReviewKind.REJECTED)
+                self.assertEqual(rejected.reason_code, "offline_evidence_privacy_unreviewed")
+
+    def test_source_review_composes_with_cost_and_game_admission_without_collecting(self):
+        admitted = admit_reviewed_offline_evidence_source(source(), contract(), GameState.IDLE)
+        self.assertEqual(admitted.kind, OfflineEvidenceAdmissionKind.ADMIT)
+        deferred = admit_reviewed_offline_evidence_source(source(), contract(), GameState.RUNNING)
+        self.assertEqual(deferred.kind, OfflineEvidenceAdmissionKind.DEFER)
+        rejected = admit_reviewed_offline_evidence_source(
+            source(uses_network=True), contract(), GameState.IDLE
+        )
+        self.assertEqual(rejected.kind, OfflineEvidenceAdmissionKind.REJECT)
+        self.assertEqual(rejected.reason_code, "offline_evidence_privacy_unreviewed")
+
     def test_complete_local_evidence_is_ready_to_try_not_a_guarantee(self):
         assessment = classify_offline_readiness(ready_evidence())
         self.assertEqual(assessment.status, OfflineReadinessStatus.READY_TO_TRY_OFFLINE)

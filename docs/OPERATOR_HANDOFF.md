@@ -214,6 +214,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   reason lists, and unknown fields are discarded; malformed/future values remain
   “Not connected.” This validates no producer and adds no collector, RPC,
   storage, action, timer, deployment, or hardware claim.
+- **Offline source-review checkpoint (pure local contract):** a future Offline
+  Readiness source must first declare only local Steam/launcher metadata,
+  read-only/no-network/no-persistence behavior, identity minimization, and a
+  bounded categorical field set. Approval composes with existing cost,
+  freshness, and game-aware admission; rejection is categorical and fail-closed.
+  This opens no files and adds no collector, process call, persistence, polling,
+  UI delivery, launch authority, deployment, or hardware action.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one
