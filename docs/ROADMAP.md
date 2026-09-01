@@ -39,7 +39,7 @@ No broader label may be inferred from a narrower one.
 | Typed placement/workflow/capability and journal contracts | Implemented and unit tested | Decky request facade and mechanism wiring remain gated. |
 | Atomic fixed-path transition journal store | Implemented and unit tested; constructed for process release | Presentation/sleep orchestration wiring and supervised persistence proof remain. |
 | Transition snapshot replay and failure injection | Implemented and simulated | No production display/GPU mechanism endpoint exists. |
-| Remote read-only capture harness | Implemented and hardware tested unprivileged | Its fixed root read-only mode is locally verified but unavailable on the current Ally because non-interactive sudo is refused. Neither mode can observe the Decky-owned sleep lease. |
+| Remote read-only capture harness | Implemented and hardware tested unprivileged; captures the static archive build label and compares its short revision only against a clean local checkout, alongside fixed-file hashes | Its fixed root read-only mode is locally verified but unavailable on the current Ally because non-interactive sudo is refused. Neither mode can observe the Decky-owned sleep lease. Build metadata is provenance only, not hardware validation. |
 | Guarded process-release approvals | Implemented and simulated in Decky-native flow | Supervised disposable-process proof remains. |
 | Process-release signal/re-scan runner, audit, and journal | Implemented and simulated | Supervised mechanism proof remains; hardware removal authority is always false. |
 | Exact-instance Linux pidfd signal adapter | Implemented, unit tested, and guarded by Decky orchestration | Supervised disposable-process proof remains. |
