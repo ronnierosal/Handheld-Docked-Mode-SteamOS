@@ -185,7 +185,7 @@ function showPresentationPreparationConfirmation(
     >
       <div style={{ fontSize: "13px", lineHeight: "18px" }}>
         <p>
-          Continue only with the G1 disconnected, no game running, and the Ally screen visible.
+          Continue only with the eGPU disconnected, no game running, and the handheld screen visible.
         </p>
         <p>
           This installs HDM&apos;s reversible Gamescope startup integration and reloads the user
@@ -239,8 +239,8 @@ function showProcessReleaseConfirmation(
           <p>{preview.protected_client_count} protected client(s) will not be closed.</p>
         )}
         <p>
-          Clearing software clients does not authorize physical G1 removal. Shut down before
-          disconnecting the G1.
+          Clearing software clients does not authorize physical eGPU removal. Shut down before
+          disconnecting the eGPU.
         </p>
       </div>
     </ConfirmModal>,
@@ -379,12 +379,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       }
       setProcessMessage(
         status.action_required
-          ? "A prior process-release attempt needs acknowledgement. Do not disconnect the G1."
+          ? "A prior process-release attempt needs acknowledgement. Do not disconnect the eGPU."
           : `Previous process-release result: ${label(status.code)}.`,
       );
     }).catch(() => {
       if (!disposed) {
-        setProcessMessage("Process-release safety state is unavailable. Do not disconnect the G1.");
+        setProcessMessage("Process-release safety state is unavailable. Do not disconnect the eGPU.");
       }
     });
     return () => {
@@ -580,8 +580,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       inactiveToastShown.current = false;
     } else if (!inactiveToastShown.current) {
       toaster.toast({
-        title: "G1 sleep protection is inactive",
-        body: sleepGuard.error || "Do not put the handheld to sleep while the G1 is attached.",
+        title: "eGPU sleep protection is inactive",
+        body: sleepGuard.error || "Do not put the handheld to sleep while an eGPU is attached.",
         critical: true,
         duration: 10000,
       });
@@ -589,7 +589,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
     if (!sleepWarningHidden && !warningToastShown.current) {
       toaster.toast({
-        title: gameUsesEgpu ? "Sleep blocked while game uses G1" : "Sleep blocked while G1 is attached",
+        title: gameUsesEgpu ? "Sleep blocked while game uses eGPU" : "Sleep blocked while eGPU is attached",
         body: "This hardware is known to wake immediately after sleep. Restore Portable and disconnect only after shutdown.",
         duration: 10000,
       });
@@ -761,7 +761,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setForceReceiptToken(canOfferForce(outcome) ? outcome.force_receipt_token : "");
       await refresh(true);
     } catch {
-      setProcessMessage("Process release failed closed. Do not disconnect the G1.");
+      setProcessMessage("Process release failed closed. Do not disconnect the eGPU.");
       if (phase === "force") {
         setForceReceiptToken("");
       }
@@ -782,7 +782,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         setProcessMessage(
           preview.blockers.length > 0
             ? `Process release blocked: ${preview.blockers.map(label).join(", ")}.`
-            : "No eligible ordinary user process is holding the G1.",
+            : "No eligible ordinary user process is holding the eGPU.",
         );
         return;
       }
@@ -922,7 +922,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
               ? "Active"
               : "Blocked; warning unavailable"
             : preflightStatus.state === "inactive"
-              ? "Standby — G1 verified absent"
+              ? "Standby — eGPU verified absent"
               : "Unavailable"}
         />
         {preflightStatus.error && (
@@ -934,8 +934,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
               <>
                 <PanelSectionRow>
                   {gameUsesEgpu
-                    ? "A game is using the G1. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
-                    : "The attached G1 is known to wake this handheld immediately after sleep. Sleep remains blocked until the G1 is verified absent."}
+                    ? "A game is using the eGPU. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
+                    : "The attached eGPU is known to wake this handheld immediately after sleep. Sleep remains blocked until the eGPU is verified absent."}
                 </PanelSectionRow>
                 <PanelSectionRow>
                   <ButtonItem layout="below" onClick={hideSleepWarning}>
@@ -1004,7 +1004,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         {processMessage && <PanelSectionRow>{processMessage}</PanelSectionRow>}
         <PanelSectionRow>
           Process closure always requires confirmation. Software readiness never authorizes
-          physical G1 removal.
+          physical eGPU removal.
         </PanelSectionRow>
       </PanelSection>
 

@@ -54,6 +54,11 @@ must never guess a healthy experience merely because a device is present.
 Detailed diagnostics remain optional and technical evidence stays out of the
 happy path.
 
+Player-facing wording is capability-based: **handheld**, **eGPU**, and
+**external display**, rather than a particular manufacturer or model. Exact
+device/eGPU names belong only in profile detection, diagnostics evidence, and
+certification documentation.
+
 Physical controls and UI affordances resolve to typed logical requests such as
 Safe Undock, Return to Handheld, Recovery, or Change Performance Profile. They
 must all enter the same authoritative transition engine. A controller hotkey

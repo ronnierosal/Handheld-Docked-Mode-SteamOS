@@ -140,7 +140,10 @@ test("overlay exposes useful categorical state without raw identities", () => {
     acknowledgement_required: false,
   });
   const text = JSON.stringify(rows);
-  assert.match(text, /asus-rog-ally-x/);
+  assert.match(text, /Device profile/);
+  assert.match(text, /recognized/);
+  assert.doesNotMatch(text, /asus-rog-ally-x/);
+  assert.doesNotMatch(text, /gpd-g1-rx7600mxt-titan-ridge/);
   assert.match(text, /test\.blocker/);
   assert.match(text, /sample-client/);
   assert.match(text, /drm render/);

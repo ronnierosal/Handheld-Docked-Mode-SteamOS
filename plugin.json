@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["system", "hardware", "diagnostics"],
-    "description": "SteamOS dock diagnostics, G1 sleep safety, and guarded user-approved eGPU client release.",
+    "description": "SteamOS dock diagnostics, eGPU sleep safety, and guarded user-approved eGPU client release.",
     "image": ""
   }
 }

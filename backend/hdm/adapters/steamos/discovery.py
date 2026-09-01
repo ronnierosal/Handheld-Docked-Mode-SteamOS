@@ -236,7 +236,7 @@ class SteamOsDiscovery:
             active=status.active,
             confidence=confidence,
             reason=(
-                "Sleep is blocked because the attached GPD G1 is known to wake immediately."
+                "Sleep is blocked because the attached eGPU is known to wake this handheld immediately."
                 if required
                 else ""
             ),
@@ -441,7 +441,7 @@ class SteamOsDiscovery:
         blockers: list[Blocker] = []
         if not matches_ally_x(host):
             blockers.append(
-                Blocker("host_profile_unknown", "Host is not a certified Ally X profile.")
+                Blocker("host_profile_unknown", "This handheld is not a certified hardware profile.")
             )
         if not cards:
             blockers.append(
@@ -497,7 +497,7 @@ class SteamOsDiscovery:
             blockers.append(
                 Blocker(
                     "egpu_clients_active",
-                    f"{len(non_game_clients)} process(es) are using certified eGPU resources.",
+                    f"{len(non_game_clients)} process(es) are using eGPU resources.",
                 )
             )
         if disconnect.storage_in_use:
@@ -512,14 +512,14 @@ class SteamOsDiscovery:
                 Blocker(
                     "sleep_guard_inactive",
                     sleep_guard.error
-                    or "The G1 is attached but the sleep inhibitor is not active.",
+                    or "An eGPU is attached but the sleep inhibitor is not active.",
                 )
             )
         if sleep_guard.active and not sleep_guard.required:
             blockers.append(
                 Blocker(
                     "sleep_guard_release_pending",
-                    "The sleep inhibitor is still active while G1 absence is reconciled.",
+                    "The sleep inhibitor is still active while eGPU absence is reconciled.",
                 )
             )
         if len([gpu for gpu in gpus if gpu.selected_for_render is True]) != 1:

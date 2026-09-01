@@ -156,7 +156,7 @@ class DeckyContractTests(unittest.TestCase):
             5,
         )
         self.assertIn('strOKButtonText={force ? "Force close" : "Close gracefully"}', source)
-        self.assertIn("Clearing software clients does not authorize physical G1 removal", source)
+        self.assertIn("Clearing software clients does not authorize physical eGPU removal", source)
 
     def test_decky_archive_has_one_top_level_plugin_directory(self):
         self.assertEqual(

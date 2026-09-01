@@ -16,14 +16,15 @@ Move between handheld and TV gaming with player-friendly modes while HDM verifie
 
 > [!IMPORTANT]
 > HDM is in active development and is not a general-availability release.
-> Version 0.2.0 exposes diagnostics, G1 sleep protection, reviewed support
+> Version 0.2.0 exposes diagnostics, eGPU sleep protection, reviewed support
 > bundles, supervised integration preparation, and explicitly approved guarded
 > release of eligible non-game eGPU clients. It does **not** expose a display/GPU
 > transition or authorize physical live eGPU removal.
 
 > [!CAUTION]
-> Physical live removal of the GPD G1 is unsupported. Restore internal
-> operation and shut the handheld down before disconnecting it.
+> Physical live removal is unsupported on the current certified hardware.
+> Restore internal operation and shut the handheld down before disconnecting an
+> eGPU.
 
 ## 📖 About
 
@@ -39,10 +40,10 @@ as unknown or degraded and blocks the action.
 ### ✨ What works today
 
 - 🔎 Read-only discovery of the host, DRM devices and connectors, Gamescope,
-  Steam game scopes, PCI topology, USB4 topology, and exact G1 clients
+  Steam game scopes, PCI topology, USB4 topology, and exact eGPU clients
 - 🧭 Confidence-aware placement inference without hard-coded card numbers,
   connector suffixes, or PCI bus addresses
-- 🛡️ Two-layer sleep protection while the certified G1 is attached: a bounded
+- 🛡️ Two-layer sleep protection while a supported eGPU is attached: a bounded
   login1 inhibitor and Steam's native preflight blocker
 - 📦 Preview, copy, and token-approved save of a bounded, redacted support bundle
 - 📊 Adaptive Decky polling, collection timings, and an optional troubleshooting
@@ -65,16 +66,16 @@ between production-safe features and dormant or simulated transition work.
 | Capability | Evidence | Availability |
 |---|---|---|
 | Decky lifecycle and typed RPC | Implemented and hardware tested | Available |
-| Read-only Ally X / G1 discovery | Implemented and hardware tested | Available |
+| Read-only certified-profile discovery | Implemented and hardware tested | Available |
 | Portable placement inference | Implemented and hardware tested | Available |
-| G1 sleep inhibitor and Steam preflight | Implemented and hardware tested | Available; persistent warning needs one final supervised visible proof |
+| eGPU sleep inhibitor and Steam preflight | Implemented and hardware tested | Available; persistent warning needs one final supervised visible proof |
 | Redacted support preview, one-shot game/GPU evidence, and approved save | Implemented and simulated | Available; new evidence and controller-visible save acceptance are pending hardware proof |
 | Docked-iGPU natural-exit observer | Implemented and simulated | Read-only categorical status available in troubleshooting; hardware proof pending |
 | Temporary verbose diagnostics | Implemented and simulated | Explicit controller consent, bounded countdown, disable control, and reboot reset available; visible acceptance pending |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
 | Portable ↔ TV Docked transition engine | Implemented and simulated | Not wired to Decky; no transition RPC exists |
 | Guarded process release | Implemented and simulated | Decky-native experimental flow; supervised disposable-process proof pending |
-| Physical G1 live removal | Known unsafe/unsupported | Not available |
+| Physical eGPU live removal | Known unsafe/unsupported on the current certified profile | Not available |
 | Automatic docking | Planned | Not available |
 
 The next release-facing gate is supervised validation of the corrected blocked-
@@ -167,7 +168,7 @@ before any Decky installation; it does not contact or modify a handheld.
 
 Hardware validation must follow the staged
 [deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md), beginning
-with one clean, provenance-recorded package and the G1 disconnected.
+with one clean, provenance-recorded package and the eGPU disconnected.
 
 ## 🛠️ Development
 
@@ -213,11 +214,11 @@ Emit a local SteamOS snapshot:
 PYTHONPATH=backend python -m hdm.cli
 ```
 
-Capture bounded, redacted state from an installed Ally without writing a remote
+Capture bounded, redacted state from an installed handheld without writing a remote
 file:
 
 ```bash
-python scripts/remote_capture.py --host <ally-ip> --identity-file <ssh-key>
+python scripts/remote_capture.py --host <handheld-ip> --identity-file <ssh-key>
 ```
 
 The production plugin exposes no general-purpose command endpoint. Root access

@@ -63,7 +63,12 @@ export function diagnosticOverlayRows(
         : "unavailable",
     },
     { name: "Snapshot schema", value: String(snapshot.schema_version) },
-    { name: "Device profile", value: snapshot.host_profile },
+    {
+      name: "Device profile",
+      value: profiles.host.status === "exact"
+        ? "recognized"
+        : humanize(profiles.host.status),
+    },
     { name: "Support tier", value: humanize(snapshot.support_tier) },
     {
       name: "Profile evidence",

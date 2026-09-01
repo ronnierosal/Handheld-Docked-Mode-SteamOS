@@ -85,7 +85,7 @@ export function warningForBlockedAttempt(
   ) {
     return {
       kind: "game",
-      title: "Sleep blocked — game is using the G1",
+      title: "Sleep blocked — game is using the eGPU",
       body: "Close the game and restore Portable before disconnecting the eGPU. The sleep request was not started.",
       critical: true,
     };
@@ -98,7 +98,7 @@ export function warningForBlockedAttempt(
   ) {
     return {
       kind: "standard",
-      title: "Sleep blocked while G1 is attached",
+      title: "Sleep blocked while an eGPU is attached",
       body: "This eGPU is known to wake the handheld immediately. Restore Portable and shut down before disconnecting it.",
       critical: false,
     };
@@ -107,7 +107,7 @@ export function warningForBlockedAttempt(
   return {
     kind: "unknown",
     title: "Sleep blocked — safety state is unknown",
-    body: "HDM could not verify that the G1 is safely absent, so the sleep request was not started.",
+    body: "HDM could not verify that the eGPU is safely absent, so the sleep request was not started.",
     critical: true,
   };
 }

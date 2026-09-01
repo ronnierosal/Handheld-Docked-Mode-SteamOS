@@ -58,14 +58,14 @@ export function connectionProgress(
   const { snapshot, inference } = payload;
   if (!snapshot.sleep_guard.required) {
     return {
-      label: "Waiting for G1",
-      detail: "No GPD G1 candidate is attached.",
+      label: "Waiting for eGPU",
+      detail: "No compatible eGPU is attached.",
       settling: false,
     };
   }
   if (snapshot.support_tier !== "certified") {
     return {
-      label: "G1 verification blocked",
+      label: "eGPU verification blocked",
       detail: firstHardwareBlocker(payload),
       settling: true,
     };
@@ -76,7 +76,7 @@ export function connectionProgress(
   );
   if (external.length === 0) {
     return {
-      label: "G1 detected",
+      label: "eGPU detected",
       detail: "Waiting for a connected TV output.",
       settling: false,
     };

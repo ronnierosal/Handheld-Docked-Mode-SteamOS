@@ -39,7 +39,7 @@ function payload({
 
 test("detached state polls for new hardware once per second", () => {
   const value = payload();
-  assert.equal(connectionProgress(value).label, "Waiting for G1");
+  assert.equal(connectionProgress(value).label, "Waiting for eGPU");
   assert.equal(refreshDelayForSnapshot(value), DISCOVERY_REFRESH_MS);
 });
 
@@ -49,7 +49,7 @@ test("incomplete identity and TV evidence use the settling cadence", () => {
     support: "unsupported",
     blockers: [{ code: "egpu_identity_unverified", message: "Exact topology incomplete." }],
   });
-  assert.equal(connectionProgress(incomplete).label, "G1 verification blocked");
+  assert.equal(connectionProgress(incomplete).label, "eGPU verification blocked");
   assert.match(connectionProgress(incomplete).detail, /topology incomplete/i);
   assert.equal(refreshDelayForSnapshot(incomplete), SETTLING_REFRESH_MS);
 
@@ -62,9 +62,9 @@ test("incomplete identity and TV evidence use the settling cadence", () => {
   assert.equal(refreshDelayForSnapshot(tv), SETTLING_REFRESH_MS);
 });
 
-test("verified G1 and TV states expose progressive labels", () => {
+test("verified eGPU and TV states expose progressive labels", () => {
   const g1 = payload({ required: true, active: true });
-  assert.equal(connectionProgress(g1).label, "G1 detected");
+  assert.equal(connectionProgress(g1).label, "eGPU detected");
   assert.equal(refreshDelayForSnapshot(g1), DISCOVERY_REFRESH_MS);
 
   const display = { kind: "external", connected: true, active: false, edid_ready: true };
