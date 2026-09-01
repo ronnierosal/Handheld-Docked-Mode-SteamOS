@@ -265,7 +265,11 @@ and run the full verification matrix before opening a pull request.
 Hardware-affecting changes require an explicit milestone decision, supervised
 execution, rollback coverage, and redacted before/live/after evidence.
 
-## 📜 License
+## 📜 Licensing
 
-Handheld Dock Mode is available under the [MIT License](LICENSE). See
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party notices.
+HDM's community distribution is licensed under the
+[GNU General Public License version 3 or later](LICENSE) (`GPL-3.0-or-later`).
+Commercial/OEM integration, redistribution, bundling, customization, support,
+or branding under terms outside GPLv3+ requires a separate negotiated license;
+see [licensing](docs/LICENSING.md). Third-party notices remain in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -79,6 +79,15 @@ The expanded product model is accepted with these boundaries:
    additional typed observations and may each be unknown.
 5. **Compatibility records never self-certify.** Game and hardware test results
    require intentional review before promotion to Verified or Certified.
+6. **Performance is a runtime budget.** HDM prefers event-driven observation;
+   any required polling has a bounded cadence, does not overlap expensive
+   scans, and defers nonessential work during an active game. Telemetry is a
+   shared, lightweight evidence source rather than a collection of optimization
+   loops.
+7. **Health and controls are independent contracts.** Placement does not imply
+   a usable display, controller, audio route, or eGPU link. Future physical
+   button/controller delivery maps to typed logical requests and enters the
+   same transition engine as Decky UI actions.
 
 ## Safety conflict: current G1 removal
 
@@ -351,6 +360,25 @@ Exit: privacy/security tests pass; no client credentials or silent upload.
 - Add profiles one combination at a time.
 - Make non-eGPU display, controller, and audio features independently useful.
 - Never promote unknown hardware through similarity alone.
+
+### Later foundation backlog — performance and game experience
+
+These items are intentionally deferred until the safe transition/recovery and
+hardware-validation gates above are closed. They must extend the existing core;
+they are not authorization for a separate optimizer or launcher.
+
+- Add a typed health aggregation contract over independently verified display,
+  audio, controller, session, storage, and eGPU/link evidence.
+- Define a single low-overhead telemetry port and performance budget, with
+  opt-in diagnostics separated from normal runtime observation.
+- Define logical controller-action adapters and a controller-driven Safe Undock
+  entry point that calls the canonical request facade only.
+- Add device mode-profile data (including display preference separately from
+  game render target) without selecting a display or changing a game setting.
+- Add a game-adapter interface with backup, atomic change, validation, and
+  rollback requirements before any game configuration mechanism is approved.
+- Research community-settings licensing/attribution and Steam integration
+  boundaries before collecting, redistributing, or presenting recommendations.
 
 ## Smallest safe next milestone
 

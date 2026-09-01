@@ -38,6 +38,33 @@ DETECT → VALIDATE → PLAN → PREPARE → APPLY → VERIFY → COMMIT
 
 Manual and automatic requests use the same policy and transition engine.
 
+## Experience and runtime principles
+
+HDM is performance-first: it remains event-driven and dormant whenever no
+transition, fault, or explicit player request requires work. Adaptive polling
+is permitted only where an event source is unavailable, must have bounded
+cadence and cost, and must defer nonessential analysis while a game is active.
+Any measurable game-performance regression attributable to HDM is a defect.
+
+Observed placement is not a complete player experience. HDM's target model uses
+a separate health dimension: **Ready**, **Recovering**, **Degraded**, or
+**Attention Required**. Its future typed aggregation will report whether
+verified display, input, audio, eGPU/link, and session evidence is usable; it
+must never guess a healthy experience merely because a device is present.
+Detailed diagnostics remain optional and technical evidence stays out of the
+happy path.
+
+Physical controls and UI affordances resolve to typed logical requests such as
+Safe Undock, Return to Handheld, Recovery, or Change Performance Profile. They
+must all enter the same authoritative transition engine. A controller hotkey
+is therefore a future delivery adapter, not a parallel detach implementation.
+
+Current scope does not include TDP control, automatic graphics tuning, game
+configuration writes, Steam Library badges, travel automation, or controller
+wake. Future work must place those behind narrow telemetry, device-profile,
+and game-adapter boundaries and preserve the same recovery and explicit-consent
+rules.
+
 ## Decky-native delivery
 
 HDM is a Decky Loader-native plugin. Its player interface uses Decky's Quick
