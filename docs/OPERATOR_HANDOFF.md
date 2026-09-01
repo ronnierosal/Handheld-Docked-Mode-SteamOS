@@ -181,6 +181,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
   game impact Unknown. It creates no collector, poller, persistence, UI
   delivery, Auto TDP, game/process intervention, device action, or performance
   conclusion; real supported-profile measurement remains required.
+- **Link-instability checkpoint (pure two-sample evidence):** two fresh
+  same-binding applicable observed Up/Down facts can report only stable or
+  state-changed link evidence; Unknown, unavailable, stale, or changed-binding
+  input is insufficient. Public output drops all attachment/sample identities.
+  It does not diagnose cable/link quality, performance, removal, recovery, or
+  certification and has no collector, scheduler, notification, or action path.
+  Hardware link-quality validation remains required.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

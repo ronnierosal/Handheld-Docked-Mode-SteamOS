@@ -73,6 +73,11 @@ reports identity-free bounded cost only when fresh and within the declared
 budget, labels game impact Unknown, and cannot authorize any action. See
 [HDM overhead measurement](PERFORMANCE_MEASUREMENT.md).
 
+The link-instability assessment separately compares exactly two fresh
+opaque-bound observed Up/Down link facts. It exposes only categorical state
+change/stability evidence and has no quality, performance, recovery, removal,
+or action authority. See [Link-instability evidence](LINK_INSTABILITY.md).
+
 Future game configuration is bounded by a pure Game Adapter change contract.
 Only a reviewed adapter can begin a typed, allowlisted setting change. The
 future mechanism must compare the expected opaque revision, create an exact
