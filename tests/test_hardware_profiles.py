@@ -126,6 +126,20 @@ class HardwareProfileTests(unittest.TestCase):
         self.assertFalse(result.verified)
         self.assertIn("subtree", result.reason)
 
+    def test_partial_pci_or_usb4_enumeration_is_candidate_present(self):
+        partial_pci = match_gpd_g1((), g1_records(), ())
+        partial_usb4 = match_gpd_g1(
+            (),
+            (),
+            (Usb4DeviceRecord("0-2", "Intel", "Tapex Creek", True, "a" * 64),),
+        )
+
+        for result in (partial_pci, partial_usb4):
+            with self.subTest(result=result):
+                self.assertTrue(result.detected)
+                self.assertFalse(result.verified)
+                self.assertIn("incomplete", result.reason)
+
     def test_rejects_an_extra_authorized_usb4_device(self):
         card = DrmCardRecord("card9", GPU_BDF, "0x1002", "0x7480", False, "amdgpu")
         usb4 = (

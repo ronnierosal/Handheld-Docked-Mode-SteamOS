@@ -105,6 +105,9 @@ class PresentationConfigStore:
                 internal_connector=internal[0].connector,
                 external_connector=external[0].connector,
                 vendor_device=gpu[0].vendor_device,
+                egpu_binding_sha256=hashlib.sha256(
+                    f"{boot_id}:{binding.egpu_stable_id}".encode("utf-8")
+                ).hexdigest(),
             )
         elif target is PlacementState.DOCKED_IGPU:
             config = GamescopeLaunchConfig(
@@ -113,6 +116,9 @@ class PresentationConfigStore:
                 internal_connector=internal[0].connector,
                 external_connector=external[0].connector,
                 vendor_device=internal_gpu[0].vendor_device,
+                egpu_binding_sha256=hashlib.sha256(
+                    f"{boot_id}:{binding.egpu_stable_id}".encode("utf-8")
+                ).hexdigest(),
             )
         else:
             raise ValueError("presentation target is unsupported")

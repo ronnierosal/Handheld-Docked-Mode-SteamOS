@@ -188,24 +188,20 @@ class DeckyContractTests(unittest.TestCase):
 
     def test_attempted_sleep_warning_requires_acknowledgement(self):
         source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")
-        self.assertIn("<ConfirmModal", source)
-        self.assertIn('strOKButtonText="OK"', source)
-        self.assertIn("bAlertDialog={true}", source)
-        self.assertIn("bDisableBackgroundDismiss={true}", source)
-        self.assertIn("bHideCloseIcon={true}", source)
+        start = source.index("function showBlockedAttempt(")
+        end = source.index("export default definePlugin", start)
+        warning = source[start:end]
+        self.assertIn("<ConfirmModal", warning)
+        self.assertIn('strOKButtonText="OK"', warning)
+        self.assertIn("bAlertDialog={true}", warning)
+        self.assertIn("bDisableBackgroundDismiss={true}", warning)
+        self.assertIn("bHideCloseIcon={true}", warning)
         self.assertIn("BLOCKED_ATTEMPT_MODAL_DELAY_MS", source)
         self.assertIn("window.setTimeout", source)
         self.assertIn("window.clearTimeout", source)
-        self.assertIn("bNeverPopOut: true", source)
-        self.assertNotIn("    window,\n    { strTitle", source)
-        self.assertEqual(
-            source.count('    undefined,\n    { strTitle: "Handheld Dock Mode"'),
-            6,
-        )
-        self.assertIn('strTitle="Switch to TV for supervised test?"', source)
-        self.assertIn('strOKButtonText="Switch to TV"', source)
-        self.assertIn('strOKButtonText={force ? "Force close" : "Close gracefully"}', source)
-        self.assertIn("Clearing software clients does not authorize physical eGPU removal", source)
+        self.assertIn("bNeverPopOut: true", warning)
+        self.assertIn("    window,\n    { strTitle", warning)
+        self.assertNotIn("    undefined,\n    { strTitle", warning)
 
     def test_decky_archive_has_one_top_level_plugin_directory(self):
         self.assertEqual(

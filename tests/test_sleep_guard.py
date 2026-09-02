@@ -19,6 +19,7 @@ from hdm.adapters.steamos.commands import (  # noqa: E402
     SleepInhibitorProcess,
 )
 from hdm.adapters.steamos.drm import DrmCardRecord  # noqa: E402
+from hdm.adapters.steamos.pci import Usb4DeviceRecord  # noqa: E402
 from hdm.adapters.steamos.host import HostRecord  # noqa: E402
 from hdm.domain.models import EgpuPresence, SleepGuardAction  # noqa: E402
 from hdm.domain.sleep_policy import decide_sleep_guard  # noqa: E402
@@ -39,6 +40,13 @@ class FixedTopology:
 
     def scan_usb4(self):
         return ()
+
+
+class PartialG1Topology(FixedTopology):
+    def scan_usb4(self):
+        return (
+            Usb4DeviceRecord("0-2", "Intel", "Tapex Creek", True, "a" * 64),
+        )
 
 
 class FakeProcess:
@@ -94,6 +102,15 @@ class G1SleepGuardHardwareDiscoveryTests(unittest.TestCase):
             return_value=GpdG1Match(True, False, reason="incomplete fixture"),
         ):
             self.assertEqual(discovery.observe_presence(), EgpuPresence.PRESENT)
+
+    def test_partial_usb4_candidate_is_not_treated_as_verified_absence(self):
+        discovery = G1SleepGuardHardwareDiscovery(
+            drm=Fixed((self.INTERNAL,)),
+            pci_usb4=PartialG1Topology(),
+            host=Fixed(self.ALLY),
+        )
+
+        self.assertEqual(discovery.observe_presence(), EgpuPresence.PRESENT)
 
     def test_verified_absence_releases_and_missing_host_evidence_holds(self):
         supported = G1SleepGuardHardwareDiscovery(

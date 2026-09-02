@@ -265,16 +265,17 @@ The application service depends only on narrow ports. Decky exposes only its
 read-only preview, explicit approval, and token-consuming preparation methods;
 none can request a Gamescope restart or presentation transition.
 
-A packaged but inactive Gamescope shim provides the first presentation
-mechanism boundary. It reads one strict, bounded, boot-scoped config from a
-fixed state root, removes inherited eGPU render selection, and applies an
-external connector/GPU only when the exact connector and vendor/device remain
-uniquely present in the same boot. Stale, malformed, missing, or ambiguous
-evidence selects a unique internal panel when available and otherwise preserves
-the existing output arguments while clearing the eGPU selector. The companion
-config store writes atomically from an exact transition binding. Neither the
-shim nor its config store installs a systemd override, restarts Gamescope, or is
-constructed by Decky.
+The packaged Gamescope shim is the final presentation mechanism boundary. It
+reads one strict, bounded, boot-scoped config from a fixed state root, removes
+inherited eGPU render selection, and applies an external connector/GPU only
+when the connector and vendor/device remain unique and a fresh full
+DRM/PCI/USB4 G1 match reproduces the same boot-scoped SHA-256 binding. The
+binding does not persist the boot ID or stable eGPU identity. Stale, malformed,
+missing, changed, or ambiguous evidence selects a unique internal panel when
+available and otherwise preserves the existing output arguments while clearing
+the eGPU selector. The companion config store writes atomically from an exact
+transition binding. The shim and config store cannot install integration or
+restart Gamescope; those authorities remain in the guarded transition service.
 
 The SteamOS signal adapter is a narrow Linux leaf mechanism: it maps only typed
 graceful/force actions to `SIGTERM`/`SIGKILL`, opens a pidfd, verifies the
@@ -568,9 +569,10 @@ process inspect/approve/execute/acknowledge. No RPC accepts a command, system
 path, device identity, PID, signal, or process target.
 
 The first 0.2 safety mechanism is a backend-owned, parent-death-guarded
-`systemd-inhibit` process. Exact G1 presence acquires its login1 lease, verified
-absence or plugin unload terminates it, and backend process death terminates the
-holder chain. Warning suppression is frontend-only and cannot affect the lease.
+`systemd-inhibit` process. Exact G1 presence and partial candidate enumeration
+acquire its login1 lease; only verified absence or plugin unload terminates it,
+and backend process death terminates the holder chain. Warning suppression is
+frontend-only and cannot affect the lease.
 
 Future transition mutation is exposed through a small, typed API with no arbitrary command
 or path inputs. The Decky entrypoint remains an adapter; it is not the domain or

@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,14 +16,18 @@ from hdm.delivery.gamescope_wrapper import (  # noqa: E402
     MAX_CONFIG_BYTES,
     GamescopeLaunchConfig,
     _load_config,
+    _verified_egpu_binding_sha256,
     config_from_dict,
     config_to_dict,
     rewrite_gamescope_argv,
     select_launch_configuration,
 )
+from hdm.profiles.gpd_g1 import GpdG1Match  # noqa: E402
 
 
 BOOT_HASH = hashlib.sha256(b"boot").hexdigest()
+EGPU_ID = "gpd-g1:0123456789abcdef"
+EGPU_BINDING = hashlib.sha256(f"boot:{EGPU_ID}".encode("utf-8")).hexdigest()
 
 
 def docked_config(**changes: str) -> GamescopeLaunchConfig:
@@ -32,6 +37,7 @@ def docked_config(**changes: str) -> GamescopeLaunchConfig:
         "internal_connector": "eDP-1",
         "external_connector": "HDMI-A-1",
         "vendor_device": "1002:7480",
+        "egpu_binding_sha256": EGPU_BINDING,
     }
     values.update(changes)
     return GamescopeLaunchConfig(**values)
@@ -44,6 +50,7 @@ def docked_igpu_config(**changes: str) -> GamescopeLaunchConfig:
         "internal_connector": "eDP-1",
         "external_connector": "HDMI-A-1",
         "vendor_device": "1002:0000",
+        "egpu_binding_sha256": EGPU_BINDING,
     }
     values.update(changes)
     return GamescopeLaunchConfig(**values)
@@ -83,6 +90,18 @@ class GamescopeConfigTests(unittest.TestCase):
 
 
 class GamescopeSelectionTests(unittest.TestCase):
+    def test_launch_binding_is_derived_only_from_a_fresh_exact_g1_match(self):
+        with patch(
+            "hdm.profiles.gpd_g1.match_gpd_g1",
+            return_value=GpdG1Match(True, True, stable_id=EGPU_ID),
+        ):
+            self.assertEqual(_verified_egpu_binding_sha256("boot"), EGPU_BINDING)
+        with patch(
+            "hdm.profiles.gpd_g1.match_gpd_g1",
+            return_value=GpdG1Match(True, False, reason="incomplete"),
+        ):
+            self.assertEqual(_verified_egpu_binding_sha256("boot"), "")
+
     def test_exact_same_boot_docked_evidence_selects_external_gpu(self):
         self.assertEqual(
             select_launch_configuration(
@@ -91,6 +110,7 @@ class GamescopeSelectionTests(unittest.TestCase):
                 connected_connectors=("eDP-1", "HDMI-A-1"),
                 internal_connectors=("eDP-1",),
                 present_vendor_devices=("1002:0000", "1002:7480"),
+                verified_egpu_binding_sha256=EGPU_BINDING,
             ),
             ("HDMI-A-1", "1002:7480"),
         )
@@ -100,12 +120,15 @@ class GamescopeSelectionTests(unittest.TestCase):
             {"current_boot_id_sha256": hashlib.sha256(b"other").hexdigest()},
             {"present_vendor_devices": ("1002:7480", "1002:7480")},
             {"connected_connectors": ("eDP-1",)},
+            {"verified_egpu_binding_sha256": ""},
+            {"verified_egpu_binding_sha256": "f" * 64},
         )
         defaults = {
             "current_boot_id_sha256": BOOT_HASH,
             "connected_connectors": ("eDP-1", "HDMI-A-1"),
             "internal_connectors": ("eDP-1",),
             "present_vendor_devices": ("1002:7480",),
+            "verified_egpu_binding_sha256": EGPU_BINDING,
         }
         for changes in cases:
             with self.subTest(changes=changes):
@@ -122,6 +145,7 @@ class GamescopeSelectionTests(unittest.TestCase):
                 connected_connectors=("eDP-1", "HDMI-A-1"),
                 internal_connectors=("eDP-1",),
                 present_vendor_devices=("1002:0000", "1002:7480"),
+                verified_egpu_binding_sha256=EGPU_BINDING,
             ),
             ("HDMI-A-1", "1002:0000"),
         )
@@ -134,6 +158,7 @@ class GamescopeSelectionTests(unittest.TestCase):
                 connected_connectors=("eDP-1", "HDMI-A-1"),
                 internal_connectors=("eDP-1",),
                 present_vendor_devices=("1002:7480",),
+                verified_egpu_binding_sha256=EGPU_BINDING,
             ),
             ("*,eDP-1", ""),
         )
@@ -146,6 +171,7 @@ class GamescopeSelectionTests(unittest.TestCase):
                 connected_connectors=("eDP-1",),
                 internal_connectors=("eDP-1",),
                 present_vendor_devices=("1002:0000", "1002:7480"),
+                verified_egpu_binding_sha256=EGPU_BINDING,
             ),
             ("*,eDP-1", "1002:0000"),
         )

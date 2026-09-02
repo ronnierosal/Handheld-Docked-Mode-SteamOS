@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -24,6 +25,7 @@ ALLOWED_FIELDS = frozenset(
         "internal_connector",
         "external_connector",
         "vendor_device",
+        "egpu_binding_sha256",
     }
 )
 
@@ -35,6 +37,7 @@ class GamescopeLaunchConfig:
     internal_connector: str
     external_connector: str = ""
     vendor_device: str = ""
+    egpu_binding_sha256: str = ""
     schema_version: int = 1
 
     def __post_init__(self) -> None:
@@ -52,7 +55,13 @@ class GamescopeLaunchConfig:
                 raise ValueError("docked Gamescope launch target is incomplete")
             if not VENDOR_DEVICE_RE.fullmatch(self.vendor_device):
                 raise ValueError("docked Gamescope launch target is incomplete")
-        elif self.external_connector or self.vendor_device:
+            if not SHA256_RE.fullmatch(self.egpu_binding_sha256):
+                raise ValueError("docked Gamescope launch identity is incomplete")
+        elif (
+            self.external_connector
+            or self.vendor_device
+            or self.egpu_binding_sha256
+        ):
             raise ValueError("portable Gamescope launch cannot select an eGPU")
 
 
@@ -64,6 +73,7 @@ def config_to_dict(value: GamescopeLaunchConfig) -> dict[str, Any]:
         "internal_connector": value.internal_connector,
         "external_connector": value.external_connector,
         "vendor_device": value.vendor_device,
+        "egpu_binding_sha256": value.egpu_binding_sha256,
     }
 
 
@@ -82,6 +92,7 @@ def config_from_dict(value: dict[str, Any]) -> GamescopeLaunchConfig:
         internal_connector=str(value["internal_connector"]),
         external_connector=str(value["external_connector"]),
         vendor_device=str(value["vendor_device"]),
+        egpu_binding_sha256=str(value["egpu_binding_sha256"]),
     )
 
 
@@ -156,6 +167,7 @@ def select_launch_configuration(
     connected_connectors: tuple[str, ...],
     internal_connectors: tuple[str, ...],
     present_vendor_devices: tuple[str, ...],
+    verified_egpu_binding_sha256: str = "",
 ) -> tuple[str, str]:
     connected = tuple(dict.fromkeys(connected_connectors))
     internal = tuple(
@@ -168,6 +180,7 @@ def select_launch_configuration(
         and connected.count(config.external_connector) == 1
         and config.external_connector not in internal
         and present_vendor_devices.count(config.vendor_device) == 1
+        and verified_egpu_binding_sha256 == config.egpu_binding_sha256
     ):
         return config.external_connector, config.vendor_device
     if (
@@ -177,6 +190,7 @@ def select_launch_configuration(
         and connected.count(config.external_connector) == 1
         and config.external_connector not in internal
         and present_vendor_devices.count(config.vendor_device) == 1
+        and verified_egpu_binding_sha256 == config.egpu_binding_sha256
     ):
         return config.external_connector, config.vendor_device
     if (
@@ -186,6 +200,7 @@ def select_launch_configuration(
         and connected.count(config.internal_connector) == 1
         and config.internal_connector in internal
         and present_vendor_devices.count(config.vendor_device) == 1
+        and verified_egpu_binding_sha256 == config.egpu_binding_sha256
     ):
         return f"*,{config.internal_connector}", config.vendor_device
     if (
@@ -202,8 +217,6 @@ def select_launch_configuration(
 
 
 def _boot_id_sha256() -> str:
-    import hashlib
-
     value = Path("/proc/sys/kernel/random/boot_id").read_text(
         encoding="utf-8", errors="strict"
     ).strip()
@@ -255,6 +268,28 @@ def _present_vendor_devices(
     return tuple(values)
 
 
+def _verified_egpu_binding_sha256(boot_id: str) -> str:
+    """Re-resolve the exact private G1 identity immediately before Gamescope exec."""
+
+    try:
+        from ..adapters.steamos.drm import DrmDiscovery
+        from ..adapters.steamos.pci import PciUsb4Discovery
+        from ..profiles.gpd_g1 import match_gpd_g1
+
+        topology = PciUsb4Discovery()
+        matched = match_gpd_g1(
+            DrmDiscovery().scan(),
+            topology.scan_pci(),
+            topology.scan_usb4(),
+        )
+    except Exception:
+        return ""
+    if not matched.verified or not boot_id:
+        return ""
+    material = f"{boot_id}:{matched.stable_id}".encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+
 def _load_config(state_root: Path) -> GamescopeLaunchConfig | None:
     try:
         if state_root.is_symlink() or not state_root.is_dir():
@@ -289,6 +324,7 @@ def main() -> int:
         connected_connectors=connected,
         internal_connectors=_internal_connectors(connected),
         present_vendor_devices=_present_vendor_devices(),
+        verified_egpu_binding_sha256=_verified_egpu_binding_sha256(boot_id),
     )
     arguments = tuple(os.sys.argv[1:])
     environment = dict(os.environ)

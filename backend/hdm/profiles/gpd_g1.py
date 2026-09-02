@@ -65,6 +65,22 @@ def match_gpd_g1(
 ) -> GpdG1Match:
     candidates = [card for card in cards if (card.vendor, card.device) == GPU_ID]
     if not candidates:
+        pci_gpu_candidates = [
+            record for record in pci_devices if _identity(record) == GPU_ID
+        ]
+        usb4_candidates = [
+            device
+            for device in usb4_devices
+            if device.authorized is True
+            and device.vendor_name.casefold() == "intel"
+            and device.device_name.casefold() == "tapex creek"
+        ]
+        if pci_gpu_candidates or usb4_candidates:
+            return GpdG1Match(
+                True,
+                False,
+                reason="Candidate eGPU transport is present but DRM identity is incomplete",
+            )
         return GpdG1Match(False, False, reason="Required external GPU was not detected")
     if len(candidates) != 1 or not candidates[0].pci_bdf:
         return GpdG1Match(True, False, reason="External GPU identity is ambiguous")

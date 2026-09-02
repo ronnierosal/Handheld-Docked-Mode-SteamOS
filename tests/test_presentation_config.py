@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import tempfile
@@ -50,8 +51,18 @@ class PresentationConfigStoreTests(unittest.TestCase):
             )
             self.assertEqual(docked.external_connector, "HDMI-A-1")
             self.assertEqual(docked.vendor_device, "1002:7480")
+            self.assertEqual(
+                docked.egpu_binding_sha256,
+                hashlib.sha256(
+                    f"{BOOT_ID}:{binding().egpu_stable_id}".encode("utf-8")
+                ).hexdigest(),
+            )
             self.assertNotIn(
                 BOOT_ID,
+                (Path(directory) / "presentation.json").read_text(encoding="utf-8"),
+            )
+            self.assertNotIn(
+                binding().egpu_stable_id,
                 (Path(directory) / "presentation.json").read_text(encoding="utf-8"),
             )
             self.assertEqual(store.load(), docked)
@@ -65,6 +76,7 @@ class PresentationConfigStoreTests(unittest.TestCase):
             self.assertEqual(docked_igpu.target, "docked_igpu")
             self.assertEqual(docked_igpu.external_connector, "HDMI-A-1")
             self.assertEqual(docked_igpu.vendor_device, "1002:0000")
+            self.assertEqual(docked_igpu.egpu_binding_sha256, docked.egpu_binding_sha256)
             self.assertEqual(store.load(), docked_igpu)
 
             portable = store.write_target(
@@ -75,6 +87,7 @@ class PresentationConfigStoreTests(unittest.TestCase):
             )
             self.assertEqual(portable.internal_connector, "eDP-1")
             self.assertEqual(portable.external_connector, "")
+            self.assertEqual(portable.egpu_binding_sha256, "")
             self.assertEqual(store.load(), portable)
 
     def test_rejects_changed_identity_invalid_boot_and_unsupported_target(self):
