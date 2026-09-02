@@ -52,6 +52,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **D2 supervised visual checkpoint (2026-09-01):** the player reported normal
+  handheld screen and controls with HDM visible in Decky, no game running, and
+  the G1 physically disconnected after the requested install. This is a
+  player-observed baseline only. The newest saved read-only capture still
+  reports the earlier `e73d249db568` build with an external GPU present, so it
+  predates this checkpoint and cannot establish installed candidate provenance,
+  plugin/RPC health, or current topology. A fresh bounded SSH capture remains
+  required before D2 can be recorded as complete; no D3 action is authorized.
 - **Release-candidate foundation (2026-09-01):** local-only script and CI step
   validate `package.json` semantic version against Python metadata and the
   built Decky ZIP, then emit a version/revision/archive-SHA manifest plus
