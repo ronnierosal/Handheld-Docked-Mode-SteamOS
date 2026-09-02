@@ -44,6 +44,8 @@ class DeckyContractTests(unittest.TestCase):
                 "get_snapshot",
                 "get_peripheral_status",
                 "get_action_history",
+                "get_automatic_dock_status",
+                "set_automatic_dock_enabled",
                 "get_docked_igpu_status",
                 "acknowledge_docked_igpu_status",
                 "get_diagnostic_logging_status",
@@ -108,6 +110,7 @@ class DeckyContractTests(unittest.TestCase):
             "get_snapshot",
             "get_peripheral_status",
             "get_action_history",
+            "get_automatic_dock_status",
             "get_diagnostic_logging_status",
             "disable_diagnostic_logging",
             "get_docked_igpu_status",
@@ -138,6 +141,8 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"acknowledge_docked_igpu_status"', source)
         self.assertIn('"get_diagnostic_logging_status"', source)
         self.assertIn('"get_action_history"', source)
+        self.assertIn('"get_automatic_dock_status"', source)
+        self.assertIn('"set_automatic_dock_enabled"', source)
         self.assertIn('"enable_diagnostic_logging"', source)
         self.assertIn('"disable_diagnostic_logging"', source)
         self.assertIn('"preview_support_bundle"', source)

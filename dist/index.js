@@ -27,6 +27,8 @@ const definePlugin = (fn) => {
 const getSnapshot = callable("get_snapshot");
 const getPeripheralStatus = callable("get_peripheral_status");
 const getActionHistory = callable("get_action_history");
+const getAutomaticDockStatus = callable("get_automatic_dock_status");
+const setAutomaticDockEnabled = callable("set_automatic_dock_enabled");
 const getDockedIgpuStatus = callable("get_docked_igpu_status");
 const acknowledgeDockedIgpuStatus = callable("acknowledge_docked_igpu_status");
 const getDiagnosticLoggingStatus = callable("get_diagnostic_logging_status");
@@ -759,7 +761,7 @@ function connectionProgress(payload) {
     }
     return {
         label: "Ready to dock",
-        detail: "TV evidence is ready. Display transitions remain disabled in this build.",
+        detail: "G1 and TV evidence are ready. Use Switch to TV now, or enable automatic TV docking.",
         settling: false,
     };
 }
@@ -1085,6 +1087,18 @@ function showPresentationPreparationConfirmation(onConfirm, onClose) {
         }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
+function showAutomaticDockConfirmation(onConfirm, onClose) {
+    let modal;
+    const close = () => {
+        modal.Close();
+        onClose();
+    };
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Enable automatic TV docking?", strOKButtonText: "Enable", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
+            close();
+            onConfirm();
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "When HDM verifies this Ally X, the exact GPD G1, one ready TV, a healthy link, and no running game, it will restart Steam Game Mode onto the TV." }), SP_JSX.jsx("p", { children: "The screen will briefly show Steam shutting down. USB4 presence alone never triggers the restart, and physical live removal remains unsupported." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    return modal;
+}
 function showPresentationPreparationBlocked(blockers) {
     // The preparation result appears below its controller-focused button. Steam's
     // Quick Access navigation can leave that row off-screen, so also surface the
@@ -1150,6 +1164,9 @@ function Content({ preflight }) {
     const [payload, setPayload] = SP_REACT.useState(null);
     const [peripheralStatus, setPeripheralStatus] = SP_REACT.useState(null);
     const [actionHistory, setActionHistory] = SP_REACT.useState(null);
+    const [automaticDockStatus, setAutomaticDockStatus] = SP_REACT.useState(null);
+    const [automaticDockBusy, setAutomaticDockBusy] = SP_REACT.useState(false);
+    const [automaticDockMessage, setAutomaticDockMessage] = SP_REACT.useState("");
     const [dockedIgpuStatus, setDockedIgpuStatus] = SP_REACT.useState(null);
     const [dockedIgpuMessage, setDockedIgpuMessage] = SP_REACT.useState("");
     const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = SP_REACT.useState(null);
@@ -1182,6 +1199,7 @@ function Content({ preflight }) {
     const linkHealthNotification = SP_REACT.useRef(null);
     const supportModal = SP_REACT.useRef(null);
     const presentationModal = SP_REACT.useRef(null);
+    const automaticDockModal = SP_REACT.useRef(null);
     const processModal = SP_REACT.useRef(null);
     const diagnosticLoggingModal = SP_REACT.useRef(null);
     SP_REACT.useEffect(() => () => {
@@ -1189,10 +1207,26 @@ function Content({ preflight }) {
         supportModal.current = null;
         presentationModal.current?.Close();
         presentationModal.current = null;
+        automaticDockModal.current?.Close();
+        automaticDockModal.current = null;
         processModal.current?.Close();
         processModal.current = null;
         diagnosticLoggingModal.current?.Close();
         diagnosticLoggingModal.current = null;
+    }, []);
+    SP_REACT.useEffect(() => {
+        let disposed = false;
+        void getAutomaticDockStatus().then((status) => {
+            if (!disposed)
+                setAutomaticDockStatus(status);
+        }).catch(() => {
+            if (!disposed) {
+                setAutomaticDockMessage("Automatic docking status is unavailable; no restart will be requested.");
+            }
+        });
+        return () => {
+            disposed = true;
+        };
     }, []);
     SP_REACT.useEffect(() => {
         let disposed = false;
@@ -1247,6 +1281,12 @@ function Content({ preflight }) {
         }
         try {
             const nextPayload = await getSnapshot();
+            try {
+                setAutomaticDockStatus(await getAutomaticDockStatus());
+            }
+            catch {
+                setAutomaticDockMessage("Automatic docking status is unavailable; no restart will be requested.");
+            }
             const linkDecision = decideLinkHealthNotification(linkHealthNotification.current, nextPayload);
             linkHealthNotification.current = linkDecision.memory;
             if (linkDecision.notification) {
@@ -1594,6 +1634,35 @@ function Content({ preflight }) {
             setTvSwitchBusy(false);
         }
     }, []);
+    const changeAutomaticDock = SP_REACT.useCallback(async (enabled) => {
+        setAutomaticDockBusy(true);
+        setAutomaticDockMessage("");
+        try {
+            const status = await setAutomaticDockEnabled(enabled, enabled);
+            setAutomaticDockStatus(status);
+            setAutomaticDockMessage(status.enabled
+                ? "Automatic TV docking is enabled. HDM is waiting for complete G1 and TV evidence."
+                : status.code === "automatic_dock.disabled"
+                    ? "Automatic TV docking is disabled."
+                    : `Automatic TV docking was not changed: ${label(status.code)}.`);
+        }
+        catch {
+            setAutomaticDockMessage("Automatic TV docking was not changed.");
+        }
+        finally {
+            setAutomaticDockBusy(false);
+        }
+    }, []);
+    const toggleAutomaticDock = SP_REACT.useCallback(() => {
+        if (automaticDockStatus?.enabled) {
+            void changeAutomaticDock(false);
+            return;
+        }
+        automaticDockModal.current?.Close();
+        automaticDockModal.current = showAutomaticDockConfirmation(() => void changeAutomaticDock(true), () => {
+            automaticDockModal.current = null;
+        });
+    }, [automaticDockStatus?.enabled, changeAutomaticDock]);
     const acknowledgeTvSwitch = SP_REACT.useCallback(async () => {
         if (!tvSwitchAcknowledgementId)
             return;
@@ -1746,7 +1815,13 @@ function Content({ preflight }) {
                             health: healthStatusLabel(payload?.health, loading),
                             connection: progress.label,
                             game: label(snapshot?.game_state ?? "unknown"),
-                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsx("div", { ref: primaryControlAnchor, children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) }) }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+                        }).map(([name, value]) => (SP_JSX.jsx(DiagnosticRow, { name: name, value: value }, name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: progress.detail })] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Safety & actions", children: [SP_JSX.jsxs("div", { ref: primaryControlAnchor, children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleAutomaticDock, disabled: automaticDockBusy, children: automaticDockBusy
+                                            ? "Saving…"
+                                            : automaticDockStatus?.enabled
+                                                ? "Disable automatic TV docking"
+                                                : "Enable automatic TV docking" }) }), SP_JSX.jsx(DiagnosticRow, { name: "Automatic TV docking", value: automaticDockStatus?.enabled
+                                        ? label(automaticDockStatus.code)
+                                        : "Off" }), automaticDockMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: automaticDockMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy || Boolean(tvSwitchAcknowledgementId), children: tvSwitchBusy ? "Switching…" : "Switch to TV now" }) }), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) })] }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
                                 ? "Checking…"
                                 : sleepGuard?.required
                                     ? sleepGuard.active
@@ -1768,7 +1843,7 @@ function Content({ preflight }) {
                                     ? () => void stopDiagnosticLogging()
                                     : requestDiagnosticLogging, disabled: diagnosticLoggingBusy, children: diagnosticLoggingStatus?.enabled
                                     ? "Disable verbose diagnostics"
-                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy || Boolean(tvSwitchAcknowledgementId), children: tvSwitchBusy ? "Switching…" : "Switch to TV" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "One press. Idle only; HDM revalidates the eGPU, TV, and game state before restarting Gamescope once." }), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge TV switch result" }) })), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
+                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage }), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge TV switch result" }) }))] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
 }
 function showBlockedAttempt(warning, onClose) {
     let modal;

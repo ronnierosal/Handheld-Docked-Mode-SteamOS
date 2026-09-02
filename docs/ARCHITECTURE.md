@@ -136,11 +136,13 @@ progress. The typed split, durable journal, deterministic replay, and guarded
 runtime orchestrator are implemented; mechanism wiring remains experimental and
 uninstalled. See [Authoritative roadmap](ROADMAP.md).
 
-An exact attach candidate can also enter a small read-only readiness watch. It
-binds the private exact eGPU identity and accepts only a newer sample before
-classifying external-display readiness and known game state. This preserves
-`Connecting` as a workflow phase without treating eGPU presence as an automatic
-dock request; see [eGPU attach readiness](ATTACH_READINESS.md).
+An exact attach candidate can also enter a small readiness watch. It binds the
+private exact eGPU identity and accepts only a newer sample before classifying
+external-display readiness, exact link health, and known game state. A partial
+USB4 observation may become an attach candidate only when a later observation
+resolves the complete exact profile. The separately persisted player opt-in can
+then let a one-shot coordinator submit `ready_idle` through the same transition
+engine used by the manual control; see [eGPU attach readiness](ATTACH_READINESS.md).
 
 A separate pure deferred-dock-intent contract can retain one direct player Dock
 request while the game is known running. Its opaque binding, expiry, explicit
@@ -370,9 +372,11 @@ confirmation issues a maximum-two-minute single-use permit; execution consumes
 it, requires the same semantic generation and ready integration, reconstructs
 the exact plan, and delegates to the orchestrator. An incomplete journal blocks
 new approval until recovery; a terminal journal blocks until its exact random
-operation ID is acknowledged. One Decky RPC constructs this facade only for the
-explicit idle TV-switch test after a separate on-screen confirmation; it is not
-an automatic attach path and remains Hardware Validation Required.
+operation ID is acknowledged. The manual Decky control and the root-owned
+automatic attach coordinator both construct this facade. Manual use consumes a
+short-lived on-screen approval; automatic use requires persistent player opt-in
+and an exact unchanged generation. Both enter the same journaled plan and remain
+Hardware Validation Required.
 
 That same durable path now treats exact idle Docked-iGPU as a supported source
 for a Docked-eGPU target. Boot config represents Docked-iGPU explicitly as TV

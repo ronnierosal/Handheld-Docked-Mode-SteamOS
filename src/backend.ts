@@ -207,6 +207,21 @@ export interface ActionHistoryPayload {
 
 export const getActionHistory = callable<[], ActionHistoryPayload>("get_action_history");
 
+export interface AutomaticDockStatusPayload {
+  schema_version: 1;
+  enabled: boolean;
+  stage: "disabled" | "observing" | "settling" | "waiting" | "switching" | "docked" | "action_required";
+  code: string;
+}
+
+export const getAutomaticDockStatus = callable<[], AutomaticDockStatusPayload>(
+  "get_automatic_dock_status",
+);
+export const setAutomaticDockEnabled = callable<
+  [boolean, boolean],
+  AutomaticDockStatusPayload
+>("set_automatic_dock_enabled");
+
 export type DockedIgpuLifecycleStage =
   | "idle"
   | "watching"

@@ -155,6 +155,19 @@ class SnapshotApi:
         return SnapshotReport(snapshot, infer_operating_mode(snapshot))
 
 
+class AutomaticDockPreferences:
+    def __init__(self, enabled=False):
+        self.enabled = enabled
+        self.saved = []
+
+    def load(self):
+        return self.enabled
+
+    def save(self, enabled):
+        self.saved.append(enabled)
+        self.enabled = enabled
+
+
 class DockedIgpuScheduler:
     def __init__(self, *, acknowledgement=True):
         self.value = DockedIgpuLifecycleStatus(
@@ -294,6 +307,23 @@ class MainProcessDeliveryTests(unittest.TestCase):
         )
         self.assertEqual(delivered["attach_readiness"]["stage"], "ready_idle")
         self.assertEqual(delivered["diagnostics"]["build"], plugin._build_info)
+
+    def test_automatic_dock_opt_in_is_explicit_persistent_and_categorical(self):
+        plugin, _service = self.plugin()
+        preferences = AutomaticDockPreferences()
+        plugin._automatic_dock_preference_store = preferences
+
+        initial = asyncio.run(plugin.get_automatic_dock_status())
+        rejected = asyncio.run(plugin.set_automatic_dock_enabled(True, False))
+        enabled = asyncio.run(plugin.set_automatic_dock_enabled(True, True))
+        disabled = asyncio.run(plugin.set_automatic_dock_enabled(False, False))
+
+        self.assertFalse(initial["enabled"])
+        self.assertEqual(rejected["code"], "automatic_dock.confirmation_required")
+        self.assertEqual(preferences.saved, [True, False])
+        self.assertTrue(enabled["enabled"])
+        self.assertFalse(disabled["enabled"])
+        self.assertNotIn("generation", json.dumps((initial, enabled, disabled)))
 
     def test_preview_and_approval_use_enum_and_opaque_receipt_only(self):
         plugin, service = self.plugin()

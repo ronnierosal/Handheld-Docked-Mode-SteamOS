@@ -68,8 +68,10 @@ local ZIP.
   operation.
 - The corrected native TV transition still needs a fresh supervised
   Ally X + GPD G1 + TV proof.
-- Automatic docking, Boosted Handheld, and physical live eGPU removal are not
-  available. The current G1 policy remains shutdown before disconnect.
+- Automatic docking is implemented behind an off-by-default persistent player
+  opt-in and remains hardware-validation-required. Boosted Handheld and physical
+  live eGPU removal are not available. The current G1 policy remains shutdown
+  before disconnect.
 
 ## Active ownership
 

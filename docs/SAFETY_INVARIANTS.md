@@ -22,8 +22,9 @@ These invariants are release gates, not preferences.
     state blockers.
 12. Diagnostics redact hostnames, addresses, home paths, hardware unique IDs, and
     other user identifiers by default.
-13. Display mutation and hardware experiments require supervised execution plus
-    redacted before/live/after evidence.
+13. Display mutation requires either supervised execution or an explicit
+    persistent player opt-in to the exact profile-gated automatic path. Hardware
+    experiments always require redacted before/live/after evidence.
 14. Suppressing a warning never suppresses its underlying safety check,
     inhibitor, approval, or audit event.
 15. Process termination targets only backend-discovered users of the exact eGPU

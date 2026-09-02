@@ -71,6 +71,20 @@ def arm_attach_readiness(
     )
 
 
+def arm_current_readiness(
+    current: VersionedObservation,
+) -> AttachReadinessWatch | None:
+    """Bind an exact startup candidate without treating USB4 alone as an eGPU."""
+    profiles = resolve_runtime_profiles(current.snapshot)
+    if not profiles.exact_host or not profiles.exact_egpu or not profiles.egpu_stable_id:
+        return None
+    return AttachReadinessWatch(
+        profiles.egpu_stable_id,
+        current.generation,
+        current.sample_id,
+    )
+
+
 def observe_attach_readiness(
     watch: AttachReadinessWatch,
     current: VersionedObservation | None,
@@ -142,6 +156,18 @@ class AttachReadinessLifecycle:
 
     def status(self) -> AttachReadinessStatus:
         with self._lock:
+            return self._status
+
+    def arm_current(self, current: VersionedObservation) -> AttachReadinessStatus:
+        """Arm one exact already-attached startup candidate for a later sample."""
+        with self._lock:
+            if self._watch is None:
+                self._watch = arm_current_readiness(current)
+                self._status = (
+                    _status(AttachReadinessStage.SETTLING, "attach.startup_observed")
+                    if self._watch is not None
+                    else _status(AttachReadinessStage.ACTION_REQUIRED, "attach.arm_unverified")
+                )
             return self._status
 
     def update(

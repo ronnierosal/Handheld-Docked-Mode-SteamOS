@@ -171,6 +171,81 @@ class SupervisedPresentationTransitionService:
         finally:
             self._lock.release()
 
+    def execute_automatic(
+        self,
+        target: PlacementState,
+        *,
+        expected_generation: str,
+        standing_consent: bool,
+    ) -> SupervisedTransitionExecution:
+        """Run the same exact plan for a persisted player opt-in.
+
+        Standing consent is supplied only by the root-owned preference delivery
+        boundary.  A caller still cannot bypass fresh evidence, the prepared
+        integration, the journal, profile capabilities, or idle-game policy.
+        """
+        if not standing_consent:
+            return SupervisedTransitionExecution(False, "automatic_dock.not_enabled")
+        if not self._lock.acquire(blocking=False):
+            return SupervisedTransitionExecution(False, "transition.concurrent_request")
+        try:
+            observed = self._observe()
+            if observed is None:
+                return SupervisedTransitionExecution(
+                    False, "transition.observation_unavailable"
+                )
+            if not expected_generation or observed.generation != expected_generation:
+                return SupervisedTransitionExecution(False, "transition.evidence_changed")
+            if not self._ready():
+                return SupervisedTransitionExecution(
+                    False, "transition.integration_not_ready"
+                )
+            journal_blocker = self._journal_blocker()
+            if journal_blocker:
+                return SupervisedTransitionExecution(False, journal_blocker)
+            resolved = resolve_runtime_profiles(observed.snapshot)
+            evidence = evidence_from_snapshot(
+                observed.snapshot,
+                observed_generation=observed.generation,
+                capabilities=resolved.capabilities,
+            )
+            plan_id = self._identifier()
+            permit = self._preview_permit(
+                plan_id=plan_id,
+                target=target,
+                generation=observed.generation,
+                evidence=evidence,
+                capabilities=resolved.capabilities,
+            )
+            decision = plan_manual_transition(
+                plan_id=plan_id,
+                request_id=self._identifier(),
+                current=infer_placement(observed.snapshot),
+                target=target,
+                capabilities=resolved.capabilities,
+                evidence=evidence,
+                experimental_permit=permit,
+            )
+            if decision.plan is None:
+                return SupervisedTransitionExecution(
+                    False, "transition.preconditions_changed"
+                )
+            result = self._orchestrator.run(decision.plan)
+            code = (
+                result.outcome.failure.code
+                if result.outcome.failure is not None
+                else f"transition.{result.outcome.kind.value}"
+            )
+            return SupervisedTransitionExecution(
+                True,
+                code,
+                decision.plan.plan_id,
+                result.outcome,
+                result.durable,
+            )
+        finally:
+            self._lock.release()
+
     def _execute_locked(self, approval_token: str) -> SupervisedTransitionExecution:
         try:
             permit = self._approvals.consume(approval_token)

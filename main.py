@@ -75,7 +75,14 @@ from hdm.application.diagnostic_logging import (  # noqa: E402
 )
 from hdm.application.action_history import project_action_history  # noqa: E402
 from hdm.application.snapshot import report_to_public_dict  # noqa: E402
-from hdm.application.attach_readiness import AttachReadinessLifecycle  # noqa: E402
+from hdm.application.attach_readiness import (  # noqa: E402
+    AttachReadinessLifecycle,
+    AttachReadinessStage,
+)
+from hdm.application.automatic_dock import (  # noqa: E402
+    AutomaticDockCoordinator,
+    AutomaticDockStage,
+)
 from hdm.application.topology_event_detection import (  # noqa: E402
     TopologyDetectionStatus,
     detect_topology_event,
@@ -139,6 +146,9 @@ from hdm.delivery.docked_igpu_scheduler import (  # noqa: E402
     DockedIgpuLifecycleScheduler,
 )
 from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
+from hdm.delivery.automatic_dock_preferences import (  # noqa: E402
+    AutomaticDockPreferenceStore,
+)
 from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
 from hdm.domain.control_plane import (  # noqa: E402
@@ -160,6 +170,10 @@ class Plugin:
         self._api = DiagnosticsApi(self._discovery)
         self._peripherals = SteamOsPeripheralObservationAdapter()
         self._sleep_guard_task: asyncio.Task[None] | None = None
+        self._automatic_dock_task: asyncio.Task[None] | None = None
+        self._automatic_dock_retry_seconds = 1.0
+        self._automatic_dock = AutomaticDockCoordinator()
+        self._automatic_dock_preference_store: AutomaticDockPreferenceStore | None = None
         self._docked_igpu_scheduler: DockedIgpuLifecycleScheduler | None = None
         self._docked_igpu_task: asyncio.Task[None] | None = None
         self._docked_igpu_retry_seconds = 30.0
@@ -246,6 +260,62 @@ class Plugin:
             )
         except Exception:
             return {"schema_version": 1, "entries": []}
+
+    async def get_automatic_dock_status(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Return the persisted opt-in and categorical coordinator state."""
+        try:
+            enabled = await asyncio.to_thread(self._automatic_dock_preferences().load)
+            status = self._automatic_dock.status()
+            return {
+                "schema_version": 1,
+                "enabled": enabled,
+                "stage": status.stage.value,
+                "code": status.code if enabled else "automatic_dock.disabled",
+            }
+        except Exception:
+            return {
+                "schema_version": 1,
+                "enabled": False,
+                "stage": AutomaticDockStage.ACTION_REQUIRED.value,
+                "code": "automatic_dock.preference_unavailable",
+            }
+
+    async def set_automatic_dock_enabled(
+        self, enabled: bool, user_confirmed: bool
+    ) -> dict[str, object]:
+        """Persist deliberate player consent; disabling is always permitted."""
+        if type(enabled) is not bool or type(user_confirmed) is not bool:
+            return self._automatic_dock_failure("automatic_dock.request_invalid")
+        if enabled and not user_confirmed:
+            return self._automatic_dock_failure(
+                "automatic_dock.confirmation_required",
+                stage=AutomaticDockStage.DISABLED,
+            )
+        try:
+            await asyncio.to_thread(self._automatic_dock_preferences().save, enabled)
+        except Exception:
+            return self._automatic_dock_failure(
+                "automatic_dock.preference_unavailable"
+            )
+        code = "automatic_dock.enabled" if enabled else "automatic_dock.disabled"
+        self._events.append(
+            severity="info",
+            code=code,
+            component="presentation",
+            stage="preference",
+        )
+        return {
+            "schema_version": 1,
+            "enabled": enabled,
+            "stage": (
+                AutomaticDockStage.OBSERVING.value
+                if enabled
+                else AutomaticDockStage.DISABLED.value
+            ),
+            "code": code,
+        }
 
     async def get_diagnostic_logging_status(self, _request: object = None) -> dict[str, object]:
         """Return bounded, identity-free status for the opt-in verbose session."""
@@ -888,6 +958,69 @@ class Plugin:
                 stage="startup",
             )
         self._sleep_guard_task = asyncio.create_task(self._sleep_guard_loop())
+        self._automatic_dock_task = asyncio.create_task(self._automatic_dock_loop())
+
+    async def _automatic_dock_loop(self) -> None:
+        """Submit one exact, idle attach request through the shared transition engine."""
+        observations = SnapshotTransitionObservationAdapter(self._discovery)
+        while True:
+            delay_seconds = self._automatic_dock_retry_seconds
+            try:
+                enabled = await asyncio.to_thread(
+                    self._automatic_dock_preferences().load
+                )
+                if not enabled:
+                    delay_seconds = 5.0
+                    await asyncio.sleep(delay_seconds)
+                    continue
+                current = await asyncio.to_thread(observations.observe)
+                readiness = await asyncio.to_thread(
+                    self._record_topology_observation, current.snapshot
+                )
+                if enabled and readiness.stage is AttachReadinessStage.IDLE:
+                    readiness = await asyncio.to_thread(
+                        self._attach_readiness.arm_current, current
+                    )
+                decision = self._automatic_dock.update(
+                    enabled=enabled,
+                    readiness=readiness,
+                    current=current,
+                )
+                if decision.status.stage is AutomaticDockStage.DOCKED:
+                    delay_seconds = 15.0
+                elif readiness.stage is AttachReadinessStage.GAME_RUNNING:
+                    delay_seconds = 5.0
+                if decision.should_switch:
+                    result = await asyncio.to_thread(
+                        self._presentation_transition_service().execute_automatic,
+                        PlacementState.DOCKED_EGPU,
+                        expected_generation=decision.expected_generation,
+                        standing_consent=enabled,
+                    )
+                    succeeded = bool(
+                        result.outcome
+                        and result.outcome.kind is TransitionOutcomeKind.SUCCEEDED
+                    )
+                    self._automatic_dock.record_result(
+                        result.code, succeeded=succeeded
+                    )
+                    self._events.append(
+                        severity="info" if succeeded else "warning",
+                        code=result.code,
+                        component="presentation",
+                        stage="automatic_dock",
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                delay_seconds = 2.0
+                self._events.append(
+                    severity="warning",
+                    code="automatic_dock.observation_failed",
+                    component="presentation",
+                    stage="automatic_dock",
+                )
+            await asyncio.sleep(delay_seconds)
 
     async def _start_docked_igpu_lifecycle(self) -> None:
         if self._docked_igpu_task is not None:
@@ -1013,6 +1146,13 @@ class Plugin:
             component="lifecycle",
             stage="shutdown",
         )
+        if self._automatic_dock_task is not None:
+            self._automatic_dock_task.cancel()
+            try:
+                await self._automatic_dock_task
+            except asyncio.CancelledError:
+                pass
+            self._automatic_dock_task = None
         await self._stop_docked_igpu_lifecycle()
         if self._sleep_guard_task is not None:
             self._sleep_guard_task.cancel()
@@ -1131,6 +1271,26 @@ class Plugin:
             integration_ready=lambda: integration.status().ready,
             approvals=self._presentation_transition_approvals,
         )
+
+    def _automatic_dock_preferences(self) -> AutomaticDockPreferenceStore:
+        if self._automatic_dock_preference_store is None:
+            self._automatic_dock_preference_store = AutomaticDockPreferenceStore(
+                RootOwnedRuntimeState().ensure()
+            )
+        return self._automatic_dock_preference_store
+
+    @staticmethod
+    def _automatic_dock_failure(
+        code: str,
+        *,
+        stage: AutomaticDockStage = AutomaticDockStage.ACTION_REQUIRED,
+    ) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "enabled": False,
+            "stage": stage.value,
+            "code": code,
+        }
 
     @staticmethod
     def _presentation_transition_failure(code: str) -> dict[str, object]:

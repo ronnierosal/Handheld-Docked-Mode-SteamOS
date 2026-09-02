@@ -175,6 +175,62 @@ class SupervisedTransitionTests(unittest.TestCase):
         )
         self.assertEqual(value.execute(token).code, "transition.approval_invalid")
 
+    def test_automatic_opt_in_uses_same_exact_plan_without_manual_token(self):
+        value, orchestrator, _ = service(
+            Observations(VersionedObservation("generation-1", snapshot()))
+        )
+
+        rejected = value.execute_automatic(
+            PlacementState.DOCKED_EGPU,
+            expected_generation="generation-1",
+            standing_consent=False,
+        )
+        accepted = value.execute_automatic(
+            PlacementState.DOCKED_EGPU,
+            expected_generation="generation-1",
+            standing_consent=True,
+        )
+
+        self.assertEqual(rejected.code, "automatic_dock.not_enabled")
+        self.assertTrue(accepted.accepted)
+        self.assertEqual(len(orchestrator.plans), 1)
+        self.assertEqual(
+            orchestrator.plans[0].target_placement, PlacementState.DOCKED_EGPU
+        )
+
+    def test_automatic_request_rejects_changed_evidence_and_pending_journal(self):
+        value, orchestrator, _ = service(
+            Observations(VersionedObservation("generation-new", snapshot()))
+        )
+        changed = value.execute_automatic(
+            PlacementState.DOCKED_EGPU,
+            expected_generation="generation-old",
+            standing_consent=True,
+        )
+        self.assertEqual(changed.code, "transition.evidence_changed")
+        self.assertEqual(orchestrator.plans, [])
+
+        journal = append_journal_entry(
+            TransitionJournal("operation-old", "request-old"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="request.accepted",
+            details=(("capability", "presentation_transition"),),
+        )
+        value, orchestrator, _ = service(
+            Observations(VersionedObservation("generation-1", snapshot())),
+            journal=journal,
+        )
+        blocked = value.execute_automatic(
+            PlacementState.DOCKED_EGPU,
+            expected_generation="generation-1",
+            standing_consent=True,
+        )
+        self.assertEqual(blocked.code, "journal.recovery_required")
+        self.assertEqual(orchestrator.plans, [])
+
     def test_idle_docked_igpu_uses_same_preview_approval_and_execution(self):
         source = docked_igpu_snapshot()
         value, orchestrator, _ = service(

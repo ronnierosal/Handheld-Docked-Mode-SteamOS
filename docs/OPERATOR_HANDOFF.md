@@ -58,6 +58,28 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **Automatic G1-to-TV docking implementation (2026-09-02):** the proven
+  eGPUBridge behavior was reduced to its required mechanism—write the exact TV
+  output and `1002:7480` render selector, restart
+  `gamescope-session.target`, then verify live state—and connected to HDM's
+  existing durable transition engine. HDM now offers an off-by-default,
+  persistent player opt-in and a visible manual fallback. The backend watches
+  only while opted in, accepts a partial USB4-to-exact-profile settling
+  sequence, requires a later fresh sample with exact Ally X/G1 identity, one
+  EDID-ready TV, observed-Up link, verified Gamescope, and Idle game state, and
+  submits at most one request per attachment. USB4 presence alone, changed
+  evidence, a running/unknown game, missing integration, or a pending journal
+  cannot request the restart. Local verification passed architecture checks,
+  765 Python tests with 5 expected Windows symlink skips, compileall, TypeScript
+  typecheck, all 64 frontend tests, Rollup build, and the constrained package
+  check. This is **Implemented and Simulated**, not hardware tested. The Ally
+  still has the prior `f7d0bf2` build installed, and its current hot-connect
+  exposes an authorized USB4 device without the G1 PCI/DRM functions; do not
+  call that a detected eGPU or install/replace the plugin while attached. The
+  next safe hardware gate is a clean candidate install with the G1 disconnected,
+  followed by player opt-in and one watched attach. Physical live removal
+  remains unsupported; shut down before disconnecting.
+
 - **Shutdown follow-up — watcher admission (2026-09-01):** the watched native
   installation of `fd2d38f` still required Decky's five-second SIGKILL, so
   default-executor shutdown alone is not a sufficient explanation or fix.

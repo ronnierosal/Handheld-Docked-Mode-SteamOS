@@ -76,10 +76,12 @@ def detect_topology_event(
     if not before_profiles.exact_host or not after_profiles.exact_host:
         return _unverified("topology.host_unverified")
 
-    if (
-        before_profiles.egpu_status is ProfileResolutionStatus.ABSENT
-        and after_profiles.exact_egpu
-    ):
+    # A USB4 device can appear before its PCI/DRM functions finish
+    # enumerating.  Treat the first exact profile after either a verified
+    # absence *or* that bounded unknown phase as the attach candidate.  The
+    # attach-readiness lifecycle still requires a later fresh sample before a
+    # transition can be considered.
+    if not before_profiles.exact_egpu and after_profiles.exact_egpu:
         return _detected(TopologyEvent.EGPU_ATTACHED, previous, current)
 
     if before_profiles.exact_egpu:

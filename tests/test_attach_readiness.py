@@ -154,6 +154,21 @@ class AttachReadinessTests(unittest.TestCase):
         self.assertEqual(armed.stage, AttachReadinessStage.SETTLING)
         self.assertEqual(ready.stage, AttachReadinessStage.READY_IDLE)
 
+    def test_exact_startup_candidate_requires_a_later_fresh_sample(self):
+        first = observed(
+            "attached", "sample-a", link_up(snapshot("connected-internal.json"))
+        )
+        lifecycle = AttachReadinessLifecycle()
+
+        armed = lifecycle.arm_current(first)
+        still_same = lifecycle.update(detect_topology_event(first, first), first)
+        fresh = observed("attached", "sample-b", first.snapshot)
+        ready = lifecycle.update(detect_topology_event(first, fresh), fresh)
+
+        self.assertEqual(armed.stage, AttachReadinessStage.SETTLING)
+        self.assertEqual(still_same.stage, AttachReadinessStage.SETTLING)
+        self.assertEqual(ready.stage, AttachReadinessStage.READY_IDLE)
+
 
 if __name__ == "__main__":
     unittest.main()

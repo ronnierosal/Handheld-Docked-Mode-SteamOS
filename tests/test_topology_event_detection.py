@@ -42,6 +42,33 @@ class TopologyEventDetectionTests(unittest.TestCase):
         self.assertEqual(result.event, TopologyEvent.EGPU_ATTACHED)
         self.assertEqual(result.previous_sample_id, "sample-a")
 
+    def test_partial_usb4_phase_can_settle_into_one_exact_attach_candidate(self):
+        portable = snapshot("portable.json")
+        partial = replace(
+            portable,
+            gpus=(
+                *portable.gpus,
+                replace(
+                    next(
+                        gpu
+                        for gpu in snapshot("connected-internal.json").gpus
+                        if gpu.role is GpuRole.EXTERNAL
+                    ),
+                    present=False,
+                    confidence=Confidence.UNKNOWN,
+                ),
+            ),
+        )
+        result = detect_topology_event(
+            observed("partial-a", "sample-a", partial),
+            observed(
+                "exact-b", "sample-b", snapshot("connected-internal.json")
+            ),
+        )
+
+        self.assertEqual(result.status, TopologyDetectionStatus.DETECTED)
+        self.assertEqual(result.event, TopologyEvent.EGPU_ATTACHED)
+
     def test_exact_removal_requires_the_same_verified_gpu_become_absent(self):
         before = snapshot("tv-docked.json")
         portable = snapshot("portable.json")

@@ -173,7 +173,7 @@ export function connectionProgress(
   }
   return {
     label: "Ready to dock",
-    detail: "TV evidence is ready. Display transitions remain disabled in this build.",
+    detail: "G1 and TV evidence are ready. Use Switch to TV now, or enable automatic TV docking.",
     settling: false,
   };
 }

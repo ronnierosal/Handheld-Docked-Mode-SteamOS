@@ -16,6 +16,8 @@ import {
   getSnapshot,
   getPeripheralStatus,
   getActionHistory,
+  getAutomaticDockStatus,
+  setAutomaticDockEnabled,
   acknowledgeProcessRelease,
   approveProcessRelease,
   approvePresentationPreparation,
@@ -40,6 +42,7 @@ import {
   type DiagnosticLoggingStatusPayload,
   type PeripheralStatusPayload,
   type ActionHistoryPayload,
+  type AutomaticDockStatusPayload,
   type ProcessReleasePhase,
   type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
@@ -214,6 +217,46 @@ function showPresentationPreparationConfirmation(
   return modal;
 }
 
+function showAutomaticDockConfirmation(
+  onConfirm: () => void,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle="Enable automatic TV docking?"
+      strOKButtonText="Enable"
+      strCancelButtonText="Cancel"
+      bDestructiveWarning={true}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={() => {
+        close();
+        onConfirm();
+      }}
+      onCancel={close}
+    >
+      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
+        <p>
+          When HDM verifies this Ally X, the exact GPD G1, one ready TV, a healthy link,
+          and no running game, it will restart Steam Game Mode onto the TV.
+        </p>
+        <p>
+          The screen will briefly show Steam shutting down. USB4 presence alone never triggers
+          the restart, and physical live removal remains unsupported.
+        </p>
+      </div>
+    </ConfirmModal>,
+    window,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
 function showPresentationPreparationBlocked(blockers: string[]): void {
   // The preparation result appears below its controller-focused button. Steam's
   // Quick Access navigation can leave that row off-screen, so also surface the
@@ -362,6 +405,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [peripheralStatus, setPeripheralStatus] = useState<PeripheralStatusPayload | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryPayload | null>(null);
+  const [automaticDockStatus, setAutomaticDockStatus] = useState<AutomaticDockStatusPayload | null>(null);
+  const [automaticDockBusy, setAutomaticDockBusy] = useState(false);
+  const [automaticDockMessage, setAutomaticDockMessage] = useState("");
   const [dockedIgpuStatus, setDockedIgpuStatus] = useState<DockedIgpuStatusPayload | null>(null);
   const [dockedIgpuMessage, setDockedIgpuMessage] = useState("");
   const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = useState<DiagnosticLoggingStatusPayload | null>(null);
@@ -398,6 +444,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const linkHealthNotification = useRef<ReturnType<typeof decideLinkHealthNotification>["memory"]>(null);
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
+  const automaticDockModal = useRef<ReturnType<typeof showModal> | null>(null);
   const processModal = useRef<ReturnType<typeof showModal> | null>(null);
   const diagnosticLoggingModal = useRef<ReturnType<typeof showModal> | null>(null);
 
@@ -406,10 +453,26 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     supportModal.current = null;
     presentationModal.current?.Close();
     presentationModal.current = null;
+    automaticDockModal.current?.Close();
+    automaticDockModal.current = null;
     processModal.current?.Close();
     processModal.current = null;
     diagnosticLoggingModal.current?.Close();
     diagnosticLoggingModal.current = null;
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    void getAutomaticDockStatus().then((status) => {
+      if (!disposed) setAutomaticDockStatus(status);
+    }).catch(() => {
+      if (!disposed) {
+        setAutomaticDockMessage("Automatic docking status is unavailable; no restart will be requested.");
+      }
+    });
+    return () => {
+      disposed = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -471,6 +534,13 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
     try {
       const nextPayload = await getSnapshot();
+      try {
+        setAutomaticDockStatus(await getAutomaticDockStatus());
+      } catch {
+        setAutomaticDockMessage(
+          "Automatic docking status is unavailable; no restart will be requested.",
+        );
+      }
       const linkDecision = decideLinkHealthNotification(
         linkHealthNotification.current,
         nextPayload,
@@ -865,6 +935,40 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     }
   }, []);
 
+  const changeAutomaticDock = useCallback(async (enabled: boolean) => {
+    setAutomaticDockBusy(true);
+    setAutomaticDockMessage("");
+    try {
+      const status = await setAutomaticDockEnabled(enabled, enabled);
+      setAutomaticDockStatus(status);
+      setAutomaticDockMessage(
+        status.enabled
+          ? "Automatic TV docking is enabled. HDM is waiting for complete G1 and TV evidence."
+          : status.code === "automatic_dock.disabled"
+            ? "Automatic TV docking is disabled."
+            : `Automatic TV docking was not changed: ${label(status.code)}.`,
+      );
+    } catch {
+      setAutomaticDockMessage("Automatic TV docking was not changed.");
+    } finally {
+      setAutomaticDockBusy(false);
+    }
+  }, []);
+
+  const toggleAutomaticDock = useCallback(() => {
+    if (automaticDockStatus?.enabled) {
+      void changeAutomaticDock(false);
+      return;
+    }
+    automaticDockModal.current?.Close();
+    automaticDockModal.current = showAutomaticDockConfirmation(
+      () => void changeAutomaticDock(true),
+      () => {
+        automaticDockModal.current = null;
+      },
+    );
+  }, [automaticDockStatus?.enabled, changeAutomaticDock]);
+
   const acknowledgeTvSwitch = useCallback(async () => {
     if (!tvSwitchAcknowledgementId) return;
     setTvSwitchBusy(true);
@@ -1042,6 +1146,38 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
 
       <PanelSection title="Safety & actions">
         <div ref={primaryControlAnchor}>
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={toggleAutomaticDock}
+              disabled={automaticDockBusy}
+            >
+              {automaticDockBusy
+                ? "Saving…"
+                : automaticDockStatus?.enabled
+                  ? "Disable automatic TV docking"
+                  : "Enable automatic TV docking"}
+            </ButtonItem>
+          </PanelSectionRow>
+          <DiagnosticRow
+            name="Automatic TV docking"
+            value={automaticDockStatus?.enabled
+              ? label(automaticDockStatus.code)
+              : "Off"}
+          />
+          {automaticDockMessage && (
+            <PanelSectionRow>{automaticDockMessage}</PanelSectionRow>
+          )}
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void executeTvSwitch()}
+              disabled={tvSwitchBusy || Boolean(tvSwitchAcknowledgementId)}
+            >
+              {tvSwitchBusy ? "Switching…" : "Switch to TV now"}
+            </ButtonItem>
+          </PanelSectionRow>
+          {tvSwitchMessage && <PanelSectionRow>{tvSwitchMessage}</PanelSectionRow>}
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={toggleTroubleshooting}>
               {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
@@ -1312,18 +1448,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             Preparation only. This control cannot restart Gamescope or switch displays.
           </PanelSectionRow>
           {presentationMessage && <PanelSectionRow>{presentationMessage}</PanelSectionRow>}
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={() => void executeTvSwitch()}
-              disabled={tvSwitchBusy || Boolean(tvSwitchAcknowledgementId)}
-            >
-              {tvSwitchBusy ? "Switching…" : "Switch to TV"}
-            </ButtonItem>
-          </PanelSectionRow>
-          <PanelSectionRow>
-            One press. Idle only; HDM revalidates the eGPU, TV, and game state before restarting Gamescope once.
-          </PanelSectionRow>
           {tvSwitchAcknowledgementId && (
             <PanelSectionRow>
               <ButtonItem layout="below" onClick={() => void acknowledgeTvSwitch()} disabled={tvSwitchBusy}>
@@ -1331,7 +1455,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
               </ButtonItem>
             </PanelSectionRow>
           )}
-          {tvSwitchMessage && <PanelSectionRow>{tvSwitchMessage}</PanelSectionRow>}
         </PanelSection>
       )}
 
