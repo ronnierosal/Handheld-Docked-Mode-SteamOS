@@ -184,6 +184,12 @@ After unzipping a downloaded artifact, run
 source checkout. It verifies the package checksum and its embedded build label
 before any Decky installation; it does not contact or modify a handheld.
 
+The CI artifact also contains a local-only release-candidate manifest and
+release-notes template. They validate one semantic version, build revision, and
+archive SHA-256, but do not publish anything. See the explicit maintainer-only
+[release-candidate pipeline](docs/RELEASE_PIPELINE.md); GitHub publication and
+Decky Store/channel registration remain separate manual gates.
+
 Hardware validation must follow the staged
 [deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md), beginning
 with one clean, provenance-recorded package and the eGPU disconnected.

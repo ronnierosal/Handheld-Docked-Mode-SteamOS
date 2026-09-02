@@ -54,6 +54,12 @@ For each candidate, retain a small local manifest containing only:
 
 Do not place device secrets or raw hardware identifiers in that manifest.
 
+`scripts/prepare_release_candidate.py` produces the standardized local-only
+version/build/archive record and notes template after the ZIP is built. It is a
+verification aid, not a publication command; follow
+[Release-candidate pipeline](RELEASE_PIPELINE.md) for the separate manual
+GitHub and Decky channel gates.
+
 A successful CI run may provide the same controlled candidate as a short-lived
 workflow artifact. Before using one, compare its workflow commit with
 `source-revision.txt`, verify its ZIP against `SHA256SUMS.txt`, and confirm the

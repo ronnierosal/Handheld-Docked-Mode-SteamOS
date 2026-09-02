@@ -52,6 +52,11 @@ jobs:
           sha256sum out/HandheldDockMode-*.zip > out/SHA256SUMS.txt
       - name: Verify controlled validation artifact
         run: python scripts/verify_validation_artifact.py "$GITHUB_WORKSPACE/out"
+      - name: Prepare local-only release candidate record
+        run: |
+          python scripts/prepare_release_candidate.py out/HandheldDockMode-*.zip \
+            --output out/release-candidate.json \
+            --notes-template out/RELEASE_NOTES_TEMPLATE.md
       - name: Upload controlled validation artifact
         uses: actions/upload-artifact@v4
         with:
@@ -60,5 +65,7 @@ jobs:
             out/HandheldDockMode-*.zip
             out/source-revision.txt
             out/SHA256SUMS.txt
+            out/release-candidate.json
+            out/RELEASE_NOTES_TEMPLATE.md
           if-no-files-found: error
           retention-days: 14

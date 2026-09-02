@@ -52,6 +52,13 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **Release-candidate foundation (2026-09-01):** local-only script and CI step
+  validate `package.json` semantic version against Python metadata and the
+  built Decky ZIP, then emit a version/revision/archive-SHA manifest plus
+  release-notes template. Verification is deterministic/local; no GitHub
+  Release, Decky Store/channel registration, credential, deployment, or
+  hardware status change occurred. Next gate is a maintainer-reviewed manual
+  publication only after applicable certification evidence.
 - North Star: HDM is a safety-first SteamOS handheld reliability companion, not
   only a dock-mode controller. It must prevent or soften player-visible PC
   paper cuts, explain state clearly, and use only validated, reversible recovery
