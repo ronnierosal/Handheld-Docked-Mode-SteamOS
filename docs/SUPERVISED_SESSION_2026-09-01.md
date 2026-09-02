@@ -61,3 +61,20 @@ SIGKILL before loading the candidate. This establishes neither graceful
 unload/reload return-to-baseline nor controller/input/RPC health. Do not begin
 D2a or attach the G1 from this result. Preserve the logs and diagnose the
 shutdown timeout in a separately approved local change before advancing.
+
+## Follow-up candidate — graceful retirement
+
+**Status: Implemented locally; Hardware Validation Required.** Local commit
+`fd2d38f2fa0434f70c20a4759a1a9b606861f8f0` shuts down HDM's event-loop default
+executor only after its owned lifecycle tasks are cancelled and its sleep guard
+is closed. This releases idle workers created by HDM's `asyncio.to_thread`
+calls before `_unload` returns. A deterministic regression test confirms that
+the executor is shut down during unload. Its locally verified package is
+`0.2.0`, SHA-256
+`a19b4231411c7cfdec44db88bb046e7781de1184da6ec41f5ad2172f0d61f892`.
+
+Before D2a, the player must install this exact package through Decky's native
+lifecycle with the G1 disconnected, observe one unload/reload, and stop if
+Decky again needs SIGKILL or any display/input/session issue appears. No G1
+attachment, sleep, display, GPU, audio, controller, USB4, or process action is
+authorized by this local correction.

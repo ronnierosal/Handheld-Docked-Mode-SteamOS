@@ -9,19 +9,24 @@ Always re-check live state before making a hardware claim.
 - Repository: `C:\Users\SLDD\Codex Projects\Handheld-Docked-Mode-SteamOS`
 - Branch: `main`
 - Local source status must be checked with `git rev-parse HEAD` and `git status --short`.
-- Current local source candidate: `cb1696c1b622db045223c9c3846127b1fdb72bb7`.
+- Current local lifecycle-fix candidate: `fd2d38f2fa0434f70c20a4759a1a9b606861f8f0`.
   It is local-only and not installed-device evidence.
-- Last verified installed HDM build on the Ally: `0.2.0`, revision `e73d249`
+- Last verified installed HDM build on the Ally: `0.2.0`, revision `cb1696c1b622`
 - Last verified loader state: `plugin_loader.service` active.
-- **Current held-local candidate (2026-09-01):** `HandheldDockMode-0.2.0.zip`
-  was rebuilt from clean `cb1696c1b622db045223c9c3846127b1fdb72bb7` and has
-  SHA-256 `fbf7da6fccbbed8e908a09664298f849364f9fa0380e043a953a49daba71c818`.
+- **Current held-local lifecycle-fix candidate (2026-09-01):**
+  `HandheldDockMode-0.2.0.zip` was rebuilt from clean
+  `fd2d38f2fa0434f70c20a4759a1a9b606861f8f0` and has SHA-256
+  `a19b4231411c7cfdec44db88bb046e7781de1184da6ec41f5ad2172f0d61f892`.
   Its semantic version, embedded build revision, package structure, and
-  release-candidate manifest were verified locally. The exact installed
+  release-candidate manifest were verified locally. The currently installed
+  `cb1696c` candidate is a provenance/runtime observation only; the new package
+  must be installed through Decky's native lifecycle during a player-present,
+  G1-disconnected session before D2 can advance. The exact pre-install
   baseline rollback archive remains `e73d249db5687f564043fe4b6f9f2fa04c2042ec`
   / SHA-256 `f9faae446cd8e61616bc0f3b3afa21961fb1b9f3fe4e87b858e1d8a9935ec519`;
-  its artifact verifier passed. This supersedes prior `84219fc` and `484df70`
-  candidates, is not installed or hardware-validated, and must remain local
+  its artifact verifier passed. This supersedes prior `84219fc`, `484df70`,
+  and installed `cb1696c` candidates, is not installed or hardware-validated,
+  and must remain local
   while the G1 is attached. Install is permitted only in the next
   player-present, G1-disconnected baseline session after a safe shutdown; do
   not live-unplug, replace the plugin, or restart Decky/Gamescope. The exact
@@ -51,12 +56,25 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **Local graceful-unload correction (2026-09-01):** D2's native install
+  evidence showed the previous HDM backend surviving Decky's five-second
+  retirement window. Local diagnosis identified idle workers retained by the
+  plugin event loop after `asyncio.to_thread` as the smallest correctable
+  cause; the remote process cannot expose a definitive thread dump. Local
+  `fd2d38f` now shuts down that default executor at the end of `_unload`; a
+  regression test proves the executor is drained before unload returns. The
+  complete local matrix passed (architecture, 750 Python tests with 5 skips,
+  compile, frontend typecheck/tests/build, package, and candidate manifest).
+  This is **Implemented** locally, not a hardware/lifecycle validation. The
+  next safe hardware step is one player-present G1-disconnected native install
+  of `fd2d38f`, followed by one watched unload/reload observation; do not begin
+  D2a or attach the G1 first.
 - **D2 native candidate installation and post-install observation (2026-09-01):**
   after a fresh bounded preflight confirmed an absent eGPU, Idle game, one
   active internal display, and healthy Steam/Gamescope/plugin-loader processes,
   the player installed the staged Decky ZIP through Decky's native installer.
   One bounded read-only capture then confirmed HDM `0.2.0` / public revision
-  `cb1696c1b622`, matching the held-local candidate; no capture errors
+  `cb1696c1b622`, matching the then-held-local candidate; no capture errors
   occurred and the current plugin process reported Portable/Idle/certified with
   no blockers. Decky logged the frontend import event and remained active with
   zero service restarts. This is **Remotely Observed** candidate provenance and
