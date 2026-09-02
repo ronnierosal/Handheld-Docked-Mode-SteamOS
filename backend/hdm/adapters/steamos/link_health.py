@@ -10,7 +10,7 @@ from ...domain.models import Confidence, EgpuLinkObservation, EgpuLinkState
 from .pci import PCI_PATTERN
 
 
-WIDTH_RE = re.compile(r"^x(?P<width>\d+)$", re.IGNORECASE)
+WIDTH_RE = re.compile(r"^x?(?P<width>\d+)$", re.IGNORECASE)
 SPEED_RE = re.compile(r"^(?P<speed>\d+(?:\.\d+)?)\s*GT/s", re.IGNORECASE)
 
 

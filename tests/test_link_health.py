@@ -37,6 +37,20 @@ class PcieLinkHealthDiscoveryTests(unittest.TestCase):
             self.assertEqual(observed.speed_gtps, 16.0)
             self.assertEqual(observed.width_lanes, 4)
 
+    def test_accepts_kernel_bare_lane_count_as_up(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path = root / self.BDF.replace(":", "_")
+            write(path / "current_link_speed", "2.5 GT/s PCIe\n")
+            write(path / "current_link_width", "4\n")
+            observed = PcieLinkHealthDiscovery(
+                path_resolver=lambda _bdf: path
+            ).observe(self.BDF)
+            self.assertEqual(observed.state, EgpuLinkState.UP)
+            self.assertEqual(observed.confidence, Confidence.OBSERVED)
+            self.assertEqual(observed.speed_gtps, 2.5)
+            self.assertEqual(observed.width_lanes, 4)
+
     def test_zero_metric_reports_down_without_claiming_removal_authority(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
