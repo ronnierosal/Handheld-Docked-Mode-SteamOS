@@ -5,6 +5,7 @@ import {
   diagnosticLoggingLabel,
   diagnosticOverlayRows,
   overheadMeasurementLabel,
+  reportedBuildLabel,
 } from "../src/diagnostics-overlay.ts";
 
 
@@ -205,6 +206,12 @@ test("HDM overhead presentation is bounded, privacy-safe, and never claims game 
     game_impact: "unknown",
     total_cost_ms: -1,
   }), "unavailable");
+});
+
+test("reported build requires complete public comparison evidence", () => {
+  assert.equal(reportedBuildLabel({ schema_version: 1, version: "0.2.0", revision: "a".repeat(12), candidate_match: "current_candidate" }), "v0.2.0 · aaaaaaaaaaaa · current candidate");
+  assert.equal(reportedBuildLabel({ schema_version: 1, version: "0.2.0", revision: "private", candidate_match: "current_candidate" }), "unavailable");
+  assert.equal(reportedBuildLabel(undefined), "unavailable");
 });
 
 test("peripheral diagnostics remain categorical when an observation is mapped", () => {

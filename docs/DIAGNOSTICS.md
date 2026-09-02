@@ -96,6 +96,10 @@ only when the archive was built from a clean committed checkout. It shows
 `uncommitted` or `unavailable` instead of guessing. This is provenance for the
 installed package, not hardware-validation or certification evidence.
 
+Troubleshooting may show a supplied public build comparison only when complete
+schema-1 version, revision, and categorical match evidence is present. It never
+compares local source itself; unavailable or malformed input stays unavailable.
+
 The same view displays the snapshot's existing categorical health state
 (`Ready`, `Recovering`, `Degraded`, or `Attention Required`) and bounded public
 health blockers. The controller-facing attention section maps only recognized

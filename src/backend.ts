@@ -175,9 +175,10 @@ export interface SnapshotPayload {
     };
     hardware_profiles: HardwareProfileDiagnostics;
     build?: {
-      schema_version: number;
+      schema_version: 1;
       version: string;
       revision: string;
+      candidate_match?: "current_candidate" | "different_build" | "unavailable";
     };
   };
 }

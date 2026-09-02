@@ -270,6 +270,10 @@ do not leave a growing queue of completed worktree commits unintegrated.
   missing axes fail at construction, preventing an incomplete matrix from being
   presented as complete. This adds no collector, action, deployment, or
   hardware claim.
+- **Reported build presentation checkpoint (read-only):** Troubleshooting now
+  maps only complete public build comparison evidence to candidate/different/
+  unavailable status. It never infers installation from local source and adds
+  no collector, RPC, deployment, or hardware claim.
 - **Implemented (local-only contract):** interrupted docked-sleep recovery has
   a privacy-safe checkpoint projection over the existing canonical sleep
   journal plus a pure post-wake evidence classifier. It emits at most one

@@ -147,6 +147,14 @@ function overheadMeasurementLabel(measurement) {
     }
     return "unavailable";
 }
+function reportedBuildLabel(build) {
+    if (!build || build.schema_version !== 1 || !/^[0-9A-Za-z.+-]{1,32}$/.test(build.version)
+        || !/^[0-9a-f]{12}$/.test(build.revision) || !build.candidate_match)
+        return "unavailable";
+    const match = build.candidate_match === "current_candidate" ? "current candidate"
+        : build.candidate_match === "different_build" ? "different build" : "comparison unavailable";
+    return `v${build.version} · ${build.revision} · ${match}`;
+}
 function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus = null, peripheralStatus = null, actionHistory = null) {
     if (!payload) {
         return [];
@@ -181,6 +189,7 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
                 : "unavailable",
         },
         { name: "Snapshot schema", value: String(snapshot.schema_version) },
+        { name: "Reported HDM build", value: reportedBuildLabel(payload.diagnostics.build) },
         {
             name: "Device profile",
             value: profiles.host.status === "exact"
