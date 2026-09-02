@@ -169,7 +169,7 @@ function showSupportBundlePreview(
         </div>
       </div>
     </ConfirmModal>,
-    undefined,
+    window,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;
@@ -208,7 +208,7 @@ function showPresentationPreparationConfirmation(
         </p>
       </div>
     </ConfirmModal>,
-    undefined,
+    window,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;
@@ -246,7 +246,7 @@ function showSupervisedTvSwitchConfirmation(
         </p>
       </div>
     </ConfirmModal>,
-    undefined,
+    window,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;
@@ -316,7 +316,7 @@ function showProcessReleaseConfirmation(
         </p>
       </div>
     </ConfirmModal>,
-    undefined,
+    window,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;
@@ -356,7 +356,7 @@ function showDiagnosticLoggingConfirmation(
         </p>
       </div>
     </ConfirmModal>,
-    undefined,
+    window,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;
@@ -1428,7 +1428,7 @@ function showBlockedAttempt(
       bHideCloseIcon={true}
       onOK={close}
     />,
-    undefined,
+    window,
     { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
   );
   return modal;

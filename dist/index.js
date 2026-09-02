@@ -1069,7 +1069,7 @@ function showSupportBundlePreview(preview, onClose) {
     };
     // Let Decky resolve Steam's visible SP window. This plugin executes in the
     // invisible SharedJSContext, so using its global window hides the dialog.
-    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Redacted support bundle preview", strOKButtonText: "Close preview", bAlertDialog: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close, children: SP_JSX.jsxs("div", { style: { fontSize: "12px", lineHeight: "17px" }, children: [SP_JSX.jsx("p", { children: "Review this exact redacted JSON before copying or saving it. The save approval expires after five minutes and can be used once." }), SP_JSX.jsx("div", { style: { maxHeight: "55vh", overflow: "hidden" }, children: SP_JSX.jsx(DFL.ScrollPanel, { children: SP_JSX.jsx("pre", { style: { whiteSpace: "pre-wrap" }, children: preview.preview_json }) }) })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Redacted support bundle preview", strOKButtonText: "Close preview", bAlertDialog: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close, children: SP_JSX.jsxs("div", { style: { fontSize: "12px", lineHeight: "17px" }, children: [SP_JSX.jsx("p", { children: "Review this exact redacted JSON before copying or saving it. The save approval expires after five minutes and can be used once." }), SP_JSX.jsx("div", { style: { maxHeight: "55vh", overflow: "hidden" }, children: SP_JSX.jsx(DFL.ScrollPanel, { children: SP_JSX.jsx("pre", { style: { whiteSpace: "pre-wrap" }, children: preview.preview_json }) }) })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function showPresentationPreparationConfirmation(onConfirm, onClose) {
@@ -1081,7 +1081,7 @@ function showPresentationPreparationConfirmation(onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Prepare experimental display validation?", strOKButtonText: "Prepare", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function showSupervisedTvSwitchConfirmation(onConfirm, onClose) {
@@ -1093,7 +1093,7 @@ function showSupervisedTvSwitchConfirmation(onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Switch to TV for supervised test?", strOKButtonText: "Switch to TV", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only while watching the handheld screen, with no game running." }), SP_JSX.jsx("p", { children: "HDM will restart Gamescope once to select the verified TV and eGPU. If verification fails, HDM attempts to restore the handheld display. Stop if the screen or controls become unusable." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only while watching the handheld screen, with no game running." }), SP_JSX.jsx("p", { children: "HDM will restart Gamescope once to select the verified TV and eGPU. If verification fails, HDM attempts to restore the handheld display. Stop if the screen or controls become unusable." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function showPresentationPreparationBlocked(blockers) {
@@ -1124,7 +1124,7 @@ function showProcessReleaseConfirmation(preview, onConfirm, onClose) {
             onConfirm();
         }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: force
                         ? "Force close may lose unsaved work. Only the exact processes that survived the approved graceful attempt are eligible."
-                        : "HDM will request a graceful close only for the exact ordinary user processes listed below." }), preview.targets.map((target, index) => (SP_JSX.jsxs("p", { children: [target.name, " \u2014 ", target.resources.map(label).join(", ")] }, `${target.name}-${index}`))), preview.protected_client_count > 0 && (SP_JSX.jsxs("p", { children: [preview.protected_client_count, " protected client(s) will not be closed."] })), SP_JSX.jsx("p", { children: "Clearing software clients does not authorize physical eGPU removal. Shut down before disconnecting the eGPU." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+                        : "HDM will request a graceful close only for the exact ordinary user processes listed below." }), preview.targets.map((target, index) => (SP_JSX.jsxs("p", { children: [target.name, " \u2014 ", target.resources.map(label).join(", ")] }, `${target.name}-${index}`))), preview.protected_client_count > 0 && (SP_JSX.jsxs("p", { children: [preview.protected_client_count, " protected client(s) will not be closed."] })), SP_JSX.jsx("p", { children: "Clearing software clients does not authorize physical eGPU removal. Shut down before disconnecting the eGPU." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function showDiagnosticLoggingConfirmation(durationLabel, onConfirm, onClose) {
@@ -1136,7 +1136,7 @@ function showDiagnosticLoggingConfirmation(durationLabel, onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Enable verbose HDM diagnostics?", strOKButtonText: "Enable", strCancelButtonText: "Cancel", bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsxs("p", { children: ["HDM will retain additional sanitized, HDM-only events for ", durationLabel, ". Storage remains capped and verbose logging will not survive a reboot."] }), SP_JSX.jsx("p", { children: "Logs stay on this handheld unless you separately preview, save, and share a support bundle." })] }) }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsxs("p", { children: ["HDM will retain additional sanitized, HDM-only events for ", durationLabel, ". Storage remains capped and verbose logging will not survive a reboot."] }), SP_JSX.jsx("p", { children: "Logs stay on this handheld unless you separately preview, save, and share a support bundle." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function MonitorIcon() {
@@ -1808,7 +1808,7 @@ function showBlockedAttempt(warning, onClose) {
     };
     // Let Decky resolve Steam's visible SP window after the Power menu closes.
     // SharedJSContext's global window is not a player-visible modal parent.
-    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: warning.title, strDescription: warning.body, strOKButtonText: "OK", bAlertDialog: true, bDestructiveWarning: warning.critical, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close }), undefined, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: warning.title, strDescription: warning.body, strOKButtonText: "OK", bAlertDialog: true, bDestructiveWarning: warning.critical, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 var index = definePlugin(() => {
