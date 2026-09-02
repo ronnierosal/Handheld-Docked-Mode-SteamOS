@@ -1,16 +1,25 @@
 # Current state
 
-Last repository audit: **2026-09-02**. Re-verify all mutable facts before a
-build, deployment, merge, or hardware session.
+Last repository audit baseline: **2026-09-02**. This page records a dated
+implementation baseline rather than attempting to name its own containing Git
+commit. Re-verify all mutable facts before a build, deployment, merge, or
+hardware session:
+
+```text
+git status --short --branch
+git rev-parse HEAD
+git rev-list --left-right --count origin/main...HEAD
+```
 
 ## Repository
 
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| HEAD | `8d96b9c398f77c26ebbef50b5fb1c7d402695169` |
-| Worktree | Clean at audit time |
-| Remote relation | Local `main` was 67 commits ahead of `origin/main` |
+| Audited implementation baseline | `8d96b9c398f77c26ebbef50b5fb1c7d402695169` |
+| Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
+| Worktree | Clean at the audit baseline; verify live before acting |
+| Remote relation | Local `main` was 67 commits ahead of `origin/main` before the governance slice |
 | Project version | `0.2.0` from `package.json` |
 
 GitHub does not yet contain the audited local implementation. Do not describe a
