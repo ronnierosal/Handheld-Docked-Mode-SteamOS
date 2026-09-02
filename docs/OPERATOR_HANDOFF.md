@@ -52,6 +52,25 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **D2 read-only post-install capture (2026-09-01):** fresh unprivileged,
+  no-write capture recorded one Steam, Gamescope, and plugin-loader process;
+  HDM was present at `0.2.0` / public revision `e73d249db568`; game state was
+  Idle; one internal display was active; and no external display/GPU was
+  observed. The capture had no collector errors or events. It mismatched the
+  current `c8f670b` candidate provenance, so the requested candidate install
+  is not established and D2 remains incomplete. Gamescope render selection and
+  the Decky-owned sleep lease remain unavailable to unprivileged capture. Stop
+  before D3; do not infer a candidate match from the player-visible panel.
+- **D3 read-only attach observation (2026-09-01):** after the player reported
+  the G1 physically attached, one bounded no-write capture instead resolved
+  only the exact Ally X host and an absent/unknown eGPU profile: no external
+  GPU, display, or link was observed. It saw HDM `0.2.0` / `e73d249db568`, one
+  Steam/Gamescope/plugin-loader process, Idle game state, one active internal
+  display, complete zero-client disconnect scan, no collector errors/events,
+  and a 14.155 ms snapshot. This conflicts with the physical report and is
+  therefore ambiguous, not an attach result or safe-undock finding. Render GPU
+  and the Decky lease were unavailable at unprivileged privilege. Stop D3 here;
+  no retry, transition, or hardware action is authorized from this capture.
 - **D2 supervised visual checkpoint (2026-09-01):** the player reported normal
   handheld screen and controls with HDM visible in Decky, no game running, and
   the G1 physically disconnected after the requested install. This is a
