@@ -14,3 +14,9 @@ out/
 node_modules/
 test-results/
 *.local.json
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx

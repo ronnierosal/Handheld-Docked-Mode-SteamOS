@@ -1,0 +1,45 @@
+name: Bug report
+description: Report an HDM defect with bounded diagnostic evidence.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: input
+    id: build
+    attributes:
+      label: HDM version and build
+      description: Use the public version/revision label; do not include device IDs.
+      placeholder: "0.2.0 / abc123def456"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Hardware profile and SteamOS version
+      placeholder: "ASUS ROG Ally X + GPD G1; SteamOS version"
+    validations:
+      required: true
+  - type: dropdown
+    id: starting_mode
+    attributes:
+      label: Starting placement
+      options: [Portable, Boosted Handheld, Docked-iGPU, TV Docked, Unknown or Degraded]
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and reproduction steps
+      description: Include the earliest visible divergence and whether recovery succeeded.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Bounded evidence
+      description: Add categorical transaction/action ID or a redacted support-bundle reference. Never paste secrets, addresses, raw IDs, paths, or giant logs.

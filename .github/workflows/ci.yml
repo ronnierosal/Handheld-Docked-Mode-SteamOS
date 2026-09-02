@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -30,6 +34,8 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Compile Python sources
         run: python -m compileall -q backend tests scripts
+      - name: Check whitespace
+        run: git diff --check
       - name: Smoke read-only diagnostics CLI
         env:
           PYTHONPATH: backend
@@ -42,6 +48,8 @@ jobs:
         run: node --check scripts/probe_steam_suspend_store.mjs
       - name: Build Decky UI
         run: pnpm build
+      - name: Verify committed frontend outputs
+        run: git diff --exit-code -- dist/index.js dist/index.js.map
       - name: Check Decky package contract
         run: python scripts/check_plugin_package.py .
       - name: Build Decky archive
