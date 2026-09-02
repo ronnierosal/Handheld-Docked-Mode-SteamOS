@@ -101,6 +101,15 @@ do not leave a growing queue of completed worktree commits unintegrated.
   certification. HDM's public capture remained Gamescope-observed/render-unknown
   with link unavailable, so its current state is not dock-ready. No reference
   code, deployment, or hardware mutation was used.
+- **Independent D3 confirmation (2026-09-01):** a fresh read-only capture
+  independently confirmed the exact certified G1 profile, present eGPU, Idle
+  game, active internal display, and one connected EDID-ready but inactive
+  external display. Render GPU remained Unknown because the Gamescope
+  environment was unreadable; Safe Undock remained blocked by incomplete client
+  scanning/protected WirePlumber; the snapshot had no errors and took 25.680 ms.
+  Installed HDM is still `0.2.0` / `e73d249`, not local `200062d`; this is
+  observation only. The next display proof is the separately scheduled
+  player-watched [D5.1 stage](DEPLOYMENT_VALIDATION.md#d51--player-watched-idle-tv-switch-proof-separately-scheduled), never an automatic follow-on.
 - **Fail-closed link presentation correction (2026-09-01):** local UI now also
   requires a current observed-Up link before `Ready to dock`; unavailable link
   evidence says `eGPU link needs verification`. Regression coverage includes

@@ -281,6 +281,24 @@ and a known-good rollback package available. Remote automation may build,
 stage, inspect, and collect evidence, but must not invoke its confirmation or
 restart Gamescope unattended.
 
+#### D5.1 — Player-watched idle TV-switch proof (separately scheduled)
+
+**Status: Hardware Validation Required.** This is a distinct supervised stage,
+not a continuation of D3 attachment observation. Before scheduling it, retain a
+fresh exact G1 profile, one connected EDID-ready external display, verified
+Gamescope/render evidence, an observed Up bridge link, Idle game state, current
+candidate provenance, and a known-good rollback package. The player must first
+visually confirm internal display, controls, network, Steam, Decky, and recovery
+access.
+
+Only the player, while watching the handheld and TV, may approve the one
+controller-confirmed switch. Remote tooling may collect before/attempt/after
+evidence but must not invoke the confirmation or restart Gamescope. Stop and
+preserve evidence for a black/missing display, lost input/SSH, unexpected
+session/process change, unknown placement, or provenance mismatch. A verified
+TV result or verified Portable rollback is required; connected HDMI alone never
+passes this stage.
+
 The first watched G1/TV attempt did not switch output; the shim retained the
 internal panel because the transition launch configuration was written where the
 shim could not read it. Treat that attempt as a failed acceptance result. The
