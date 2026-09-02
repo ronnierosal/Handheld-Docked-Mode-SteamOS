@@ -31,7 +31,6 @@ import {
   disableDiagnosticLogging,
   preparePresentationIntegration,
   previewPresentationPreparation,
-  previewSupervisedTvSwitch,
   previewProcessRelease,
   previewSupportBundle,
   saveSupportBundle,
@@ -205,44 +204,6 @@ function showPresentationPreparationConfirmation(
         <p>
           This installs HDM&apos;s reversible Gamescope startup integration and reloads the user
           service configuration. It does not restart Gamescope, switch displays, or select a GPU.
-        </p>
-      </div>
-    </ConfirmModal>,
-    window,
-    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
-  );
-  return modal;
-}
-
-function showSupervisedTvSwitchConfirmation(
-  onConfirm: () => void,
-  onClose: () => void,
-): ReturnType<typeof showModal> {
-  let modal: ReturnType<typeof showModal>;
-  const close = () => {
-    modal.Close();
-    onClose();
-  };
-  modal = showModal(
-    <ConfirmModal
-      strTitle="Switch to TV for supervised test?"
-      strOKButtonText="Switch to TV"
-      strCancelButtonText="Cancel"
-      bDestructiveWarning={true}
-      bDisableBackgroundDismiss={true}
-      bHideCloseIcon={true}
-      onOK={() => {
-        close();
-        onConfirm();
-      }}
-      onCancel={close}
-    >
-      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
-        <p>Continue only while watching the handheld screen, with no game running.</p>
-        <p>
-          HDM will restart Gamescope once to select the verified TV and eGPU. If verification
-          fails, HDM attempts to restore the handheld display. Stop if the screen or controls
-          become unusable.
         </p>
       </div>
     </ConfirmModal>,
@@ -433,7 +394,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const linkHealthNotification = useRef<ReturnType<typeof decideLinkHealthNotification>["memory"]>(null);
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
-  const tvSwitchModal = useRef<ReturnType<typeof showModal> | null>(null);
   const processModal = useRef<ReturnType<typeof showModal> | null>(null);
   const diagnosticLoggingModal = useRef<ReturnType<typeof showModal> | null>(null);
 
@@ -442,8 +402,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     supportModal.current = null;
     presentationModal.current?.Close();
     presentationModal.current = null;
-    tvSwitchModal.current?.Close();
-    tvSwitchModal.current = null;
     processModal.current?.Close();
     processModal.current = null;
     diagnosticLoggingModal.current?.Close();
@@ -870,12 +828,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     setTvSwitchBusy(true);
     setTvSwitchMessage("");
     try {
-      toaster.toast({
-        title: "HDM is switching to the TV",
-        body: "Watch the handheld screen while HDM verifies the transition.",
-        critical: true,
-        duration: 30000,
-      });
       const approval = await approveSupervisedTvSwitch();
       if (!approval.approval_token || approval.blockers.length > 0) {
         setTvSwitchMessage(
@@ -885,6 +837,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         );
         return;
       }
+      toaster.toast({
+        title: "HDM is switching to the TV",
+        body: "Watch the handheld screen while HDM verifies the transition.",
+        critical: true,
+        duration: 30000,
+      });
       const outcome = await executeSupervisedTvSwitch(approval.approval_token);
       setTvSwitchAcknowledgementId(
         outcome.acknowledgement_required ? outcome.acknowledgement_id : "",
@@ -900,29 +858,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setTvSwitchBusy(false);
     }
   }, []);
-
-  const inspectTvSwitch = useCallback(async () => {
-    setTvSwitchBusy(true);
-    setTvSwitchMessage("");
-    try {
-      const preview = await previewSupervisedTvSwitch();
-      if (!preview.ready || preview.blockers.length > 0) {
-        setTvSwitchMessage(
-          `TV switch blocked: ${preview.blockers.map(label).join(", ")}.`,
-        );
-        return;
-      }
-      tvSwitchModal.current?.Close();
-      tvSwitchModal.current = showSupervisedTvSwitchConfirmation(
-        () => void executeTvSwitch(),
-        () => { tvSwitchModal.current = null; },
-      );
-    } catch {
-      setTvSwitchMessage("TV switch inspection is unavailable. No change was made.");
-    } finally {
-      setTvSwitchBusy(false);
-    }
-  }, [executeTvSwitch]);
 
   const acknowledgeTvSwitch = useCallback(async () => {
     if (!tvSwitchAcknowledgementId) return;
@@ -1374,14 +1309,14 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           <PanelSectionRow>
             <ButtonItem
               layout="below"
-              onClick={() => void inspectTvSwitch()}
+              onClick={() => void executeTvSwitch()}
               disabled={tvSwitchBusy || Boolean(tvSwitchAcknowledgementId)}
             >
-              {tvSwitchBusy ? "Checking…" : "Switch to TV for supervised test"}
+              {tvSwitchBusy ? "Switching…" : "Switch to TV"}
             </ButtonItem>
           </PanelSectionRow>
           <PanelSectionRow>
-            Idle only. This is an experimental, player-watched test and may restart Gamescope once.
+            One press. Idle only; HDM revalidates the G1, TV, and game state before restarting Gamescope once.
           </PanelSectionRow>
           {tvSwitchAcknowledgementId && (
             <PanelSectionRow>

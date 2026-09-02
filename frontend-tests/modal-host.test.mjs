@@ -6,6 +6,6 @@ const source = readFileSync(new URL("../src/index.tsx", import.meta.url), "utf8"
 
 test("player-facing modals use Steam's visible window host", () => {
   const modalCalls = source.match(/showModal\([\s\S]*?\n\s*window,\n\s*\{ strTitle:/g) ?? [];
-  assert.ok(modalCalls.length >= 6);
+  assert.ok(modalCalls.length >= 5);
   assert.doesNotMatch(source, /showModal\([\s\S]*?\n\s*undefined,\n\s*\{ strTitle:/);
 });
