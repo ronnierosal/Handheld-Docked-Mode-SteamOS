@@ -89,7 +89,8 @@ const LABELS: Record<string, string> = {
   user: "User",
 };
 
-const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
+const SLEEP_WARNING_KEY = "hdm.hideAttachedEgpuSleepWarning";
+const LEGACY_SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
 const SNAPSHOT_STALE_AFTER_MS = 10_000;
 const BLOCKED_ATTEMPT_MODAL_DELAY_MS = 750;
 const DIAGNOSTIC_LOGGING_OPTIONS = [
@@ -371,7 +372,10 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [loading, setLoading] = useState(true);
   const [preflightStatus, setPreflightStatus] = useState(() => preflight.status());
   const [sleepWarningHidden, setSleepWarningHidden] = useState(
-    () => localStorage.getItem(SLEEP_WARNING_KEY) === "1",
+    () => (
+      localStorage.getItem(SLEEP_WARNING_KEY) === "1"
+      || localStorage.getItem(LEGACY_SLEEP_WARNING_KEY) === "1"
+    ),
   );
   const [supportPreview, setSupportPreview] = useState<SupportBundlePreviewPayload | null>(null);
   const [supportBusy, setSupportBusy] = useState(false);
@@ -683,11 +687,13 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
 
   const hideSleepWarning = useCallback(() => {
     localStorage.setItem(SLEEP_WARNING_KEY, "1");
+    localStorage.removeItem(LEGACY_SLEEP_WARNING_KEY);
     setSleepWarningHidden(true);
   }, []);
 
   const showSleepWarning = useCallback(() => {
     localStorage.removeItem(SLEEP_WARNING_KEY);
+    localStorage.removeItem(LEGACY_SLEEP_WARNING_KEY);
     warningToastShown.current = false;
     setSleepWarningHidden(false);
   }, []);
@@ -1316,7 +1322,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             </ButtonItem>
           </PanelSectionRow>
           <PanelSectionRow>
-            One press. Idle only; HDM revalidates the G1, TV, and game state before restarting Gamescope once.
+            One press. Idle only; HDM revalidates the eGPU, TV, and game state before restarting Gamescope once.
           </PanelSectionRow>
           {tvSwitchAcknowledgementId && (
             <PanelSectionRow>

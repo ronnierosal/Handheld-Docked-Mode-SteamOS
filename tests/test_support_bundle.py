@@ -42,8 +42,8 @@ class IncrementingClock:
 
 def adversarial_report() -> dict[str, object]:
     private = (
-        "RonniePrivate ally-secret 192.168.1.185 /home/RonniePrivate/private "
-        "C:\\Users\\RonniePrivate\\secret 0000:08:00.0 1002:7480 card17 "
+        "FixtureUser fixture-secret 192.0.2.185 /home/FixtureUser/private "
+        "C:\\Users\\FixtureUser\\secret 0000:08:00.0 1002:7480 card17 "
         "renderD128 HDMI-A-9 1814797631546d0ba959013aee764ebb65e79cb2e"
     )
     return {
@@ -167,17 +167,17 @@ class SupportBundleTests(unittest.TestCase):
             events.snapshot(),
             {
                 "hdm": "0.2.0",
-                "decky": "ally-secret",
-                "steamos": "RonniePrivate@192.168.1.185",
+                "decky": "fixture-secret",
+                "steamos": "FixtureUser@192.0.2.185",
                 "kernel": "6.11.11-valve",
             },
-            sensitive_values=("RonniePrivate", "ally-secret"),
+            sensitive_values=("FixtureUser", "fixture-secret"),
         )
 
         for forbidden in (
-            "RonniePrivate",
-            "ally-secret",
-            "192.168.1.185",
+            "FixtureUser",
+            "fixture-secret",
+            "192.0.2.185",
             "/home/",
             "C:\\Users\\",
             "0000:08:00.0",
@@ -199,6 +199,24 @@ class SupportBundleTests(unittest.TestCase):
         self.assertNotIn("private-stable-id", bundle.json_text)
         self.assertTrue(bundle.payload["manifest"]["redacted"])
         self.assertLessEqual(bundle.size_bytes, 256 * 1024)
+
+    def test_profile_check_uses_exact_runtime_status_not_one_host_id(self):
+        report = adversarial_report()
+        report["snapshot"]["host_profile"] = "synthetic-handheld-profile"
+        report["diagnostics"]["hardware_profiles"] = {
+            "host": {"status": "exact", "profile_id": "synthetic-handheld-profile"},
+            "egpu": {"status": "absent", "profile_id": "unknown"},
+            "capabilities": [],
+        }
+
+        bundle = SupportBundleService().build(report, (), {})
+
+        check = next(
+            row
+            for row in bundle.payload["profile_checks"]
+            if row["code"] == "host.profile_exact"
+        )
+        self.assertEqual(check["result"], "pass")
 
     def test_size_limit_drops_old_events_but_keeps_manifest_and_snapshot(self):
         clock = IncrementingClock()

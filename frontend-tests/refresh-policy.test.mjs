@@ -62,7 +62,7 @@ test("incomplete identity and TV evidence use the settling cadence", () => {
     blockers: [{ code: "egpu_identity_unverified", message: "Exact topology incomplete." }],
   });
   assert.equal(connectionProgress(incomplete).label, "eGPU evidence unavailable");
-  assert.match(connectionProgress(incomplete).detail, /exact G1/i);
+  assert.match(connectionProgress(incomplete).detail, /exact eGPU/i);
   assert.equal(refreshDelayForSnapshot(incomplete), SETTLING_REFRESH_MS);
 
   const tv = payload({

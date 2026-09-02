@@ -296,15 +296,28 @@ class SupportBundlePreviewStore:
             self._previews.pop(token, None)
 
 
-def _profile_checks(snapshot: Mapping[str, Any]) -> list[dict[str, str]]:
+def _profile_checks(
+    snapshot: Mapping[str, Any], diagnostics: Mapping[str, Any]
+) -> list[dict[str, str]]:
     sleep_guard = snapshot.get("sleep_guard", {})
     disconnect = snapshot.get("disconnect_readiness", {})
     gamescope = snapshot.get("gamescope", {})
+    hardware_profiles = diagnostics.get("hardware_profiles", {})
+    host_profile = (
+        hardware_profiles.get("host", {})
+        if isinstance(hardware_profiles, Mapping)
+        else {}
+    )
+    host_exact = (
+        host_profile.get("status") == "exact"
+        if isinstance(host_profile, Mapping) and host_profile
+        else snapshot.get("host_profile") not in {None, "", "unknown"}
+    )
     required = sleep_guard.get("required") is True
     return [
         {
-            "code": "host.certified",
-            "result": "pass" if snapshot.get("host_profile") == "asus-rog-ally-x" else "fail",
+            "code": "host.profile_exact",
+            "result": "pass" if host_exact else "fail",
         },
         {
             "code": "hardware.support",
@@ -538,7 +551,12 @@ class SupportBundleService:
                 {key: versions.get(key, "unknown") for key in ("hdm", "decky", "steamos", "kernel")},
                 sensitive,
             ),
-            "profile_checks": _profile_checks(snapshot),
+            "profile_checks": _profile_checks(
+                snapshot,
+                report.get("diagnostics", {})
+                if isinstance(report.get("diagnostics", {}), Mapping)
+                else {},
+            ),
             "diagnostics": sanitize_value(report.get("diagnostics", {}), sensitive),
             "snapshot": _support_snapshot(snapshot, sensitive),
             "events": event_rows,

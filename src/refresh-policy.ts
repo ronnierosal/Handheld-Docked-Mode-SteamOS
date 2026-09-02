@@ -93,14 +93,14 @@ export function connectionProgress(
   if (egpu === "absent") {
     return {
       label: "eGPU not detected",
-      detail: "Current read-only evidence has not detected a supported G1.",
+      detail: "Current read-only evidence has not detected a supported eGPU.",
       settling: false,
     };
   }
   if (egpu !== "exact") {
     return {
       label: "eGPU evidence unavailable",
-      detail: "Waiting for current exact G1 profile evidence.",
+      detail: "Waiting for current exact eGPU profile evidence.",
       settling: true,
     };
   }

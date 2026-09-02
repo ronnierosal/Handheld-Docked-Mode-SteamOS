@@ -688,14 +688,14 @@ function connectionProgress(payload) {
     if (egpu === "absent") {
         return {
             label: "eGPU not detected",
-            detail: "Current read-only evidence has not detected a supported G1.",
+            detail: "Current read-only evidence has not detected a supported eGPU.",
             settling: false,
         };
     }
     if (egpu !== "exact") {
         return {
             label: "eGPU evidence unavailable",
-            detail: "Waiting for current exact G1 profile evidence.",
+            detail: "Waiting for current exact eGPU profile evidence.",
             settling: true,
         };
     }
@@ -1028,7 +1028,8 @@ const LABELS = {
     unsupported: "Unsupported",
     user: "User",
 };
-const SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
+const SLEEP_WARNING_KEY = "hdm.hideAttachedEgpuSleepWarning";
+const LEGACY_SLEEP_WARNING_KEY = "hdm.hideAttachedG1SleepWarning";
 const SNAPSHOT_STALE_AFTER_MS = 10_000;
 const BLOCKED_ATTEMPT_MODAL_DELAY_MS = 750;
 const DIAGNOSTIC_LOGGING_OPTIONS = [
@@ -1158,7 +1159,8 @@ function Content({ preflight }) {
     const [error, setError] = SP_REACT.useState("");
     const [loading, setLoading] = SP_REACT.useState(true);
     const [preflightStatus, setPreflightStatus] = SP_REACT.useState(() => preflight.status());
-    const [sleepWarningHidden, setSleepWarningHidden] = SP_REACT.useState(() => localStorage.getItem(SLEEP_WARNING_KEY) === "1");
+    const [sleepWarningHidden, setSleepWarningHidden] = SP_REACT.useState(() => (localStorage.getItem(SLEEP_WARNING_KEY) === "1"
+        || localStorage.getItem(LEGACY_SLEEP_WARNING_KEY) === "1"));
     const [supportPreview, setSupportPreview] = SP_REACT.useState(null);
     const [supportBusy, setSupportBusy] = SP_REACT.useState(false);
     const [supportMessage, setSupportMessage] = SP_REACT.useState("");
@@ -1428,10 +1430,12 @@ function Content({ preflight }) {
     }, [gameUsesEgpu, sleepGuard, sleepWarningHidden]);
     const hideSleepWarning = SP_REACT.useCallback(() => {
         localStorage.setItem(SLEEP_WARNING_KEY, "1");
+        localStorage.removeItem(LEGACY_SLEEP_WARNING_KEY);
         setSleepWarningHidden(true);
     }, []);
     const showSleepWarning = SP_REACT.useCallback(() => {
         localStorage.removeItem(SLEEP_WARNING_KEY);
+        localStorage.removeItem(LEGACY_SLEEP_WARNING_KEY);
         warningToastShown.current = false;
         setSleepWarningHidden(false);
     }, []);
@@ -1764,7 +1768,7 @@ function Content({ preflight }) {
                                     ? () => void stopDiagnosticLogging()
                                     : requestDiagnosticLogging, disabled: diagnosticLoggingBusy, children: diagnosticLoggingStatus?.enabled
                                     ? "Disable verbose diagnostics"
-                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy || Boolean(tvSwitchAcknowledgementId), children: tvSwitchBusy ? "Switching…" : "Switch to TV" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "One press. Idle only; HDM revalidates the G1, TV, and game state before restarting Gamescope once." }), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge TV switch result" }) })), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
+                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy || Boolean(tvSwitchAcknowledgementId), children: tvSwitchBusy ? "Switching…" : "Switch to TV" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "One press. Idle only; HDM revalidates the eGPU, TV, and game state before restarting Gamescope once." }), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge TV switch result" }) })), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
 }
 function showBlockedAttempt(warning, onClose) {
     let modal;
