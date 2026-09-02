@@ -540,6 +540,42 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertIsNone(plugin._docked_igpu_task)
         self.assertIsNone(plugin._docked_igpu_scheduler)
 
+    def test_docked_igpu_watcher_starts_only_for_a_running_docked_igpu_report(self):
+        plugin, _service = self.plugin()
+        scheduler = DockedIgpuScheduler()
+        plugin._build_docked_igpu_scheduler = lambda: scheduler
+
+        class Report:
+            def __init__(self, placement, game_state):
+                self.snapshot = types.SimpleNamespace(game_state=game_state)
+                self.placement = placement
+
+        original_infer_placement = self.module.infer_placement
+        report = None
+        self.module.infer_placement = lambda snapshot: report.placement
+
+        async def exercise():
+            nonlocal report
+            report = Report(PlacementState.PORTABLE, GameState.RUNNING)
+            await plugin._start_docked_igpu_lifecycle_for(report)
+            self.assertIsNone(plugin._docked_igpu_task)
+            report = Report(PlacementState.DOCKED_IGPU, GameState.IDLE)
+            await plugin._start_docked_igpu_lifecycle_for(report)
+            self.assertIsNone(plugin._docked_igpu_task)
+            report = Report(PlacementState.DOCKED_IGPU, GameState.RUNNING)
+            await plugin._start_docked_igpu_lifecycle_for(report)
+            for _ in range(100):
+                if scheduler.started:
+                    break
+                await asyncio.sleep(0.001)
+            await plugin._stop_docked_igpu_lifecycle()
+
+        try:
+            asyncio.run(exercise())
+            self.assertTrue(scheduler.started)
+        finally:
+            self.module.infer_placement = original_infer_placement
+
     def test_unload_drains_the_plugin_default_executor(self):
         plugin, _service = self.plugin()
 

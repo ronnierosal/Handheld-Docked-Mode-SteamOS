@@ -145,6 +145,8 @@ from hdm.domain.control_plane import (  # noqa: E402
     PlacementState,
     TransitionOutcomeKind,
 )
+from hdm.domain.models import GameState  # noqa: E402
+from hdm.domain.inference import infer_placement  # noqa: E402
 from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
 
 
@@ -187,12 +189,22 @@ class Plugin:
         report = await asyncio.to_thread(self._api.get_snapshot_report)
         payload = report_to_public_dict(report)
         payload["diagnostics"]["build"] = self._build_info
+        await self._start_docked_igpu_lifecycle_for(report)
         attach_status = await asyncio.to_thread(
             self._record_topology_observation, report.snapshot
         )
         payload["attach_readiness"] = attach_readiness_to_payload(attach_status)
         await asyncio.to_thread(self._record_verbose_snapshot, payload)
         return payload
+
+    async def _start_docked_igpu_lifecycle_for(self, report) -> None:
+        """Start the exit watcher only for its exact running Docked-iGPU case."""
+
+        if (
+            infer_placement(report.snapshot) is PlacementState.DOCKED_IGPU
+            and report.snapshot.game_state is GameState.RUNNING
+        ):
+            await self._start_docked_igpu_lifecycle()
 
     def _record_topology_observation(self, snapshot):
         """Log only verified snapshot deltas; never execute recovery from them."""
@@ -875,7 +887,6 @@ class Plugin:
                 component="discovery",
                 stage="startup",
             )
-        await self._start_docked_igpu_lifecycle()
         self._sleep_guard_task = asyncio.create_task(self._sleep_guard_loop())
 
     async def _start_docked_igpu_lifecycle(self) -> None:
