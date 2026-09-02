@@ -71,6 +71,14 @@ do not leave a growing queue of completed worktree commits unintegrated.
   therefore ambiguous, not an attach result or safe-undock finding. Render GPU
   and the Decky lease were unavailable at unprivileged privilege. Stop D3 here;
   no retry, transition, or hardware action is authorized from this capture.
+- **D3 one-time read-only recheck (2026-09-01):** after the player confirmed
+  G1 power and cable seating, the explicitly authorized single additional
+  capture was unchanged: no PCI/USB4/eGPU identity, link, external GPU, or
+  external display enumerated; no collector errors appeared. PCI/USB4 probe
+  timings changed only from 4.529/0.257 ms to 4.308/0.208 ms and do not imply a
+  topology change. Stop all remote checks. The smallest next operator check is
+  to visually confirm the cable uses the G1 upstream host USB4 port rather than
+  a display-only or auxiliary port; do not reset or otherwise mutate the Ally.
 - **D2 supervised visual checkpoint (2026-09-01):** the player reported normal
   handheld screen and controls with HDM visible in Decky, no game running, and
   the G1 physically disconnected after the requested install. This is a
