@@ -4,9 +4,11 @@
 
 # Handheld Dock Mode
 
-**Safety-first reliability companion for SteamOS handheld PCs**
+**Safety-first, games-first reliability companion for SteamOS handheld PCs**
 
-Move between handheld and TV gaming with player-friendly modes while HDM verifies the GPU, display, Gamescope, game, and hardware state underneath.
+HDM aims to make handheld gaming console-simple: status first, low overhead,
+and no avoidable surprises. It verifies GPU, display, Gamescope, game, and
+hardware state before any future dock-mode action.
 
 [![CI](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/actions/workflows/ci.yml/badge.svg)](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/actions/workflows/ci.yml) [![Last commit](https://img.shields.io/github/last-commit/ronnierosal/Handheld-Docked-Mode-SteamOS)](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/commits/main/) ![Version](https://img.shields.io/badge/version-0.2.0-6f42c1) ![Platform](https://img.shields.io/badge/platform-SteamOS-1b2838?logo=steam) [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-2ea44f)](LICENSE)
 
@@ -34,9 +36,10 @@ paper cuts by detecting problems, preventing avoidable failures, explaining
 state in player language, and safely guiding or performing verified recovery
 where authority and evidence allow. Docking is the first domain, not the
 product boundary; today’s implemented scope remains deliberately narrower.
-Players choose a desired placement—such as **Portable** or **TV Docked**—instead
-of managing DRM connectors, PCI addresses, GPU selectors, or Gamescope
-arguments.
+HDM presents player-friendly placement and journey status—such as **Portable**
+or a future **TV Docked** target—instead of DRM connectors, PCI addresses, GPU
+selectors, or Gamescope arguments. Current native transition authority remains
+intentionally narrow and supervised.
 
 The project is deliberately fail-closed. If HDM cannot prove the exact hardware,
 active display, render GPU, game state, or rollback path, it reports the state
@@ -52,7 +55,11 @@ as unknown or degraded and blocks the action.
   login1 inhibitor and Steam's native preflight blocker
 - 📦 Preview, copy, and token-approved save of a bounded, redacted support bundle
 - 📊 Adaptive Decky polling, collection timings, and an optional troubleshooting
-  overlay
+  overlay with bounded health, recovery/link explanations, and HDM-overhead
+  status that never claims game impact
+- 🧭 Compact controller-first Journey status: deferred dock, prepared idle,
+  Safe Undock evidence, recovery, link, and Offline Readiness remain local
+  classifiers until a reviewed read-only delivery source is connected
 - 🧪 Deterministic transition, rollback, crash-recovery, process-release, sleep,
   compatibility, and failure-injection simulations
 - 🔧 Explicitly approved preparation of the reversible Gamescope integration
@@ -68,14 +75,20 @@ It cannot restart Gamescope, switch a display, or select a GPU.
 HDM `0.2.0` is a development build. The implementation is intentionally split
 between production-safe features and dormant or simulated transition work.
 
+Evidence labels matter: **Implemented** means code and deterministic checks;
+**Remotely observed** means bounded read-only device evidence; **Hardware
+Validation Required** means a player-present supervised test still decides the
+claim. Neither a simulation nor a clean UI promotes hardware support.
+
 | Capability | Evidence | Availability |
 |---|---|---|
 | Decky lifecycle and typed RPC | Implemented and hardware tested | Available |
 | Read-only certified-profile discovery | Implemented and hardware tested | Available |
 | Portable placement inference | Implemented and hardware tested | Available |
 | eGPU sleep inhibitor and Steam preflight | Implemented and hardware tested | Available; persistent warning needs one final supervised visible proof |
-| Redacted support preview, one-shot game/GPU evidence, and approved save | Implemented and simulated | Available; new evidence and controller-visible save acceptance are pending hardware proof |
+| Redacted support preview and approved save | Implemented and simulated | Available; controller-visible preview/save acceptance remains pending hardware proof |
 | Docked-iGPU natural-exit observer | Implemented and simulated | Read-only categorical status available in troubleshooting; hardware proof pending |
+| Journey, link/recovery explanation, and Offline Readiness classifiers | Implemented and frontend tested | Read-only UI remains “Not connected” until a reviewed delivery source is wired; no game/account collection or action authority |
 | Temporary verbose diagnostics | Implemented and simulated | Explicit controller consent, bounded countdown, disable control, and reboot reset available; visible acceptance pending |
 | Gamescope integration preparation | Implemented and simulated | Available only through an explicit, short-lived approval |
 | Supervised idle TV-switch test | Implemented and simulated | Explicit player-watched Decky test only; hardware proof pending, automatic docking remains unavailable |
@@ -174,6 +187,9 @@ before any Decky installation; it does not contact or modify a handheld.
 Hardware validation must follow the staged
 [deployment and validation strategy](docs/DEPLOYMENT_VALIDATION.md), beginning
 with one clean, provenance-recorded package and the eGPU disconnected.
+The current player-present preparation record is
+[Supervised Ally session preparation](docs/SUPERVISED_SESSION_2026-09-01.md);
+it is a local artifact/readiness record, not a deployment or hardware result.
 
 ## 🛠️ Development
 
