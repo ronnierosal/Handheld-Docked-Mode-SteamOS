@@ -1012,6 +1012,11 @@ class Plugin:
             self._sleep_guard_task = None
         status = await asyncio.to_thread(self._sleep_guard.close)
         decky.logger.info("HDM sleep guard released: active=%s", status.active)
+        # Decky retires this plugin's backend process after _unload returns.
+        # asyncio.to_thread creates worker threads on this process's event loop;
+        # stop those idle workers explicitly so they cannot keep the retired
+        # backend alive until Decky's five-second force-kill timeout.
+        await asyncio.get_running_loop().shutdown_default_executor()
 
     async def _stop_docked_igpu_lifecycle(self) -> None:
         task = self._docked_igpu_task

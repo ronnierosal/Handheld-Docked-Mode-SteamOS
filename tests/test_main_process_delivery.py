@@ -540,6 +540,18 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertIsNone(plugin._docked_igpu_task)
         self.assertIsNone(plugin._docked_igpu_scheduler)
 
+    def test_unload_drains_the_plugin_default_executor(self):
+        plugin, _service = self.plugin()
+
+        async def exercise():
+            loop = asyncio.get_running_loop()
+            await plugin._unload()
+            executor = loop._default_executor
+            self.assertIsNotNone(executor)
+            self.assertTrue(executor._shutdown)
+
+        asyncio.run(exercise())
+
     def test_docked_igpu_supervisor_retries_transient_build_failure(self):
         plugin, _service = self.plugin()
         plugin._docked_igpu_retry_seconds = 0.001
