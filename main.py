@@ -1023,11 +1023,12 @@ class Plugin:
             self._sleep_guard_task = None
         status = await asyncio.to_thread(self._sleep_guard.close)
         decky.logger.info("HDM sleep guard released: active=%s", status.active)
-        # Decky retires this plugin's backend process after _unload returns.
-        # asyncio.to_thread creates worker threads on this process's event loop;
-        # stop those idle workers explicitly so they cannot keep the retired
-        # backend alive until Decky's five-second force-kill timeout.
-        await asyncio.get_running_loop().shutdown_default_executor()
+        # Do not drain asyncio's shared executor here. Cancellation stops the
+        # coroutine that requested a read-only scan, but cannot cancel a scan
+        # already running in a worker thread. Waiting for that worker can hold
+        # Decky's unload hook past its five-second deadline and cause a forced
+        # stop. Decky owns backend-process retirement after this hook returns;
+        # HDM only owns and stops the tasks and resources it created.
 
     async def _stop_docked_igpu_lifecycle(self) -> None:
         task = self._docked_igpu_task

@@ -576,15 +576,25 @@ class MainProcessDeliveryTests(unittest.TestCase):
         finally:
             self.module.infer_placement = original_infer_placement
 
-    def test_unload_drains_the_plugin_default_executor(self):
+    def test_unload_never_waits_for_the_shared_default_executor(self):
         plugin, _service = self.plugin()
 
         async def exercise():
             loop = asyncio.get_running_loop()
-            await plugin._unload()
-            executor = loop._default_executor
-            self.assertIsNotNone(executor)
-            self.assertTrue(executor._shutdown)
+            called = False
+            original_shutdown = loop.shutdown_default_executor
+
+            async def unexpected_executor_shutdown():
+                nonlocal called
+                called = True
+                raise AssertionError("plugin unload must not drain shared executor")
+
+            loop.shutdown_default_executor = unexpected_executor_shutdown
+            try:
+                await plugin._unload()
+            finally:
+                loop.shutdown_default_executor = original_shutdown
+            self.assertFalse(called)
 
         asyncio.run(exercise())
 
