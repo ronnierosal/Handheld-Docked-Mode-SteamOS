@@ -35,6 +35,7 @@ export interface RefreshPolicyPayload {
     egpu_link: {
       applicable: boolean;
       state: "up" | "down" | "unknown";
+      confidence: string;
     };
     blockers: Array<{ code: string; message: string }>;
   };
@@ -110,9 +111,13 @@ export function connectionProgress(
       settling: true,
     };
   }
-  if (snapshot.egpu_link.applicable && snapshot.egpu_link.state !== "up") {
+  if (
+    snapshot.egpu_link.applicable !== true
+    || snapshot.egpu_link.state !== "up"
+    || snapshot.egpu_link.confidence !== "observed"
+  ) {
     return {
-      label: snapshot.egpu_link.state === "down"
+      label: snapshot.egpu_link.applicable && snapshot.egpu_link.state === "down"
         ? "eGPU link needs attention"
         : "eGPU link needs verification",
       detail: "HDM is preserving the current setup. Verify the display and controls before changing it.",

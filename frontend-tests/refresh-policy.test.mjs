@@ -24,6 +24,7 @@ function payload({
   scanComplete = true,
   linkApplicable = false,
   linkState = "unknown",
+  linkConfidence = "unknown",
   mode = "portable",
   blockers = [],
   gameState = "idle",
@@ -39,7 +40,7 @@ function payload({
       gamescope: { running: gamescopeRunning, confidence: gamescopeConfidence },
       disconnect_readiness: { scan_complete: scanComplete },
       sleep_guard: { required, active, confidence },
-      egpu_link: { applicable: linkApplicable, state: linkState },
+      egpu_link: { applicable: linkApplicable, state: linkState, confidence: linkConfidence },
       blockers,
     },
     inference: { mode },
@@ -72,6 +73,7 @@ test("incomplete identity and TV evidence use the settling cadence", () => {
     gpus: [{ role: "external", present: true, confidence: "verified" }],
     linkApplicable: true,
     linkState: "up",
+    linkConfidence: "observed",
   });
   assert.equal(connectionProgress(tv).label, "TV initializing");
   assert.equal(refreshDelayForSnapshot(tv), SETTLING_REFRESH_MS);
@@ -83,6 +85,7 @@ test("verified eGPU and TV states expose progressive labels", () => {
     gpus: [{ role: "external", present: true, confidence: "verified" }],
     linkApplicable: true,
     linkState: "up",
+    linkConfidence: "observed",
   };
   const g1 = payload({ required: true, active: true, ...g1Facts });
   assert.equal(connectionProgress(g1).label, "eGPU detected");
@@ -123,6 +126,7 @@ test("unverified display activity or Gamescope state never becomes ready to dock
     gpus: [{ role: "external", present: true, confidence: "verified" }],
     linkApplicable: true,
     linkState: "up",
+    linkConfidence: "observed",
   };
   const observedDisplay = { kind: "external", connected: true, active: false, edid_ready: true, confidence: "observed" };
   assert.equal(connectionProgress(payload({ ...g1Facts, displays: [observedDisplay] })).label, "TV initializing");
@@ -155,6 +159,19 @@ test("a stale display or sleep guard never substitutes for exact current G1 evid
   assert.notEqual(connectionProgress(unknown).label, "Ready to dock");
 });
 
+test("an exact G1 without an observed Up link never becomes ready to dock", () => {
+  const display = { kind: "external", connected: true, active: false, edid_ready: true, confidence: "verified" };
+  const value = payload({
+    required: true,
+    active: true,
+    displays: [display],
+    egpuStatus: "exact",
+    gpus: [{ role: "external", present: true, confidence: "verified" }],
+  });
+  assert.equal(connectionProgress(value).label, "eGPU link needs verification");
+  assert.notEqual(connectionProgress(value).label, "Ready to dock");
+});
+
 test("link Down or Unknown cannot present a docked connection as ready", () => {
   const display = { kind: "external", connected: true, active: true, edid_ready: true, confidence: "verified" };
   const down = payload({
@@ -164,6 +181,7 @@ test("link Down or Unknown cannot present a docked connection as ready", () => {
     mode: "tv_docked",
     linkApplicable: true,
     linkState: "down",
+    linkConfidence: "observed",
     egpuStatus: "exact",
     gpus: [{ role: "external", present: true, confidence: "verified" }],
   });
@@ -177,6 +195,7 @@ test("link Down or Unknown cannot present a docked connection as ready", () => {
     mode: "tv_docked",
     linkApplicable: true,
     linkState: "unknown",
+    linkConfidence: "unknown",
     egpuStatus: "exact",
     gpus: [{ role: "external", present: true, confidence: "verified" }],
   });

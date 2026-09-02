@@ -88,6 +88,25 @@ do not leave a growing queue of completed worktree commits unintegrated.
   topology change. Stop all remote checks. The smallest next operator check is
   to visually confirm the cable uses the G1 upstream host USB4 port rather than
   a display-only or auxiliary port; do not reset or otherwise mutate the Ally.
+- **Cross-reference read-only topology comparison (2026-09-01):** the frozen
+  eGPUBridge `ef04f65f` snapshot and a fresh HDM capture now agree on the exact
+  G1 profile: RX 7600M XT `1002:7480`, HDMI audio `1002:ab30`, Titan Ridge
+  bridges `8086:15ef`, xHCI `8086:15f0`, and a verified present external GPU
+  with connected HDMI-A-2/EDID. Live Gamescope still used `-O *,eDP-1`, so the
+  internal panel was active and the connected HDMI output was not active. The
+  current idle capture had no active Steam scope; eGPUBridge's reference parser
+  covers the current `app-steam-app<appid>-<instance>.scope` form. Journal
+  evidence showed prior link-down/card-absent records then a fresh Link Up and
+  enumeration, plus earlier AMD/bridge recovery noise; it is not a clean-link
+  certification. HDM's public capture remained Gamescope-observed/render-unknown
+  with link unavailable, so its current state is not dock-ready. No reference
+  code, deployment, or hardware mutation was used.
+- **Fail-closed link presentation correction (2026-09-01):** local UI now also
+  requires a current observed-Up link before `Ready to dock`; unavailable link
+  evidence says `eGPU link needs verification`. Regression coverage includes
+  exact-G1/display facts without a link and the stale display/sleep-guard case.
+  This is a local uninstalled UI-only correction, not a transition or hardware
+  validation result.
 - **D2 supervised visual checkpoint (2026-09-01):** the player reported normal
   handheld screen and controls with HDM visible in Decky, no game running, and
   the G1 physically disconnected after the requested install. This is a
