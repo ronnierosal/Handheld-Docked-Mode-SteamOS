@@ -38,7 +38,8 @@ properties; no author, location, camera, or GPS metadata was found.
   development environment.
 - **Recommended action:** Replace it with a repository-relative command or a
   generic `C:\path\to\...` example.
-- **Status:** Open at audit baseline; safe to fix immediately.
+- **Status:** Fixed in `3f0e9fa`; the handoff now resolves the checkout root at
+  runtime instead of naming a Windows profile.
 
 ### PRIV-002 — private LAN address and local path remain in Git history
 
@@ -139,7 +140,8 @@ properties; no author, location, camera, or GPS metadata was found.
 - **Recommended action:** Use `eGPU` in workflow copy and a model-neutral key;
   retain model names in certification and compatibility surfaces. If the key is
   renamed, read the legacy key for migration.
-- **Status:** Open; safe copy/key migration.
+- **Status:** Fixed in `8a8cb5f`; player copy is generic and the legacy key is
+  read only for preference migration.
 
 ### HC-007 — support profile check compares one literal host ID
 
@@ -151,7 +153,8 @@ properties; no author, location, camera, or GPS metadata was found.
   profile despite valid runtime evidence.
 - **Recommended action:** Report generic exact-profile resolution or consume the
   resolved hardware-profile diagnostics instead of a literal ID.
-- **Status:** Open; small targeted change.
+- **Status:** Fixed in `8a8cb5f`; a synthetic alternate exact-host regression
+  test proves that the check no longer depends on the Ally profile ID.
 
 ### ENV-001 — signed updater and capture payload fix the `deck` home
 
@@ -200,13 +203,14 @@ properties; no author, location, camera, or GPS metadata was found.
 - **Location:** `tests/test_support_bundle.py`, `tests/test_remote_capture.py`,
   `tests/test_stage_decky_update.py`
 - **Category / severity:** D/F — Test Fixture / Placeholder, **P3**
-- **Current behavior:** Intentional redaction tests use `RonniePrivate` and
-  `192.168.1.*` values.
+- **Current behavior:** Intentional redaction tests used a maintainer-like
+  placeholder name and RFC 1918 addresses.
 - **Why it matters:** They are test data, not proven disclosures, but they look
   like captured maintainer data and obscure history/privacy review.
 - **Recommended action:** Use `FixtureUser` and RFC 5737 documentation addresses
   such as `192.0.2.*`.
-- **Status:** Open; low-risk cleanup.
+- **Status:** Fixed across `3f0e9fa` and `8a8cb5f`; fixtures now use
+  `FixtureUser` and RFC 5737 documentation addresses.
 
 ### HYGIENE-001 — secret-file ignores were incomplete at baseline
 
@@ -218,8 +222,8 @@ properties; no author, location, camera, or GPS metadata was found.
   easier to stage accidentally.
 - **Recommended action:** Ignore common secret-file patterns while allowing any
   intentionally reviewed public test key by explicit exception.
-- **Status:** Being addressed by the separate governance workstream; do not
-  duplicate or overwrite that change.
+- **Status:** Fixed by the separate governance workstream before this report was
+  committed; the audit did not overwrite that change.
 
 ## Intentional hardware-specific data retained
 
