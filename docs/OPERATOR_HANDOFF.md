@@ -9,25 +9,24 @@ Always re-check live state before making a hardware claim.
 - Repository: `C:\Users\SLDD\Codex Projects\Handheld-Docked-Mode-SteamOS`
 - Branch: `main`
 - Local source status must be checked with `git rev-parse HEAD` and `git status --short`.
-- Latest locally verified application slices at this handoff: `36da94f` (optional
-  authoritative health observations) and `c271309` (their measured timing).
-  They are local-only, not installed-device evidence, and may be unpushed.
+- Current local source candidate: `cb1696c1b622db045223c9c3846127b1fdb72bb7`.
+  It is local-only and not installed-device evidence.
 - Last verified installed HDM build on the Ally: `0.2.0`, revision `e73d249`
 - Last verified loader state: `plugin_loader.service` active.
-- A signed candidate based on `3584a4d` is staged but was not installed when
-  this note was written.
-- **Current local candidate (2026-09-01):**
-  [candidate `84219fc`](DEPLOYMENT_CANDIDATE_2026-09-01.md) passed D0/D1
-  locally and has an inspected combined archive. It is not yet D2-stageable:
-  no local rollback archive matches the last observed installed `e73d249`
-  baseline. Do not install until that artifact or an explicit rollback plan is
-  available.
-- **Superseding local package preparation (2026-09-01):** current main
-  `484df70` and an exact rebuilt `e73d249` rollback archive passed isolated D1
-  verification and the paired local artifact gate. This is only
-  `verified_for_supervised_review`, not installation or hardware validation.
-  The exact hashes, paths, player-present D2/D2a/D3-only scope, and stop
-  conditions are in [the supervised session record](SUPERVISED_SESSION_2026-09-01.md).
+- **Current held-local candidate (2026-09-01):** `HandheldDockMode-0.2.0.zip`
+  was rebuilt from clean `cb1696c1b622db045223c9c3846127b1fdb72bb7` and has
+  SHA-256 `fbf7da6fccbbed8e908a09664298f849364f9fa0380e043a953a49daba71c818`.
+  Its semantic version, embedded build revision, package structure, and
+  release-candidate manifest were verified locally. The exact installed
+  baseline rollback archive remains `e73d249db5687f564043fe4b6f9f2fa04c2042ec`
+  / SHA-256 `f9faae446cd8e61616bc0f3b3afa21961fb1b9f3fe4e87b858e1d8a9935ec519`;
+  its artifact verifier passed. This supersedes prior `84219fc` and `484df70`
+  candidates, is not installed or hardware-validated, and must remain local
+  while the G1 is attached. Install is permitted only in the next
+  player-present, G1-disconnected baseline session after a safe shutdown; do
+  not live-unplug, replace the plugin, or restart Decky/Gamescope. The exact
+  D2/D2a/D3 scope and stop conditions are in
+  [the supervised session record](SUPERVISED_SESSION_2026-09-01.md).
 
 The staged candidate, installed version, and local checkout may change. Confirm
 each independently before relying on this snapshot.

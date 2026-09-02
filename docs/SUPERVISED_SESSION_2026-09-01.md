@@ -7,13 +7,16 @@ presence, G1 state, UI behavior, or any hardware capability.
 
 | Role | Commit | Version | SHA-256 | Isolated validation directory |
 | --- | --- | --- | --- | --- |
-| Candidate | `484df70af5f31b166f32707b88292005ea90396e` | `0.2.0` | `e17357e3ea2afb5048288f76f42ec6bf0ebd83e841e9773330510207fb25fce9` | `out/validation-current-484df70` |
+| Candidate | `cb1696c1b622db045223c9c3846127b1fdb72bb7` | `0.2.0` | `fbf7da6fccbbed8e908a09664298f849364f9fa0380e043a953a49daba71c818` | `out/release-candidate.json` (manifest verified; create the D2 paired record before install) |
 | Rollback baseline | `e73d249db5687f564043fe4b6f9f2fa04c2042ec` | `0.2.0` | `f9faae446cd8e61616bc0f3b3afa21961fb1b9f3fe4e87b858e1d8a9935ec519` | `out/validation-rollback-e73d249` |
 
-The candidate was built from clean current main. The rollback was rebuilt in a
-detached exact-revision worktree, not substituted from the unrelated preserved
-`25802649` archive. Both embedded revisions and the paired artifact gate passed
-locally with the observed baseline label `e73d249db568`.
+The candidate was built from clean current main and its release-candidate
+manifest verified its version, embedded revision, ZIP structure, and hash. The
+rollback was rebuilt in a detached exact-revision worktree, not substituted from
+the unrelated preserved `25802649` archive; its embedded revision and artifact
+verifier passed locally with the observed baseline label `e73d249db568`.
+This candidate supersedes the older `484df70` entry. Before D2, create the
+paired candidate record from this exact archive and re-verify both artifacts.
 
 ## Session scope and stop conditions
 
