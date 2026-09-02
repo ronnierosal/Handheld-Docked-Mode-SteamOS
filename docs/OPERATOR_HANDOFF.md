@@ -22,6 +22,12 @@ Always re-check live state before making a hardware claim.
   no local rollback archive matches the last observed installed `e73d249`
   baseline. Do not install until that artifact or an explicit rollback plan is
   available.
+- **Superseding local package preparation (2026-09-01):** current main
+  `484df70` and an exact rebuilt `e73d249` rollback archive passed isolated D1
+  verification and the paired local artifact gate. This is only
+  `verified_for_supervised_review`, not installation or hardware validation.
+  The exact hashes, paths, player-present D2/D2a/D3-only scope, and stop
+  conditions are in [the supervised session record](SUPERVISED_SESSION_2026-09-01.md).
 
 The staged candidate, installed version, and local checkout may change. Confirm
 each independently before relying on this snapshot.
