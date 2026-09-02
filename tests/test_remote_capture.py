@@ -59,9 +59,9 @@ class RemoteCaptureTests(unittest.TestCase):
             stdout = json.dumps(safe_capture)
 
         with patch("remote_capture.subprocess.run", return_value=Result()) as run:
-            value = remote_capture.collect_remote(host="192.168.1.172")
+            value = remote_capture.collect_remote(host="192.0.2.172")
         argv = run.call_args.args[0]
-        self.assertEqual(argv[-3:], ["deck@192.168.1.172", "python3", "-"])
+        self.assertEqual(argv[-3:], ["deck@192.0.2.172", "python3", "-"])
         self.assertNotIn("shell", run.call_args.kwargs)
         self.assertEqual(
             run.call_args.kwargs["input"],
@@ -88,12 +88,12 @@ class RemoteCaptureTests(unittest.TestCase):
 
         with patch("remote_capture.subprocess.run", return_value=Result()) as run:
             remote_capture.collect_remote(
-                host="192.168.1.172",
+                host="192.0.2.172",
                 root_read_only=True,
             )
         self.assertEqual(
             run.call_args.args[0][-5:],
-            ["deck@192.168.1.172", "sudo", "-n", "/usr/bin/python3", "-"],
+            ["deck@192.0.2.172", "sudo", "-n", "/usr/bin/python3", "-"],
         )
         self.assertNotIn("shell", run.call_args.kwargs)
 
@@ -126,7 +126,7 @@ class RemoteCaptureTests(unittest.TestCase):
                 r"non-interactive root read-only capture unavailable \(SSH status 1\)",
             ) as raised:
                 remote_capture.collect_remote(
-                    host="192.168.1.172",
+                    host="192.0.2.172",
                     root_read_only=True,
                 )
         self.assertEqual(run.call_count, 1)
@@ -136,14 +136,14 @@ class RemoteCaptureTests(unittest.TestCase):
         class Result:
             returncode = 255
             stdout = ""
-            stderr = "deck@192.168.1.141: Permission denied (publickey,password)."
+            stderr = "deck@192.0.2.141: Permission denied (publickey,password)."
 
         with patch("remote_capture.subprocess.run", return_value=Result()):
             with self.assertRaisesRegex(
                 RuntimeError, r"ssh\.authentication_failed"
             ) as raised:
-                remote_capture.collect_remote(host="192.168.1.141")
-        self.assertNotIn("192.168.1.141", str(raised.exception))
+                remote_capture.collect_remote(host="192.0.2.141")
+        self.assertNotIn("192.0.2.141", str(raised.exception))
         self.assertNotIn("publickey", str(raised.exception))
 
     def test_ssh_failure_classification_is_fixed_and_non_sensitive(self):

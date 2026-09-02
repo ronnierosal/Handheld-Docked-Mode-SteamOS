@@ -8,7 +8,7 @@ state before making a hardware claim.
 
 ## Repository and current snapshot
 
-- Repository: `C:\Users\SLDD\Codex Projects\Handheld-Docked-Mode-SteamOS`
+- Repository: the root of this checkout (`git rev-parse --show-toplevel`)
 - Branch, HEAD, divergence, worktree, version, and active ownership:
   [Current state](CURRENT_STATE.md). Re-run `git rev-parse HEAD` and
   `git status --short --branch` before relying on that snapshot.

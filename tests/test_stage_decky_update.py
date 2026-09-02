@@ -52,12 +52,12 @@ class StageDeckyUpdateTests(unittest.TestCase):
 
     def test_commands_constrain_destination_and_remote_path(self):
         filename = "HDM-update-0.2.0-aaaaaaaaaaaa.zip"
-        argv = stage_decky_update.build_hash_argv(host="192.168.1.146", user="deck", port=22, timeout_seconds=15, identity_file=None, filename=filename)
+        argv = stage_decky_update.build_hash_argv(host="192.0.2.146", user="deck", port=22, timeout_seconds=15, identity_file=None, filename=filename)
         self.assertEqual(argv[-3:], ["sha256sum", "--", f"/home/deck/Downloads/{filename}"])
         with self.assertRaises(ValueError):
             stage_decky_update.build_hash_argv(host="bad host", user="deck", port=22, timeout_seconds=15, identity_file=None, filename=filename)
         with self.assertRaises(ValueError):
-            stage_decky_update.build_hash_argv(host="192.168.1.146", user="deck", port=22, timeout_seconds=15, identity_file=None, filename="../../plugin.zip")
+            stage_decky_update.build_hash_argv(host="192.0.2.146", user="deck", port=22, timeout_seconds=15, identity_file=None, filename="../../plugin.zip")
 
     def test_staging_requires_remote_digest_match(self):
         class Result:
@@ -72,7 +72,7 @@ class StageDeckyUpdateTests(unittest.TestCase):
             results = [Result(), Result()]
             results[1].stdout = f"{digest}  /home/deck/Downloads/{expected_name}\n"
             with patch.object(stage_decky_update.subprocess, "run", side_effect=results) as run:
-                result = stage_decky_update.stage_package(package=package, host="192.168.1.146")
+                result = stage_decky_update.stage_package(package=package, host="192.0.2.146")
             self.assertEqual(result["state"], "staged")
             self.assertEqual(run.call_count, 2)
 
