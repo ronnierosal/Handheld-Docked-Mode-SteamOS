@@ -43,3 +43,21 @@ Gamescope, or change display/GPU/audio/controller state.
 
 No D4 warning/support acceptance, D5 process/presentation operation, D6 sleep,
 unplug, controller/audio, or display transition is in this session.
+
+## D2 result — native install observation
+
+**Status: Remotely Observed; D2 lifecycle acceptance incomplete.** With the G1
+absent and the game Idle, the player used Decky's native installer to install
+the candidate above. The immediate bounded read-only capture reported
+`0.2.0` / public revision `cb1696c1b622`, exactly matching the candidate,
+with no collector errors, one active internal display, and one Steam,
+Gamescope, and plugin-loader process. Decky remained active with zero service
+restarts, logged its frontend import event, and HDM subsequently reported
+Portable/Idle/certified with no blockers.
+
+The native install did expose a stop condition for later lifecycle acceptance:
+Decky waited five seconds for the prior HDM process to unload, then sent
+SIGKILL before loading the candidate. This establishes neither graceful
+unload/reload return-to-baseline nor controller/input/RPC health. Do not begin
+D2a or attach the G1 from this result. Preserve the logs and diagnose the
+shutdown timeout in a separately approved local change before advancing.

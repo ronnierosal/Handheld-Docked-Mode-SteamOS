@@ -51,6 +51,22 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **D2 native candidate installation and post-install observation (2026-09-01):**
+  after a fresh bounded preflight confirmed an absent eGPU, Idle game, one
+  active internal display, and healthy Steam/Gamescope/plugin-loader processes,
+  the player installed the staged Decky ZIP through Decky's native installer.
+  One bounded read-only capture then confirmed HDM `0.2.0` / public revision
+  `cb1696c1b622`, matching the held-local candidate; no capture errors
+  occurred and the current plugin process reported Portable/Idle/certified with
+  no blockers. Decky logged the frontend import event and remained active with
+  zero service restarts. This is **Remotely Observed** candidate provenance and
+  baseline runtime only: render GPU remains unreadable at unprivileged
+  privilege, and neither controller/input nor a real HDM RPC request was
+  exercised. Crucially, Decky's native replacement stopped the old HDM process
+  only after its five-second timeout and SIGKILL. Therefore D2 unload/reload
+  return-to-baseline is **not validated**; preserve this lifecycle finding and
+  do not proceed to D2a or attach the G1 until it is diagnosed in a separately
+  approved local slice.
 - **Fail-closed Connection label correction (2026-09-01):** local review found
   that the Quick Access `Ready to dock` branch inferred eGPU readiness from a
   required sleep guard plus display facts, without requiring the public exact
