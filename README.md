@@ -229,7 +229,7 @@ Build the deterministic Decky archive:
 python scripts/build_plugin.py
 ```
 
-The package is written to `out/HandheldDockMode-0.2.0.zip`. Never deploy if a
+The package is written to `out/HandheldDockMode-<version>.zip`. Never deploy if a
 check fails, the worktree contains unexplained changes, or artifact provenance
 cannot be matched to one commit.
 
@@ -278,6 +278,8 @@ evidence, but its architecture and behavior are not inherited as proof.
 
 | Topic | Document |
 |---|---|
+| Authority and navigation | [Documentation index](docs/INDEX.md) |
+| Current repository/build/deployment truth | [Current state](docs/CURRENT_STATE.md) |
 | Product scope and placements | [Product definition](docs/PRODUCT.md) |
 | Non-negotiable release gates | [Safety invariants](docs/SAFETY_INVARIANTS.md) |
 | Components and state model | [Architecture](docs/ARCHITECTURE.md) |
@@ -291,6 +293,10 @@ evidence, but its architecture and behavior are not inherited as proof.
 | Sleep request policy | [Sleep workflow](docs/SLEEP_WORKFLOW.md) |
 | Verified game-save boundary | [Game save](docs/GAME_SAVE.md) |
 | Process-release boundary | [Process release](docs/PROCESS_RELEASE.md) |
+| Contributor and Git workflow | [Development](docs/DEVELOPMENT.md) |
+| Player-facing UI contract | [UI specification](docs/UI_SPEC.md) |
+| eGPUBridge capability preservation | [Parity audit](docs/EGPUBRIDGE_FEATURE_REVIEW.md) |
+| Planned GitHub Wiki pages | [Wiki information architecture](docs/WIKI_INFORMATION_ARCHITECTURE.md) |
 
 Additional design records and compatibility documents are available in
 [`docs/`](docs/).
@@ -299,10 +305,13 @@ Additional design records and compatibility documents are available in
 
 Contributions should preserve the safety invariants, pure-domain boundary, and
 fail-closed defaults. Keep changes narrow, add deterministic regression coverage,
-and run the full verification matrix before opening a pull request.
+and use verification proportional to the change. Run the full matrix at
+meaningful integration, deployment, and release gates.
 
 Hardware-affecting changes require an explicit milestone decision, supervised
 execution, rollback coverage, and redacted before/live/after evidence.
+See [Contributing](CONTRIBUTING.md) and the
+[development workflow](docs/DEVELOPMENT.md).
 
 ## 📜 Licensing
 

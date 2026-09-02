@@ -1,120 +1,79 @@
-# eGPUBridge feature review for HDM
+# eGPUBridge parity audit
 
-## Decision rule
+Audit baseline: HDM `8d96b9c`, eGPUBridge frozen hardware reference
+`ef04f65f`, reviewed 2026-09-02.
 
-HDM is a Decky Loader-native product, not an eGPUBridge rename. eGPUBridge is
-evidence for useful behavior, hardware constraints, and failure modes. Features
-are reimplemented through HDM's typed observations, policy, transactions, and
-native Decky UI; its monolithic backend and legacy UI are not ported.
+eGPUBridge is hardware and UX evidence, not HDM's architecture. A capability is
+not preserved merely because similar code or a deterministic test exists; the
+HDM evidence column states what is actually present.
 
-## Recommended feature selection
+## Status vocabulary
 
-| eGPUBridge capability | HDM decision | Target | Reason |
-|---|---|---|---|
-| DRM, Gamescope, Steam-game, PCI, and USB4 discovery | Keep, redesigned | 0.1 | Required evidence for every later decision; already implemented. |
-| Native Decky Quick Access UI and typed RPC | Keep, redesigned | 0.1 | This is HDM's only supported player-facing delivery model. |
-| Portable / TV Docked manual switch | Reimplement | 0.2 | Core product workflow; must use one verified transaction engine. |
-| Restore Internal recovery | Reimplement | 0.2 | Required rollback and black-screen recovery path. |
-| Running-game transition block | Reimplement | 0.2 | Required safety invariant; unknown game state also blocks. |
-| eGPU sleep warning and resume observation | Reimplement | 0.2 | The certified Ally X/GPD G1 immediately wakes from attached sleep. |
-| Sleep blocking while the G1 is attached | Lease implemented; Steam UI acceptance failed | 0.2 | The login1 lease prevents full suspend, but Steam's Sleep action can still leave the active presentation black. A native preflight/warning is required. |
-| Exact disconnect readiness report | Read-only core implemented | 0.1/0.2 | Schema 2 now explains exact GPU/audio process clients and mounted/swap storage; transition actions remain 0.2. |
-| Close processes using the exact eGPU | New guarded workflow | 0.2 | Addresses stale non-game clients without presenting live unplug as safe. |
-| Hot-plug observation and internal failback | Reimplement | 0.2 | Protects the next Gamescope session when the configured eGPU is absent. |
-| PCIe/USB4 link-health diagnostics | Reimplement read-only | 0.2 | Useful for the degraded G1 link; not a transition prerequisite by itself. |
-| TV ADB, Wake-on-LAN, and input control | Defer, optional adapter | Later | Useful convenience, but separate from safe dock state and not required for 0.2. |
-| Recovery hardware hotkeys | Defer | Later | Useful after the transition engine and native UI recovery are proven. |
-| GPU telemetry | Consider read-only subset | Later | Helpful but not core to mode correctness. |
-| GPU power, fan, clock, or voltage tuning | Do not port initially | Out of scope | Expands hardware risk and needs its own profiles, bounds, watchdog, and rollback. |
-| NVIDIA driver installation or removal | Do not port | Out of scope | OS package and driver mutation does not belong in the HDM Decky RPC surface. |
-| Physical live G1 PCI/USB4 removal | Do not enable | Unsupported | The validated Ally X/G1 path has produced AMDGPU teardown stalls. |
-| Transparent running-game GPU migration | Do not promise | Unsupported | A live graphics device cannot generally migrate between physical GPUs. |
+- **Preserved:** equivalent user value exists through HDM's architecture.
+- **Improved in HDM:** the capability exists with a clearer or safer contract.
+- **Intentionally different:** HDM solves the need differently.
+- **Missing / candidate:** useful evidence exists, but HDM does not yet deliver it.
+- **Not applicable:** outside HDM's product or platform boundary.
 
-## Sleep guard behavior
+## Capability ledger
 
-The root Decky backend owns a login1 sleep-inhibitor lease while the exact
-certified G1 is present. The lease is released when the G1 is verified absent or
-the plugin unloads. A crashed plugin must not leave a permanent system inhibitor.
+| eGPUBridge capability | HDM classification | HDM evidence / decision |
+|---|---|---|
+| DRM, Gamescope, Steam-game, PCI, and USB4 discovery | Improved in HDM | Independent typed observations in SteamOS adapters; exact-profile composition; runtime card/connector/address rediscovery; deterministic fixtures and first-profile read-only evidence. |
+| GPU/eGPU identity | Improved in HDM | Conservative Ally/G1 profiles require full topology and opaque USB4 identity; incomplete/ambiguous identity fails closed. Central multi-profile wiring remains a P0 audit gap. |
+| Internal/external display detection | Improved in HDM | Connected output and live active Gamescope target are separate facts. Internal connector classification needs eDP/DSI/LVDS consistency. |
+| Native Decky status UI | Improved in HDM | Typed RPC, native controls, bounded polling, placement/health/game separation, progressive troubleshooting. See `UI_SPEC.md`. |
+| One-tap TV switch | Missing / candidate | One player-watched supervised HDM path is implemented/simulated. Corrected native path still requires fresh Ally/G1/TV proof; automatic docking is unavailable. |
+| Restore Internal | Preserved, hardware proof pending | Portable recovery policy, journal, wrapper failback, and orchestrator verification exist; native corrected path still needs supervised proof. |
+| Idempotent switch | Improved in HDM | Transition policy skips already verified target state and binds requests to fresh observations; hardware proof remains workflow-specific. |
+| Running-game guard | Improved in HDM | Running or unknown game state blocks disruptive transition; no executable-name-only guess. |
+| Switch ordering and verification | Improved in HDM | Detect → Validate → Plan → Prepare → Apply → Verify → Commit with journaled rollback; eGPUBridge's proven ordering informed the mechanism. |
+| Gamescope handling | Intentionally different | HDM uses a narrow prepared integration, boot-scoped configuration, exact user/session discovery, and a supervised transition boundary rather than the monolithic legacy backend. |
+| Bounded readiness/retry | Improved in HDM | Typed stages, bounded timeouts, revalidation, single-owner workflows, and deterministic failure injection. Runtime/hardware retry claims remain evidence-gated. |
+| Failure handling and rollback | Improved in HDM | Durable transaction journal, rollback contract, recovery explanations, and fail-closed unknown state. Native hardware recovery still needs scenario-specific proof. |
+| Hot-plug observation | Missing / candidate | Topology events and attach readiness are read-only classifiers. No persistent automatic docking coordinator is authorized. |
+| Missing-eGPU startup failback | Preserved, proof pending | Wrapper and recovery policy prefer a verified internal state; current HDM mechanism requires native hardware validation. |
+| Disconnect readiness | Improved in HDM | Exact bounded client/storage/topology evidence and approval-bound process release. It never converts readiness into a live-unplug claim. |
+| Physical PCI/USB4 live removal | Intentionally different / unsupported | Disabled for the certified G1 because eGPUBridge evidence included AMDGPU teardown stalls. Current policy is shutdown before disconnect. |
+| Sleep/resume handling | Improved contract, incomplete proof | Login1 inhibitor, Steam preflight, wake/recovery policy, and evidence records exist. Final visible warning and scenario proofs remain. |
+| Status/history/diagnostics | Improved in HDM | Privacy-safe versioned snapshot, health, stage timings, bounded actions, support preview/export, and build label. One packaged unified CLI/service/transaction report remains missing. |
+| Link-health diagnostics | Preserved | Read-only exact-bridge link state is categorical and does not imply transition readiness by itself. |
+| Controller/audio handoff | Missing / candidate | Pure contracts and read-only observations exist; no general hardware-tested handoff claim. |
+| TV ADB/Wake-on-LAN/input control | Missing / candidate | Optional later adapter; not required for correct placement and not part of current authority. |
+| Recovery hardware hotkeys | Missing / candidate | Deferred until the transition engine and native recovery are proven. |
+| GPU telemetry | Intentionally different | Only bounded optional health/performance assessment contracts are considered; no broad telemetry/tuning surface. |
+| GPU power/fan/clock/voltage tuning | Not applicable | Out of current product scope; would require separate profiles, bounds, watchdog, and rollback. |
+| NVIDIA driver installation/removal | Not applicable | OS package/driver mutation is outside the Decky RPC surface. |
+| TV/network launcher utilities | Not applicable | eGPUBridge convenience surfaces are not inherited into core HDM. |
 
-The Decky UI shows a persistent **Sleep blocked** state and explains why:
+## Proven lessons retained
 
-| Observed state | Behavior |
-|---|---|
-| G1 absent | Sleep is not blocked by HDM. |
-| G1 present, no game using it | Block sleep and warn that this hardware is known to wake immediately; direct the user to Portable, power off, and disconnect the G1. |
-| G1 selected for rendering and game state unknown | Block sleep and explain that workload safety is unknown. |
-| A game owns the G1 | Hard-block sleep and show the game/eGPU warning. Offer a separate close-game workflow, never an implicit kill. |
+The frozen eGPUBridge reference demonstrated these important facts on the first
+hardware profile:
 
-The informational attached-G1 warning may offer **Never show again**. That
-preference suppresses the repeated explanatory banner only. It does not release
-the inhibitor, change a blocker, suppress a destructive-action confirmation, or
-turn an unsafe state into an allowed state. The current blocked state remains
-visible as a compact status row.
+- connector presence is not active output; live Gamescope must agree
+- both Gamescope output selection and Vulkan GPU selection matter
+- card numbers, connector suffixes, and PCI addresses must be rediscovered
+- running/unknown game state must block restart
+- internal restore should be idempotent
+- readiness must be bounded and verified after a new Gamescope process appears
+- failure must preserve or restore the internal panel
+- physical live G1 removal is not safe merely because software clients cleared
 
-Power-menu interception can improve the warning experience, but it is not the
-safety boundary: physical power-button and external sleep requests must still be
-covered by the root login1 inhibitor. HDM must test the Decky/Steam UI hook and
-the inhibitor independently.
+HDM carries those lessons through typed observations, profiles, policy, ports,
+transactions, and native Decky presentation. It must not copy eGPUBridge's
+monolith, broad root surface, hard-coded paths, tuning controls, or subjective UI.
 
-On the validated Ally build, logind reports `HandlePowerKey=ignore`; Steam owns
-the visible power-button path. Testing Steam's active-session power-menu Sleep
-action with the G1 attached showed that login1 refused the suspend transition,
-but Steam left the backlight lit with a black screen. Synthetic Steam input and
-a short physical power-button press did not recover presentation; a graceful
-Steam reboot restored the display. The lease is therefore necessary but not
-sufficient for the player-facing path. HDM needs a Decky-native
-preflight/warning before Steam starts that sequence. Physical power-button,
-idle-sleep, and authorized direct login1/system requests remain separate
-supervised tests and must not proceed until that path is fixed.
-The proposed preflight lifecycle and test gates are specified in
-[ADR: Steam sleep preflight](ADR_STEAM_SLEEP_PREFLIGHT.md).
+## UX translation
 
-## Close eGPU processes workflow
+Useful eGPUBridge UI characteristics are explicit in [UI specification](UI_SPEC.md):
+one obvious primary action, adjacent status, visible restore/recovery, diagnostics
+behind progressive disclosure, native controller controls, and clear errors.
+HDM intentionally adds independent placement/health/workflow/confidence axes and
+removes controls it cannot safely support.
 
-**Close eGPU Processes** is distinct from **Disconnect eGPU**. It may remove
-software blockers, but HDM must re-run every disconnect check afterward and may
-still require shutdown.
+## Review rule
 
-1. Resolve the exact card and render nodes from the verified eGPU identity.
-2. Enumerate `/proc/<pid>/fd` links to only those nodes; never target every DRM
-   process.
-3. Bind each candidate to PID, UID, command name, process start time, opened
-   nodes, and the current eGPU fingerprint.
-4. Classify candidates:
-   - Steam game: offer **Close game**, then bounded graceful termination.
-   - Eligible user process: offer a selected-process or all-eligible close.
-   - Gamescope, Steam, Decky, display/session managers, and system processes:
-     protected; never kill through this workflow.
-   - Storage clients or mounted filesystems: non-overridable blocker because
-     forced closure or removal can corrupt data.
-5. Preview the exact eligible processes and warn about unsaved work.
-6. On approval, send `SIGTERM`, wait for a bounded interval, and re-observe.
-7. If an eligible process still holds the same node, offer a second explicit
-   **Force close remaining** confirmation before `SIGKILL`.
-8. Before either signal, verify the process start time and token-bound snapshot
-   to prevent PID reuse or stale approval.
-9. Re-run render GPU, active display, running-game, DRM client, audio, storage,
-   USB4, and hardware-identity checks. Never claim safe disconnect while any
-   required observation is unknown.
-10. Audit the preview, approval, each signal, exit result, and final readiness
-    result without recording command lines or private paths.
-
-The frontend never submits arbitrary PIDs, signals, commands, or paths. It sends
-only a short-lived approval token issued for the backend-computed candidate set.
-
-## Proposed 0.2 slices
-
-1. Expand read-only observations: exact DRM clients and audio/storage users are
-   implemented; sleep compatibility and inhibitor capability remain.
-2. Add pure policy for sleep eligibility, process classification, and disconnect
-   readiness.
-3. Add the durable transition journal and manual Portable / TV Docked engine.
-4. Add the sleep inhibitor and native warning preferences. The lease is
-   implemented, but Steam power-menu acceptance exposed a black-screen failure;
-   add a native preflight/warning before further sleep-path tests.
-5. Add graceful close and separately confirmed force-close for eligible clients.
-6. Add supervised Ally X/G1 tests for transitions, sleep attempts, process
-   closure, failure injection, and internal recovery.
-
-No slice enables physical live unplug on the certified G1 until a separate
-hardware experiment proves teardown reliable.
+Update this ledger whenever HDM changes a user-visible eGPU workflow, safety
+gate, recovery path, diagnostic surface, or hardware evidence level. A row may
+move to Preserved or Improved only when current HDM evidence supports the claim.

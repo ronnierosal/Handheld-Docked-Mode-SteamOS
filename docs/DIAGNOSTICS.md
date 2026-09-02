@@ -14,7 +14,37 @@ PYTHONPATH=backend python -m hdm.cli
 PYTHONPATH=backend python -m hdm.cli --compact
 ```
 
-After package installation, the equivalent command is `hdm-diagnose`.
+Installing the Python project exposes the `hdm-diagnose` console entry point.
+A normal Decky ZIP does not install `pyproject.toml` or a global console script;
+from an installed plugin tree the current equivalent is:
+
+```text
+PYTHONPATH=<plugin-root>/backend python3 -m hdm.cli --compact
+```
+
+Do not claim that `hdm-diagnose` is globally installed by Decky until packaging
+adds and verifies that launcher.
+
+## Standard diagnostic interface roadmap
+
+The current CLI emits the privacy-safe snapshot only. Phase 2 will provide one
+architecture-appropriate packaged command (target UX: `hdm diagnostics`) backed
+by a shared read-only composition rather than scraping Decky UI output. It must
+remain bounded and include:
+
+- HDM semantic version, full/short commit, build/artifact identity, and installed
+  deployment record when available
+- placement, health, game, host/eGPU profile, display/render, and link state
+- bounded current transaction, recent transitions/failures, and recovery state
+- relevant service state without arbitrary `journalctl` output
+- categorical evidence gaps and collection timings
+
+The report must be shared by the packaged CLI, Decky troubleshooting, remote
+capture, and support collection where their privilege and lifecycle allow. A
+separate CLI process cannot invent in-memory Decky action history or transaction
+state; unavailable sources stay explicit. Deeper support collection remains a
+separate preview/approval flow. No command may dump unrestricted logs, paths,
+process identity, raw hardware IDs, addresses, or account/game identity.
 
 Delivery adapters call `DiagnosticsApi.get_snapshot()` to receive the same
 versioned dictionary without parsing CLI output. The Decky plugin is a thin

@@ -1,19 +1,20 @@
 # Maintainer and agent handoff
 
-This note gives a fresh Codex chat the current, operator-safe starting point.
-It is an operational snapshot, not proof of a certified hardware behavior.
-Always re-check live state before making a hardware claim.
+This is the operational runbook and checkpoint history. The short mutable
+repository/build/deployment snapshot is [Current state](CURRENT_STATE.md).
+Historical entries here are evidence in their original context, not proof of a
+current installed build or certified hardware behavior. Always re-check live
+state before making a hardware claim.
 
 ## Repository and current snapshot
 
 - Repository: `C:\Users\SLDD\Codex Projects\Handheld-Docked-Mode-SteamOS`
-- Branch: `main`
-- Local source status must be checked with `git rev-parse HEAD` and `git status --short`.
-- Current local lifecycle-fix candidate: `49c826c5e7d896287abefdbb2a657ae1b2da516f`.
-  It is local-only and not installed-device evidence.
+- Branch, HEAD, divergence, worktree, version, and active ownership:
+  [Current state](CURRENT_STATE.md). Re-run `git rev-parse HEAD` and
+  `git status --short --branch` before relying on that snapshot.
 - Last verified installed HDM build on the Ally: `0.2.0`, revision `fd2d38f2fa04`
 - Last verified loader state: `plugin_loader.service` active.
-- **Current held-local lifecycle-fix candidate (2026-09-01):**
+- **Historical held-local lifecycle-fix candidate (2026-09-01):**
   `HandheldDockMode-0.2.0.zip` was rebuilt from clean
   `49c826c5e7d896287abefdbb2a657ae1b2da516f` and has SHA-256
   `029ca3f2b5887ae0199845b8f21e0c8f5a35f408aa0627e7602bbfad1cea39a1`.
@@ -25,7 +26,7 @@ Always re-check live state before making a hardware claim.
   baseline rollback archive remains `e73d249db5687f564043fe4b6f9f2fa04c2042ec`
   / SHA-256 `f9faae446cd8e61616bc0f3b3afa21961fb1b9f3fe4e87b858e1d8a9935ec519`;
   its artifact verifier passed. This supersedes prior `84219fc`, `484df70`,
-  `cb1696c`, and installed `fd2d38f` candidates, is not installed or hardware-validated,
+  `cb1696c`, and installed `fd2d38f` candidates, was not installed or hardware-validated,
   and must remain local
   while the G1 is attached. Install is permitted only in the next
   player-present, G1-disconnected baseline session after a safe shutdown; do
@@ -33,8 +34,9 @@ Always re-check live state before making a hardware claim.
   D2/D2a/D3 scope and stop conditions are in
   [the supervised session record](SUPERVISED_SESSION_2026-09-01.md).
 
-The staged candidate, installed version, and local checkout may change. Confirm
-each independently before relying on this snapshot.
+The staged candidate, installed version, and local checkout have changed since
+that checkpoint. Confirm each independently; do not deploy the historical ZIP
+because it appears near the top of this runbook.
 
 ## Checkpoint and worker-integration policy
 
