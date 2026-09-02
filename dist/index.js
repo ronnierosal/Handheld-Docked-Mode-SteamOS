@@ -671,16 +671,32 @@ function firstHardwareBlocker(payload) {
         || item.code === "game_state_unknown"));
     return blocker?.message ?? "Waiting for complete hardware evidence.";
 }
+function exactEgpuState(payload) {
+    const profile = payload.diagnostics?.hardware_profiles?.egpu?.status;
+    const external = payload.snapshot.gpus.filter((gpu) => (gpu.role === "external" && gpu.present && gpu.confidence === "verified"));
+    if (profile === "exact" && external.length === 1) {
+        return "exact";
+    }
+    return profile === "absent" ? "absent" : "unknown";
+}
 function connectionProgress(payload) {
     if (!payload) {
         return { label: "Checking hardware", detail: "Reading current state.", settling: true };
     }
     const { snapshot, inference } = payload;
-    if (!snapshot.sleep_guard.required) {
+    const egpu = exactEgpuState(payload);
+    if (egpu === "absent") {
         return {
-            label: "Waiting for eGPU",
-            detail: "No compatible eGPU is attached.",
+            label: "eGPU not detected",
+            detail: "Current read-only evidence has not detected a supported G1.",
             settling: false,
+        };
+    }
+    if (egpu !== "exact") {
+        return {
+            label: "eGPU evidence unavailable",
+            detail: "Waiting for current exact G1 profile evidence.",
+            settling: true,
         };
     }
     if (snapshot.support_tier !== "certified") {
@@ -709,7 +725,8 @@ function connectionProgress(payload) {
     }
     if (external.length !== 1
         || external[0].edid_ready !== true
-        || external[0].active === null) {
+        || external[0].active === null
+        || external[0].confidence !== "verified") {
         return {
             label: "TV initializing",
             detail: "Waiting for one verified connector, EDID, and active-output result.",
@@ -724,6 +741,14 @@ function connectionProgress(payload) {
         };
     }
     if (external[0].active === true) {
+        return {
+            label: "Dock verification blocked",
+            detail: firstHardwareBlocker(payload),
+            settling: true,
+        };
+    }
+    if (snapshot.gamescope.running !== true
+        || snapshot.gamescope.confidence !== "verified") {
         return {
             label: "Dock verification blocked",
             detail: firstHardwareBlocker(payload),

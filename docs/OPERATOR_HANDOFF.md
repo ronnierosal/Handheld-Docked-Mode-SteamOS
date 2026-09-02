@@ -52,6 +52,15 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **Fail-closed Connection label correction (2026-09-01):** local review found
+  that the Quick Access `Ready to dock` branch inferred eGPU readiness from a
+  required sleep guard plus display facts, without requiring the public exact
+  G1 profile result. The read-only D3 captures therefore expose a stale/partial
+  evidence mismatch, not a detected G1. The local UI now requires one exact G1
+  profile, one verified present external GPU, observed Up link, one verified
+  connected/EDID/active-result external display, and verified Gamescope before
+  `Ready to dock`; absence or unknown evidence is explicit instead. This is an
+  uninstalled local UI correction, not a hardware result or transition change.
 - **D2 read-only post-install capture (2026-09-01):** fresh unprivileged,
   no-write capture recorded one Steam, Gamescope, and plugin-loader process;
   HDM was present at `0.2.0` / public revision `e73d249db568`; game state was

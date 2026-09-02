@@ -8,12 +8,22 @@ export interface RefreshPolicyPayload {
   snapshot: {
     support_tier: string;
     game_state: string;
+    gpus: Array<{
+      role: string;
+      present: boolean;
+      confidence: string;
+    }>;
     displays: Array<{
       kind: string;
       connected: boolean | null;
       active: boolean | null;
       edid_ready: boolean | null;
+      confidence: string;
     }>;
+    gamescope: {
+      running: boolean | null;
+      confidence: string;
+    };
     disconnect_readiness: {
       scan_complete: boolean;
     };
@@ -30,6 +40,13 @@ export interface RefreshPolicyPayload {
   };
   inference: {
     mode: string;
+  };
+  diagnostics?: {
+    hardware_profiles?: {
+      egpu?: {
+        status: "exact" | "absent" | "unknown";
+      };
+    };
   };
 }
 
@@ -52,6 +69,17 @@ function firstHardwareBlocker(payload: RefreshPolicyPayload): string {
   return blocker?.message ?? "Waiting for complete hardware evidence.";
 }
 
+function exactEgpuState(payload: RefreshPolicyPayload): "exact" | "absent" | "unknown" {
+  const profile = payload.diagnostics?.hardware_profiles?.egpu?.status;
+  const external = payload.snapshot.gpus.filter((gpu) => (
+    gpu.role === "external" && gpu.present && gpu.confidence === "verified"
+  ));
+  if (profile === "exact" && external.length === 1) {
+    return "exact";
+  }
+  return profile === "absent" ? "absent" : "unknown";
+}
+
 export function connectionProgress(
   payload: RefreshPolicyPayload | null,
 ): ConnectionProgress {
@@ -60,11 +88,19 @@ export function connectionProgress(
   }
 
   const { snapshot, inference } = payload;
-  if (!snapshot.sleep_guard.required) {
+  const egpu = exactEgpuState(payload);
+  if (egpu === "absent") {
     return {
-      label: "Waiting for eGPU",
-      detail: "No compatible eGPU is attached.",
+      label: "eGPU not detected",
+      detail: "Current read-only evidence has not detected a supported G1.",
       settling: false,
+    };
+  }
+  if (egpu !== "exact") {
+    return {
+      label: "eGPU evidence unavailable",
+      detail: "Waiting for current exact G1 profile evidence.",
+      settling: true,
     };
   }
   if (snapshot.support_tier !== "certified") {
@@ -98,6 +134,7 @@ export function connectionProgress(
     external.length !== 1
     || external[0].edid_ready !== true
     || external[0].active === null
+    || external[0].confidence !== "verified"
   ) {
     return {
       label: "TV initializing",
@@ -113,6 +150,16 @@ export function connectionProgress(
     };
   }
   if (external[0].active === true) {
+    return {
+      label: "Dock verification blocked",
+      detail: firstHardwareBlocker(payload),
+      settling: true,
+    };
+  }
+  if (
+    snapshot.gamescope.running !== true
+    || snapshot.gamescope.confidence !== "verified"
+  ) {
     return {
       label: "Dock verification blocked",
       detail: firstHardwareBlocker(payload),

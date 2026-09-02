@@ -25,8 +25,11 @@ own explicit confirmation and fail-closed checks.
 
 The compact Quick Access Connection row also fails closed: a current applicable
 Down or Unknown link sample cannot be presented as `TV Docked` or `Ready to
-dock`. It asks for attention or verification using the existing read-only
-snapshot cadence; it adds no collector or transition authority.
+dock`. `Ready to dock` additionally requires one currently exact G1 profile and
+one verified present external GPU; a stale display row or required sleep guard
+cannot substitute for that evidence. Verified absence says `eGPU not detected`;
+unknown profile evidence says `eGPU evidence unavailable`. It adds no collector
+or transition authority.
 
 ## Status vocabulary
 
