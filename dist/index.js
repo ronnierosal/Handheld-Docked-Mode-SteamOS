@@ -1023,6 +1023,7 @@ class SleepPreflightCoordinator {
 const LABELS = {
     "journal.foreign_workflow": "Another workflow needs attention",
     "automatic_dock.rearmed_after_acknowledgement": "Re-checking attachment",
+    "automatic_dock.suppressed_for_safe_disconnect": "Waiting for G1 removal",
     boosted_handheld: "Boosted Handheld",
     certified: "Certified",
     degraded: "Degraded",
@@ -1116,7 +1117,7 @@ function showSafeDisconnectConfirmation(portable, onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: portable ? "Shut down for G1 disconnect?" : "Return to Ally for G1 disconnect?", strOKButtonText: portable ? "Shut down" : "Return to Ally", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsx("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: portable ? (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will revalidate idle Portable mode and request a normal system shutdown." }), SP_JSX.jsx("p", { children: "Disconnect the G1 only after the fans stop and every top power LED is off." })] })) : (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will require no running game, then restart Game Mode on the Ally display." }), SP_JSX.jsx("p", { children: "After Portable is verified, acknowledge the result and use this control again to shut down. Do not unplug yet." })] })) }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsx("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: portable ? (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will revalidate idle Portable mode and request a normal system shutdown." }), SP_JSX.jsx("p", { children: "The request cannot prove physical power-off. Keep the G1 connected until the fan stops and every top power LED is off." }), SP_JSX.jsx("p", { children: "If the fan remains on after 60 seconds, keep the G1 connected and hold the Ally power button until the fan stops." })] })) : (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will require no running game, then restart Game Mode on the Ally display." }), SP_JSX.jsx("p", { children: "After Portable is verified, acknowledge the result and use this control again to shut down. Do not unplug yet." })] })) }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
 function showPresentationPreparationBlocked(blockers) {
@@ -1738,14 +1739,14 @@ function Content({ preflight }) {
                     return;
                 }
                 toaster.toast({
-                    title: "HDM is shutting down the Ally",
-                    body: "Disconnect the G1 only after the fans and every top power LED are off.",
+                    title: "HDM requested an Ally shutdown",
+                    body: "Completion is unverified. Keep the G1 connected until the fan and every top power LED are off.",
                     critical: true,
                     duration: 30000,
                 });
                 const outcome = await executeSafeDisconnectShutdown(approval.approval_token);
                 setSafeDisconnectMessage(outcome.accepted
-                    ? "Shutdown requested. Wait until the Ally is completely off before disconnecting the G1."
+                    ? "Power-off request accepted; completion is unverified. Keep the G1 connected until the fan stops. If it remains on after 60 seconds, hold the Ally power button until the fan stops."
                     : `Shutdown was not requested: ${label(outcome.code)}.`);
                 return;
             }
@@ -1984,7 +1985,7 @@ function Content({ preflight }) {
                                             || Boolean(journalStatus && journalStatus.code !== "journal.idle"), children: safeDisconnectBusy
                                             ? "Checking…"
                                             : payload?.inference.mode === "portable"
-                                                ? "Shut down to disconnect G1"
+                                                ? "Request shutdown for G1 disconnect"
                                                 : "Prepare G1 disconnect" }) }), safeDisconnectMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: safeDisconnectMessage })), journalStatus && journalStatus.code !== "journal.idle" && (SP_JSX.jsx(DiagnosticRow, { name: "Safety journal", value: label(journalStatus.owner) })), journalMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: journalMessage }), journalStatus?.owner === "sleep"
                                     && journalStatus.acknowledgement_required
                                     && journalStatus.acknowledgement_id && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgePriorSleep(), disabled: journalBusy, children: journalBusy ? "Acknowledging…" : "Acknowledge prior sleep result" }) })), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge prior display transition result" }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) })] }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading

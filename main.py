@@ -868,6 +868,12 @@ class Plugin:
     ) -> dict[str, object]:
         """Clear only the exact terminal transition after player acknowledgement."""
         try:
+            prior_status = await asyncio.to_thread(
+                self._presentation_transition_service().status
+            )
+        except Exception:
+            prior_status = None
+        try:
             acknowledged = await asyncio.to_thread(
                 self._presentation_transition_service().acknowledge,
                 acknowledgement_id,
@@ -875,7 +881,10 @@ class Plugin:
         except Exception:
             acknowledged = False
         if acknowledged:
-            self._automatic_dock.reset_after_acknowledgement()
+            if prior_status and prior_status.target is PlacementState.PORTABLE:
+                self._automatic_dock.suppress_current_attachment_after_portable_return()
+            else:
+                self._automatic_dock.reset_after_acknowledgement()
         return {"schema_version": 1, "acknowledged": acknowledged}
 
     async def get_supervised_tv_switch_status(
@@ -895,6 +904,7 @@ class Plugin:
                 "action_required": True,
                 "acknowledgement_id": "",
                 "durable": False,
+                "target": PlacementState.UNKNOWN.value,
             }
 
     async def get_process_release_status(self, _request: object = None) -> dict[str, object]:

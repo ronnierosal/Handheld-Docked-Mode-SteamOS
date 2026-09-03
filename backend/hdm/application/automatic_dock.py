@@ -115,6 +115,20 @@ class AutomaticDockCoordinator:
         )
         return self._status
 
+    def suppress_current_attachment_after_portable_return(self) -> AutomaticDockStatus:
+        """Do not undo an intentional safe-disconnect Portable transition.
+
+        The attempted latch clears automatically only after the exact eGPU is
+        no longer observed (or when the player deliberately disables docking).
+        """
+        self._attempted = True
+        self._status = AutomaticDockStatus(
+            AutomaticDockStage.WAITING,
+            "automatic_dock.suppressed_for_safe_disconnect",
+            True,
+        )
+        return self._status
+
     def record_result(self, code: str, *, succeeded: bool) -> AutomaticDockStatus:
         self._status = AutomaticDockStatus(
             AutomaticDockStage.DOCKED if succeeded else AutomaticDockStage.ACTION_REQUIRED,

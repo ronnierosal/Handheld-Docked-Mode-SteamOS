@@ -443,9 +443,62 @@ class SupervisedTransitionTests(unittest.TestCase):
         self.assertTrue(payload["acknowledgement_required"])
         self.assertTrue(payload["action_required"])
         self.assertEqual(payload["acknowledgement_id"], "operation-0001")
+        self.assertEqual(payload["target"], "unknown")
         self.assertNotIn("request_id", payload)
         self.assertTrue(value.acknowledge(payload["acknowledgement_id"]))
         self.assertIsNone(store.current)
+
+    def test_status_exposes_only_categorical_persisted_target(self):
+        journal = append_journal_entry(
+            TransitionJournal("operation-0002", "request-0002"),
+            kind=JournalEventKind.REQUESTED,
+            occurred_at="2026-08-31T12:00:00Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.DOCKED_EGPU,
+            code="request.accepted",
+            details=(
+                ("capability", "presentation_transition"),
+                ("target_placement", "portable"),
+            ),
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.OBSERVED,
+            occurred_at="2026-08-31T12:00:01Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.DOCKED_EGPU,
+            code="snapshot.observed",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.VALIDATED,
+            occurred_at="2026-08-31T12:00:02Z",
+            workflow_state=WorkflowState.RETURNING_TO_PORTABLE,
+            placement=PlacementState.DOCKED_EGPU,
+            code="plan.validated",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.PLANNED,
+            occurred_at="2026-08-31T12:00:03Z",
+            workflow_state=WorkflowState.RETURNING_TO_PORTABLE,
+            placement=PlacementState.DOCKED_EGPU,
+            code="plan.ready",
+        )
+        journal = append_journal_entry(
+            journal,
+            kind=JournalEventKind.COMMITTED,
+            occurred_at="2026-08-31T12:00:04Z",
+            workflow_state=WorkflowState.IDLE,
+            placement=PlacementState.PORTABLE,
+            code="transition.committed",
+        )
+        value, _, _ = service(Observations(), journal=journal)
+
+        payload = status_to_payload(value.status())
+
+        self.assertEqual(payload["target"], "portable")
+        self.assertNotIn("request_id", payload)
 
     def test_status_refuses_foreign_terminal_journal(self):
         journal = append_journal_entry(

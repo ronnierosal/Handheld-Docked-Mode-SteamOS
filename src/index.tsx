@@ -64,6 +64,7 @@ import {
   atAGlanceRows,
   compactJourneyStatusRows,
   compactStatusPanels,
+  quickAccessSectionVisibility,
   revealJourneyDetails,
   journeyStatusRows,
   restoreQuickAccessFocus,
@@ -85,6 +86,7 @@ import {
 const LABELS: Record<string, string> = {
   "journal.foreign_workflow": "Another workflow needs attention",
   "automatic_dock.rearmed_after_acknowledgement": "Re-checking attachment",
+  "automatic_dock.suppressed_for_safe_disconnect": "Waiting for G1 removal",
   boosted_handheld: "Boosted Handheld",
   certified: "Certified",
   degraded: "Degraded",
@@ -294,7 +296,8 @@ function showSafeDisconnectConfirmation(
         {portable ? (
           <>
             <p>HDM will revalidate idle Portable mode and request a normal system shutdown.</p>
-            <p>Disconnect the G1 only after the fans stop and every top power LED is off.</p>
+            <p>The request cannot prove physical power-off. Keep the G1 connected until the fan stops and every top power LED is off.</p>
+            <p>If the fan remains on after 60 seconds, keep the G1 connected and hold the Ally power button until the fan stops.</p>
           </>
         ) : (
           <>
@@ -1086,15 +1089,15 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           return;
         }
         toaster.toast({
-          title: "HDM is shutting down the Ally",
-          body: "Disconnect the G1 only after the fans and every top power LED are off.",
+          title: "HDM requested an Ally shutdown",
+          body: "Completion is unverified. Keep the G1 connected until the fan and every top power LED are off.",
           critical: true,
           duration: 30000,
         });
         const outcome = await executeSafeDisconnectShutdown(approval.approval_token);
         setSafeDisconnectMessage(
           outcome.accepted
-            ? "Shutdown requested. Wait until the Ally is completely off before disconnecting the G1."
+            ? "Power-off request accepted; completion is unverified. Keep the G1 connected until the fan stops. If it remains on after 60 seconds, hold the Ally power button until the fan stops."
             : `Shutdown was not requested: ${label(outcome.code)}.`,
         );
         return;
@@ -1340,6 +1343,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     });
   }, []);
 
+  const sectionVisibility = quickAccessSectionVisibility(showDiagnostics);
+
   return (
     <>
       <div ref={statusAnchor} tabIndex={-1}>
@@ -1407,7 +1412,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
               {safeDisconnectBusy
                 ? "Checking…"
                 : payload?.inference.mode === "portable"
-                  ? "Shut down to disconnect G1"
+                  ? "Request shutdown for G1 disconnect"
                   : "Prepare G1 disconnect"}
             </ButtonItem>
           </PanelSectionRow>
@@ -1440,7 +1445,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           )}
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={toggleTroubleshooting}>
-              {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
+              {showDiagnostics ? "Hide troubleshooting" : "Troubleshoot"}
             </ButtonItem>
           </PanelSectionRow>
         </div>

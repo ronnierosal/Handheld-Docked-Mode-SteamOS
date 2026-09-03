@@ -374,6 +374,7 @@ export interface SupervisedTvSwitchStatusPayload {
   action_required: boolean;
   acknowledgement_id: string;
   durable: boolean;
+  target: "portable" | "docked_egpu" | "unknown";
 }
 
 export const previewSupervisedTvSwitch = callable<

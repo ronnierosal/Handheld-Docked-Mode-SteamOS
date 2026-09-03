@@ -329,6 +329,9 @@ class MainProcessDeliveryTests(unittest.TestCase):
         plugin, _service = self.plugin()
 
         class TransitionService:
+            def status(self):
+                return types.SimpleNamespace(target=PlacementState.DOCKED_EGPU)
+
             def acknowledge(self, _operation_id):
                 return True
 
@@ -341,6 +344,30 @@ class MainProcessDeliveryTests(unittest.TestCase):
 
         self.assertTrue(result["acknowledged"])
         self.assertFalse(plugin._automatic_dock._attempted)
+
+    def test_portable_transition_acknowledgement_suppresses_redock(self):
+        plugin, _service = self.plugin()
+
+        class TransitionService:
+            def status(self):
+                return types.SimpleNamespace(target=PlacementState.PORTABLE)
+
+            def acknowledge(self, _operation_id):
+                return True
+
+        plugin._presentation_transition_service = lambda: TransitionService()
+        plugin._automatic_dock._attempted = False
+
+        result = asyncio.run(
+            plugin.acknowledge_supervised_tv_switch("operation-public-1")
+        )
+
+        self.assertTrue(result["acknowledged"])
+        self.assertTrue(plugin._automatic_dock._attempted)
+        self.assertEqual(
+            plugin._automatic_dock.status().code,
+            "automatic_dock.suppressed_for_safe_disconnect",
+        )
 
     def test_sleep_journal_acknowledgement_rearms_automatic_docking(self):
         plugin, _service = self.plugin()

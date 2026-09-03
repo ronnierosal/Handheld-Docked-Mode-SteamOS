@@ -403,7 +403,12 @@ approval valid for at most 30 seconds; execution consumes it, requires the same
 semantic generation, and invokes only `/usr/bin/systemctl --no-block poweroff`
 through a root-only fixed command adapter. It does not unbind, reset USB4, or
 authorize removal while powered. A terminal presentation journal must still be
-acknowledged before the UI enables shutdown.
+acknowledged before the UI enables shutdown. Presentation journals persist the
+categorical requested target. Acknowledging an intentional Portable return
+latches automatic docking off for that exact attachment until the G1 is removed;
+acknowledging a TV attempt may still re-arm one retry. A successful systemctl
+return proves only that the power-off request was accepted, never that firmware
+completed physical power-off.
 
 That same durable path now treats exact idle Docked-iGPU as a supported source
 for a Docked-eGPU target. Boot config represents Docked-iGPU explicitly as TV

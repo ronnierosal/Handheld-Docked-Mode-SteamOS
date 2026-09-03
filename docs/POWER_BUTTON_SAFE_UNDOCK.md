@@ -35,8 +35,12 @@ No UI may claim physical power-button support. Guide + Y remains dormant until
 a controller input adapter can verify/debounce input and deliver it to the one
 authoritative transition-request sink. A controller-focusable Decky fallback is
 implemented separately: return to verified Portable, acknowledge the durable
-transition, then issue one confirmed normal shutdown. Physical removal remains
-prohibited until the Ally is completely off.
+transition, then issue one confirmed normal shutdown request. The accepted
+request is not a completion result. Physical removal remains prohibited until
+the fan has stopped and the Ally is physically off. The 2026-09-02 watched G1
+test required a manual long power-button hold after user space and networking
+stopped but the fan and two top LEDs remained on; HDM must not automate that
+forced-off recovery.
 
 ## Future gate
 

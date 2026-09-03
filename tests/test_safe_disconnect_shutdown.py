@@ -46,7 +46,12 @@ class Observations:
 
 
 class Power:
-    def __init__(self, result=PowerOffResult(True, "safe_disconnect.poweroff_requested")):
+    def __init__(
+        self,
+        result=PowerOffResult(
+            True, "safe_disconnect.poweroff_request_accepted_unverified"
+        ),
+    ):
         self.result = result
         self.calls = 0
 
@@ -78,7 +83,9 @@ class SafeDisconnectShutdownTests(unittest.TestCase):
         result = service.execute(preview.approval_token)
 
         self.assertTrue(result.accepted)
-        self.assertEqual(result.code, "safe_disconnect.poweroff_requested")
+        self.assertEqual(
+            result.code, "safe_disconnect.poweroff_request_accepted_unverified"
+        )
         self.assertEqual(power.calls, 1)
         self.assertFalse(service.execute(preview.approval_token).accepted)
         self.assertEqual(power.calls, 1)

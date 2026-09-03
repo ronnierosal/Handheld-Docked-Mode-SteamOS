@@ -70,6 +70,7 @@ class SupervisedTransitionStatus:
     action_required: bool = False
     operation_id: str = ""
     durable: bool = True
+    target: PlacementState = PlacementState.UNKNOWN
 
 
 class SupervisedPresentationTransitionService:
@@ -342,6 +343,7 @@ class SupervisedPresentationTransitionService:
             action_required=terminal.kind
             in (JournalEventKind.BLOCKED, JournalEventKind.FAILED),
             operation_id=current.operation_id,
+            target=self._journal_target(current),
         )
 
     def recover_interrupted(self) -> RuntimeTransitionResult:
@@ -415,6 +417,17 @@ class SupervisedPresentationTransitionService:
             and dict(journal.entries[0].details).get("capability")
             in (None, "presentation_transition")
         )
+
+    @staticmethod
+    def _journal_target(journal) -> PlacementState:
+        """Recover only the categorical target persisted with the request."""
+        if not journal.entries:
+            return PlacementState.UNKNOWN
+        value = dict(journal.entries[0].details).get("target_placement", "")
+        try:
+            return PlacementState(value)
+        except ValueError:
+            return PlacementState.UNKNOWN
 
     def _observe(self):
         try:

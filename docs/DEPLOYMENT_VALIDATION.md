@@ -308,7 +308,9 @@ same durable transition engine, visibly recover the internal display, verify
 the internal render GPU and Portable audio, and expose the exact terminal
 acknowledgement after Game Mode returns.
 
-After acknowledgement, the control must read **Shut down to disconnect G1**.
+After acknowledgement, the control must read **Request shutdown for G1
+disconnect** and automatic docking must remain suppressed for the current exact
+attachment.
 The player may confirm it only while HDM still reports idle Portable. The Ally
 must complete a normal shutdown. Do not disconnect on an accepted RPC or a dark
 screen alone: wait until fans stop and every top power LED is off. Only then may
@@ -316,6 +318,16 @@ the player remove the G1 cable. Boot again with the G1 absent and capture the
 Portable/controller state before testing a new attach. Any unknown game,
 non-Portable placement, changed generation, active journal, lost controller, or
 incomplete shutdown stops the stage.
+
+The 2026-09-02 watched run on installed `a988c0cf1d61` passed TV-to-Portable
+restoration but failed this stage. Automatic docking had to be disabled before
+acknowledgement to prevent an immediate redock. The fixed power-off request then
+removed SSH and ping, while the fan and two top LEDs remained on until the player
+held the Ally power button for approximately twelve seconds. That is an
+incomplete physical shutdown, not a safe-disconnect pass. A later candidate
+persists the transition target, suppresses redock after Portable acknowledgement,
+and labels command acceptance as physically unverified; the firmware-level
+shutdown hang remains unresolved.
 
 The first watched G1/TV attempt did not switch output; the shim retained the
 internal panel because the transition launch configuration was written where the

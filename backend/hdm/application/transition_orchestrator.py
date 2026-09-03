@@ -111,7 +111,10 @@ class TransitionOrchestrator:
                 WorkflowState.IDLE,
                 plan.from_placement,
                 "request.accepted",
-                (("capability", "presentation_transition"),),
+                (
+                    ("capability", "presentation_transition"),
+                    ("target_placement", plan.target_placement.value),
+                ),
             )
         except Exception:
             return self._without_journal(

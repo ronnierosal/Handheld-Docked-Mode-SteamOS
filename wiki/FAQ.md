@@ -27,6 +27,9 @@ the latest fix still needs a clean-build supervised hardware proof. See
 ## Can I unplug the GPD G1 while the handheld is running?
 
 No. Physical live G1 removal is unsupported. Shut down before disconnecting it.
+An accepted shutdown request is not proof of physical power-off. If the fan
+remains on, keep the G1 connected and hold the Ally power button until the fan
+stops; only then remove the cable.
 
 ## Can HDM move a running game between GPUs?
 

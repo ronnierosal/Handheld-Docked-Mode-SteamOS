@@ -113,6 +113,30 @@ class AutomaticDockCoordinatorTests(unittest.TestCase):
             ).should_switch
         )
 
+    def test_portable_return_suppresses_same_attachment_until_removed(self):
+        coordinator = AutomaticDockCoordinator()
+        ready = readiness(AttachReadinessStage.READY_IDLE, "attach.ready_idle")
+        attached = current("connected-internal.json")
+
+        coordinator.suppress_current_attachment_after_portable_return()
+        held = coordinator.update(enabled=True, readiness=ready, current=attached)
+
+        self.assertFalse(held.should_switch)
+        self.assertEqual(
+            held.status.code, "automatic_dock.suppressed_for_safe_disconnect"
+        )
+
+        coordinator.update(
+            enabled=True,
+            readiness=readiness(AttachReadinessStage.IDLE, "attach.idle"),
+            current=current("portable.json", "portable"),
+        )
+        self.assertTrue(
+            coordinator.update(
+                enabled=True, readiness=ready, current=attached
+            ).should_switch
+        )
+
         coordinator.reset_after_acknowledgement()
         self.assertTrue(
             coordinator.update(

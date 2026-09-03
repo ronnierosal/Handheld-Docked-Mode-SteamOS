@@ -7,12 +7,13 @@ const backend = readFileSync(new URL("../src/backend.ts", import.meta.url), "utf
 
 test("safe disconnect returns Portable before offering confirmed shutdown", () => {
   assert.match(source, /Prepare G1 disconnect/);
-  assert.match(source, /Shut down to disconnect G1/);
+  assert.match(source, /Request shutdown for G1 disconnect/);
   assert.match(source, /approveSupervisedPortableSwitch/);
   assert.match(source, /executeSupervisedPortableSwitch/);
   assert.match(source, /approveSafeDisconnectShutdown/);
   assert.match(source, /executeSafeDisconnectShutdown/);
-  assert.match(source, /Disconnect the G1 only after the fans stop and every top power LED is off/);
+  assert.match(source, /request cannot prove physical power-off/);
+  assert.match(source, /If the fan remains on after 60 seconds/);
   assert.doesNotMatch(source, /Safe to (?:unplug|disconnect) while powered/i);
   assert.match(backend, /"approve_supervised_portable_switch"/);
   assert.match(backend, /"execute_safe_disconnect_shutdown"/);

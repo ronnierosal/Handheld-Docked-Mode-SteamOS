@@ -22,7 +22,12 @@ The Decky panel now supplies the reliable fallback through one
 controller-focusable **Prepare G1 disconnect** control. From TV Docked it enters
 the existing supervised TV-to-Portable transition. Once the player has
 acknowledged that durable result and HDM freshly verifies idle Portable, the
-same control becomes **Shut down to disconnect G1**. The shutdown uses a
+same control becomes **Request shutdown for G1 disconnect**. Acknowledging that
+intentional Portable result suppresses automatic redocking until the exact G1
+is removed. The shutdown uses a
 30-second single-use backend approval and an exact fixed system power command.
-It never says the cable may be removed while the Ally is powered. Guide + Y
-remains dormant until SteamOS exposes a verified global input source.
+Command acceptance does not prove physical power-off. If the fan remains after
+60 seconds, the player must keep the G1 connected and hold the Ally power button
+until the fan stops. It never says the cable may be removed while the Ally is
+powered. Guide + Y remains dormant until SteamOS exposes a verified global input
+source.

@@ -30,6 +30,7 @@ ALLOWED_DETAIL_KEYS = frozenset(
         "recovery_code",
         "step_code",
         "support_tier",
+        "target_placement",
     }
 )
 

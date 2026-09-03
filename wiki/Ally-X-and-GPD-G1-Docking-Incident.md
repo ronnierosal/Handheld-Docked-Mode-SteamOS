@@ -118,6 +118,25 @@ permitted only after fans and every power LED are off. Attach settling and
 correlated unexpected-loss observation tighten to 250 ms, but kernel USB4/PCI
 enumeration and Gamescope restart remain independent timing budgets.
 
+## What the first shutdown-before-disconnect test taught us
+
+The 2026-09-02 installed `a988c0cf1d61` run automatically reached the TV on a
+second attempt, selected G1 HDMI audio, and returned to the Ally display through
+**Prepare G1 disconnect**. Two additional defects were then observed:
+
+- acknowledging the intentional Portable transition re-armed automatic docking,
+  so the operator first had to disable automatic TV docking; and
+- the normal power-off request removed SSH and ping, but the Ally fan and two
+  top LEDs remained on until a roughly twelve-second manual power-button hold.
+
+The follow-up changes persist the categorical transition target so Portable
+acknowledgement suppresses redocking until G1 removal. They also rename and
+describe shutdown as an unverified request: an accepted system command is not
+proof that the Ally reached physical off. The firmware-level hang is unresolved.
+Keep the G1 connected if the fan remains on; after 60 seconds use a manual long
+power-button hold, and remove the cable only after the fan stops. HDM does not
+automate forced power-off.
+
 See [Troubleshooting](Troubleshooting),
 [Safety and eGPU Handling](Safety-and-eGPU-Handling), and
 [Issues Fixed](Issues-Fixed).

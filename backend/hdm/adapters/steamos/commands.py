@@ -467,4 +467,6 @@ class SystemPowerCommandRunner:
             return PowerOffResult(False, "safe_disconnect.poweroff_unavailable")
         if completed.returncode != 0:
             return PowerOffResult(False, "safe_disconnect.poweroff_failed")
-        return PowerOffResult(True, "safe_disconnect.poweroff_requested")
+        return PowerOffResult(
+            True, "safe_disconnect.poweroff_request_accepted_unverified"
+        )

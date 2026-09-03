@@ -20,4 +20,5 @@ def status_to_payload(status: SupervisedTransitionStatus) -> dict[str, Any]:
         "action_required": status.action_required,
         "acknowledgement_id": status.operation_id,
         "durable": status.durable,
+        "target": status.target.value,
     }

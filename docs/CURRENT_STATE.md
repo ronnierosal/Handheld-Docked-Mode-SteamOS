@@ -16,7 +16,7 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `4492a7b81251f31240444fae192ae5dc9291f50b` |
+| Audited implementation baseline | `a988c0cf1d61376b3450db74a04b6c2c29a373dd` |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
 | Remote relation | Mutable; run the commands above before relying on it |
@@ -36,23 +36,18 @@ push or publication.
 - No artifact is promoted as current by this page. Build and verify one package
   from the intended clean commit for each validation session.
 - The last live observation reports installed HDM `0.2.0`, public revision
-  `0d66127cd0c2`, on 2026-09-02. With the G1 disconnected at installation and
-  automatic TV docking enabled, a watched attach resolved the exact Ally X/G1
-  profile, one EDID-ready TV, observed-Up link, and Idle game state. HDM restarted
-  Gamescope, activated only the TV, and selected the RX 7600M XT for rendering.
-  The player visibly confirmed Steam on the TV, and the durable presentation
-  journal committed successfully. This is the first hardware-validated automatic
-  TV/render transition for this candidate.
-- Audio did not follow that successful transition because the installed build had
-  no live PipeWire handoff. Read-only inspection found the exact G1 HDMI device and
-  its SteamOS loopback sink while the internal loopback remained default. A single
-  supervised `wpctl set-default` using a freshly resolved numeric node ID moved
-  audio to the TV, and the player confirmed TV sound. The current worktree turns
-  that proof into a guarded child of the presentation transition: it captures the
-  current portable sink before attach, resolves the ephemeral G1 loopback node from
-  the freshly verified G1 audio PCI function, changes and verifies the default,
-  and restores the captured sink on transition rollback or Portable return. This
-  code is committed and locally tested but not installed or hardware-validated.
+  `a988c0cf1d61`, on 2026-09-02. A watched automatic attach first returned to the
+  Ally after a black-TV attempt. Kernel evidence showed the G1 PCI function bind
+  to `amdgpu` followed by repeated non-fatal PCIe AER recovery failures for the
+  G1 USB controller. After the player acknowledged the recovered transition, the
+  automatic retry activated the TV. Read-only evidence verified the external
+  display active and internal display inactive; the unprivileged collector could
+  not read the Gamescope render-selector environment.
+- The same automatic retry selected the exact G1 HDMI loopback sink as the default
+  audio output, and the subsequent supervised Portable transition activated the
+  Ally display while leaving the TV connected but inactive. This hardware run
+  therefore validates automatic audio selection and display return for one cycle,
+  but not repeatability or physical shutdown.
 - Historical candidate and deployment records are snapshots, not current truth.
   See [Operator handoff](OPERATOR_HANDOFF.md) and dated deployment records for
   their exact context.
@@ -79,11 +74,13 @@ local ZIP.
   are implemented to the evidence levels recorded in [Roadmap](ROADMAP.md).
 - Deterministic transition/recovery behavior does not by itself prove hardware
   operation.
-- Automatic TV/display and render-GPU docking is hardware validated for one watched
-  attach on installed `0d66127cd0c2`. The guarded automatic audio child is locally
-  implemented and simulated; only its direct supervised G1 HDMI selection has
-  hardware proof. Automatic selection and Portable restoration still require a
-  watched install/connect/return cycle.
+- Automatic TV/display docking is hardware validated across watched attaches.
+  Installed `a988c0cf1d61` initially recovered to the Ally after a black-TV
+  attempt, then its acknowledgement-driven retry activated the TV and selected
+  G1 HDMI as the default audio sink. The same build subsequently returned to
+  verified Portable through **Prepare G1 disconnect**. Unprivileged capture
+  could not verify the Gamescope render selector, so this run does not add a new
+  render-GPU claim.
 - One player-directed idle live pull left the Ally backlight black while
   Gamescope and Steam were absent, then SteamOS natively restored Gamescope on
   the internal panel after approximately 80 seconds. The player verified Steam
@@ -99,12 +96,18 @@ local ZIP.
   Portable. No driver probe, bind, unbind, or USB4 reset was attempted. This is
   evidence that native Portable recovery does not by itself guarantee a clean
   subsequent reconnect.
-- The current implementation adds a controller-focusable two-stage disconnect
-  fallback: use the existing durable transition engine to return to Portable,
-  acknowledge its result, then issue one separately confirmed power-off request
-  only from fresh idle Portable evidence. It also reduces exact attach-settling
-  and correlated-loss observation to 250 ms. These changes are implemented and
-  simulated, not installed or hardware tested.
+- Installed `a988c0cf1d61` exercised the controller-focusable two-stage
+  disconnect fallback through verified TV-to-Portable recovery. Its
+  acknowledgement incorrectly re-armed automatic docking, requiring the player
+  to disable automatic TV docking first. The follow-up implementation persists
+  the categorical requested target and suppresses redocking after a Portable
+  acknowledgement until the exact G1 disappears.
+- The same watched run failed the physical shutdown gate. The fixed power-off
+  request removed SSH and ping, but the Ally fan and two top LEDs remained on
+  until the player held the power button for approximately twelve seconds. The
+  follow-up UI labels command acceptance as physically unverified and provides
+  a manual recovery instruction; it does not automate forced power-off. Exact
+  attach-settling and correlated-loss observation remain at 250 ms.
 - Automatic docking remains behind an off-by-default persistent player opt-in.
   Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
@@ -133,18 +136,20 @@ hardware-tested behavior.
 
 ## Immediate gates
 
-1. Shut down before disconnecting the attached G1, then install only while the G1
-   is absent. Keep the Ally Portable long enough for HDM to capture its current
+1. Build and install the target-aware acknowledgement correction with the G1
+   absent. Keep the Ally Portable long enough for HDM to capture its current
    default audio sink.
 2. Repeat one watched automatic attach and verify TV picture, RX 7600M XT render
    selection, automatic TV audio, and one committed transition.
-3. Exercise the supervised return-to-Portable path while the G1 remains attached;
-   verify internal display and the exact captured portable audio before shutdown.
+3. Repeat **Prepare G1 disconnect**, acknowledge while automatic docking remains
+   enabled, and verify HDM stays Portable with the shutdown-request control
+   available.
 4. Validate ordinary attach/return behavior with the installed native-recovery
    supervisor before any separately approved repeat of an unexpected-loss
    scenario.
-5. Validate TV-to-Portable, durable acknowledgement, confirmed shutdown, and
-   complete power-off before cable removal. Do not perform a powered live pull.
+5. Treat complete physical power-off as failed until the fan stops without a
+   forced hold. Never disconnect merely because the request was accepted or the
+   network disappeared. Do not perform a powered live pull.
 6. Diagnose the observed unbound-G1 reconnect with a separately approved,
    supervised one-shot driver-probe experiment before adding any recovery
    mutation.
