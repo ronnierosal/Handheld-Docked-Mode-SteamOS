@@ -64,7 +64,6 @@ import {
   atAGlanceRows,
   compactJourneyStatusRows,
   compactStatusPanels,
-  quickAccessSectionVisibility,
   revealJourneyDetails,
   journeyStatusRows,
   restoreQuickAccessFocus,
@@ -1343,8 +1342,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     });
   }, []);
 
-  const sectionVisibility = quickAccessSectionVisibility(showDiagnostics);
-
   return (
     <>
       <div ref={statusAnchor} tabIndex={-1}>
@@ -1445,7 +1442,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           )}
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={toggleTroubleshooting}>
-              {showDiagnostics ? "Hide troubleshooting" : "Troubleshoot"}
+              {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
             </ButtonItem>
           </PanelSectionRow>
         </div>
