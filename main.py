@@ -203,6 +203,7 @@ class Plugin:
         self._topology_lock = threading.Lock()
         self._topology_observation = None
         self._attach_readiness = AttachReadinessLifecycle()
+        self._last_attach_readiness_code = self._attach_readiness.status().code
         self._diagnostic_logging = DiagnosticLoggingController(
             self._events,
             boot_session_id=self._boot_session_id,
@@ -249,8 +250,16 @@ class Plugin:
         with self._topology_lock:
             previous = self._topology_observation
             self._topology_observation = current
-        detection = detect_topology_event(previous, current)
-        status = self._attach_readiness.update(detection, current)
+            detection = detect_topology_event(previous, current)
+            status = self._attach_readiness.update(detection, current)
+            readiness_changed = status.code != self._last_attach_readiness_code
+            self._last_attach_readiness_code = status.code
+        if readiness_changed:
+            decky.logger.info(
+                "HDM attach readiness: stage=%s code=%s",
+                status.stage.value,
+                status.code,
+            )
         if detection.status is not TopologyDetectionStatus.DETECTED:
             return status
         self._events.append(

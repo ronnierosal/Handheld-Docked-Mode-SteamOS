@@ -29,6 +29,9 @@ class AttachReadinessStage(StrEnum):
     ACTION_REQUIRED = "action_required"
 
 
+READY_STABILITY_SAMPLES = 4
+
+
 @dataclass(frozen=True, slots=True)
 class AttachReadinessWatch:
     """Private identity binding created only from an exact attach candidate."""
@@ -152,6 +155,8 @@ class AttachReadinessLifecycle:
     def __init__(self) -> None:
         self._watch: AttachReadinessWatch | None = None
         self._status = _status(AttachReadinessStage.IDLE, "attach.idle")
+        self._ready_samples = 0
+        self._last_ready_sample_id = ""
         self._lock = threading.Lock()
 
     def status(self) -> AttachReadinessStatus:
@@ -163,6 +168,7 @@ class AttachReadinessLifecycle:
         with self._lock:
             if self._watch is None:
                 self._watch = arm_current_readiness(current)
+                self._reset_ready_stability()
                 self._status = (
                     _status(AttachReadinessStage.SETTLING, "attach.startup_observed")
                     if self._watch is not None
@@ -182,11 +188,31 @@ class AttachReadinessLifecycle:
                 and detection.event is TopologyEvent.EGPU_ATTACHED
             ):
                 self._watch = arm_attach_readiness(detection, current)
+                self._reset_ready_stability()
                 self._status = (
                     _status(AttachReadinessStage.SETTLING, "attach.observed")
                     if self._watch is not None
                     else _status(AttachReadinessStage.ACTION_REQUIRED, "attach.arm_unverified")
                 )
             elif self._watch is not None:
-                self._status = observe_attach_readiness(self._watch, current)
+                observed = observe_attach_readiness(self._watch, current)
+                if observed.stage is AttachReadinessStage.READY_IDLE:
+                    if current.sample_id != self._last_ready_sample_id:
+                        self._ready_samples += 1
+                        self._last_ready_sample_id = current.sample_id
+                    self._status = (
+                        observed
+                        if self._ready_samples >= READY_STABILITY_SAMPLES
+                        else _status(
+                            AttachReadinessStage.SETTLING,
+                            "attach.ready_stabilizing",
+                        )
+                    )
+                else:
+                    self._reset_ready_stability()
+                    self._status = observed
             return self._status
+
+    def _reset_ready_stability(self) -> None:
+        self._ready_samples = 0
+        self._last_ready_sample_id = ""
