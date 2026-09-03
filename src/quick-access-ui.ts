@@ -7,6 +7,29 @@ export interface AtAGlanceState {
   game: string;
 }
 
+export interface QuickAccessSectionVisibility {
+  journey: boolean;
+  sleepProtection: boolean;
+  disconnectReadiness: boolean;
+  support: boolean;
+  diagnostics: boolean;
+  navigation: boolean;
+}
+
+/** Keep secondary evidence and tools behind the single Troubleshoot disclosure. */
+export function quickAccessSectionVisibility(
+  troubleshootingOpen: boolean,
+): QuickAccessSectionVisibility {
+  return {
+    journey: troubleshootingOpen,
+    sleepProtection: troubleshootingOpen,
+    disconnectReadiness: troubleshootingOpen,
+    support: troubleshootingOpen,
+    diagnostics: troubleshootingOpen,
+    navigation: troubleshootingOpen,
+  };
+}
+
 /**
  * Keep the first screen to four player-facing facts. Technical evidence stays
  * behind the explicit troubleshooting control.

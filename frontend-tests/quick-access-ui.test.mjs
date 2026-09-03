@@ -5,10 +5,30 @@ import {
   atAGlanceRows,
   compactJourneyStatusRows,
   compactStatusPanels,
+  quickAccessSectionVisibility,
   revealJourneyDetails,
   journeyStatusRows,
   restoreQuickAccessFocus,
 } from "../src/quick-access-ui.ts";
+
+test("secondary sections stay hidden until the player opens Troubleshoot", () => {
+  assert.deepEqual(quickAccessSectionVisibility(false), {
+    journey: false,
+    sleepProtection: false,
+    disconnectReadiness: false,
+    support: false,
+    diagnostics: false,
+    navigation: false,
+  });
+  assert.deepEqual(quickAccessSectionVisibility(true), {
+    journey: true,
+    sleepProtection: true,
+    disconnectReadiness: true,
+    support: true,
+    diagnostics: true,
+    navigation: true,
+  });
+});
 
 test("at-a-glance UI remains compact and preserves progressive state labels", () => {
   assert.deepEqual(

@@ -64,6 +64,7 @@ import {
   atAGlanceRows,
   compactJourneyStatusRows,
   compactStatusPanels,
+  quickAccessSectionVisibility,
   revealJourneyDetails,
   journeyStatusRows,
   restoreQuickAccessFocus,
@@ -1342,6 +1343,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     });
   }, []);
 
+  const sectionVisibility = quickAccessSectionVisibility(showDiagnostics);
+
   return (
     <>
       <div ref={statusAnchor} tabIndex={-1}>
@@ -1442,7 +1445,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           )}
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={toggleTroubleshooting}>
-              {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
+              {showDiagnostics ? "Hide troubleshooting" : "Troubleshoot"}
             </ButtonItem>
           </PanelSectionRow>
         </div>
@@ -1451,8 +1454,10 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             {error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.`}
           </PanelSectionRow>
         )}
-        <PanelSectionRow>Read-only status refreshes while this panel is open.</PanelSectionRow>
-        {sleepGuard?.required && sleepWarningHidden && (
+        {sectionVisibility.diagnostics && (
+          <PanelSectionRow>Read-only status refreshes while this panel is open.</PanelSectionRow>
+        )}
+        {sectionVisibility.diagnostics && sleepGuard?.required && sleepWarningHidden && (
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={showSleepWarning}>
               Show sleep warning again
@@ -1461,31 +1466,35 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         )}
       </PanelSection>
 
-      <PanelSection title="Journey status">
-        {journeyRows.map((row) => (
-          <DiagnosticRow key={row.name} name={row.name} value={row.value} />
-        ))}
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={toggleJourneyDetails}>
-            {showJourneyDetails ? "Hide journey details" : "Open journey details"}
-          </ButtonItem>
-        </PanelSectionRow>
-      </PanelSection>
-
-      {showJourneyDetails && (
-        <div ref={journeyDetailsAnchor}>
-          <PanelSection title="Journey details">
-            <PanelSectionRow>
-              Read-only local policy status. It does not perform dock, undock, recovery, or game actions.
-            </PanelSectionRow>
-            {journeyDetailRows.map((row) => (
-              <DiagnosticRow key={row.name} name={row.name} value={row.detail} />
+      {sectionVisibility.journey && (
+        <>
+          <PanelSection title="Journey status">
+            {journeyRows.map((row) => (
+              <DiagnosticRow key={row.name} name={row.name} value={row.value} />
             ))}
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={toggleJourneyDetails}>
+                {showJourneyDetails ? "Hide journey details" : "Open journey details"}
+              </ButtonItem>
+            </PanelSectionRow>
           </PanelSection>
-        </div>
+
+          {showJourneyDetails && (
+            <div ref={journeyDetailsAnchor}>
+              <PanelSection title="Journey details">
+                <PanelSectionRow>
+                  Read-only local policy status. It does not perform dock, undock, recovery, or game actions.
+                </PanelSectionRow>
+                {journeyDetailRows.map((row) => (
+                  <DiagnosticRow key={row.name} name={row.name} value={row.detail} />
+                ))}
+              </PanelSection>
+            </div>
+          )}
+        </>
       )}
 
-      <PanelSection title="Sleep protection">
+      {sectionVisibility.sleepProtection && <PanelSection title="Sleep protection">
         <DiagnosticRow
           name="System inhibitor"
           value={loading
@@ -1538,9 +1547,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             )}
           </>
         )}
-      </PanelSection>
+      </PanelSection>}
 
-      <PanelSection title="Disconnect readiness">
+      {sectionVisibility.disconnectReadiness && <PanelSection title="Disconnect readiness">
         <DiagnosticRow name="Status" value={disconnectStatus} />
         {disconnect?.applicable && (
           <DiagnosticRow
@@ -1593,7 +1602,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           Process closure always requires confirmation. Software readiness never authorizes
           physical eGPU removal.
         </PanelSectionRow>
-      </PanelSection>
+      </PanelSection>}
 
       {needsAttention && (
         <PanelSection title="Needs attention">
@@ -1607,7 +1616,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         </PanelSection>
       )}
 
-      <PanelSection title="Support bundle">
+      {sectionVisibility.support && <PanelSection title="Support bundle">
         <PanelSectionRow>
           Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs,
           addresses, usernames, home paths, and command lines are excluded or redacted.
@@ -1643,9 +1652,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           </>
         )}
         {supportMessage && <PanelSectionRow>{supportMessage}</PanelSectionRow>}
-      </PanelSection>
+      </PanelSection>}
 
-      {showDiagnostics && (
+      {sectionVisibility.diagnostics && (
         <PanelSection title="Troubleshooting details">
           <PanelSectionRow>
             Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden.
@@ -1713,13 +1722,13 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         </PanelSection>
       )}
 
-      <PanelSection title="Navigation">
+      {sectionVisibility.navigation && <PanelSection title="Navigation">
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={returnToStatus}>
             Back to top
           </ButtonItem>
         </PanelSectionRow>
-      </PanelSection>
+      </PanelSection>}
       </div>
     </>
   );
