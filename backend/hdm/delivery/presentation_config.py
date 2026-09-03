@@ -25,6 +25,7 @@ BOOT_ID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
+CONFIG_FILE_MODE = 0o644
 
 
 class PresentationConfigStore:
@@ -143,9 +144,11 @@ class PresentationConfigStore:
             raise ValueError("presentation config exceeds its bound")
         temporary = self._root / f".{CONFIG_FILENAME}.{secrets.token_hex(8)}.tmp"
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
-        descriptor = os.open(temporary, flags, 0o600)
+        descriptor = os.open(temporary, flags, CONFIG_FILE_MODE)
         try:
             with os.fdopen(descriptor, "wb") as target:
+                if os.name == "posix":
+                    os.fchmod(target.fileno(), CONFIG_FILE_MODE)
                 target.write(data)
                 target.flush()
                 os.fsync(target.fileno())

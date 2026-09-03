@@ -77,8 +77,20 @@ do not leave a growing queue of completed worktree commits unintegrated.
   tests with 5 expected Windows symlink skips, compileall, TypeScript typecheck,
   64 frontend tests, Rollup, package check, and `git diff --check`. This is
   **Hardware-Diagnosed and Implemented/Simulated**, not yet hardware validated.
-  Do not install while the G1 is attached. Shut down, disconnect, install the
-  clean candidate, verify Portable baseline, then perform one watched reconnect.
+  Candidate `22e19446e904` installed cleanly and a second watched attach again
+  restarted Gamescope but selected the internal panel. The installed shim was
+  current and its unprivileged exact G1 revalidation succeeded. The remaining
+  failure was the config file itself: the root plugin wrote
+  `presentation.json` as root-owned mode `0600`, so the `deck`-owned Gamescope
+  shim could not read it and treated the config as absent. The follow-up writes
+  the bounded identity-free config as root-owned mode `0644`; raw boot and G1
+  identities remain absent, and launch-time exact hardware revalidation remains
+  mandatory. Targeted writer/wrapper, architecture, compile, and diff checks
+  pass; the full matrix and clean candidate build remain required. This second
+  correction is **Hardware-Diagnosed and Implemented/Simulated**, not hardware
+  validated. Do not install while the G1 is attached. Shut down, disconnect,
+  install the clean candidate, verify Portable baseline, then perform one watched
+  reconnect.
 
 - **Live shared-journal blocker and local owner-aware correction (2026-09-02):**
   after the installed `898d9c8322e5` build observed the exact Ally X/G1/TV

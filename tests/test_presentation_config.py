@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -12,7 +14,10 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
-from hdm.delivery.presentation_config import PresentationConfigStore  # noqa: E402
+from hdm.delivery.presentation_config import (  # noqa: E402
+    CONFIG_FILE_MODE,
+    PresentationConfigStore,
+)
 from hdm.delivery.gamescope_wrapper import (  # noqa: E402
     _verified_egpu_binding_sha256,
     select_launch_configuration,
@@ -71,6 +76,11 @@ class PresentationConfigStoreTests(unittest.TestCase):
                 binding().egpu_stable_id,
                 (Path(directory) / "presentation.json").read_text(encoding="utf-8"),
             )
+            if os.name == "posix":
+                self.assertEqual(
+                    stat.S_IMODE((Path(directory) / "presentation.json").stat().st_mode),
+                    CONFIG_FILE_MODE,
+                )
             self.assertEqual(store.load(), docked)
             with patch(
                 "hdm.profiles.gpd_g1.match_gpd_g1",

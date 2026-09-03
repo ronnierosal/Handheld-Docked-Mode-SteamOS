@@ -16,7 +16,7 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `7227e739300f6a5b2f936ca3dff06bae04a1f0f5` plus the launch-time boot-binding fix in this change |
+| Audited implementation baseline | `22e19446e904bfda8f78719f460cc96ae926bebc` plus the launch-config readability fix in this change |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
 | Remote relation | Local `main` was 67 commits ahead of `origin/main` before the governance slice |
@@ -44,7 +44,11 @@ publication.
   link, and Idle game state. Automatic docking restarted Gamescope, the handheld
   screen went dark, and the TV reported a signal but remained black. The launch
   shim fell back to the internal panel; verification timed out after 15 seconds
-  and HDM verified recovery to Portable.
+  and HDM verified recovery to Portable. Candidate `22e19446e904` corrected the
+  boot-binding material, but a repeated watched attach produced the same safe
+  fallback. Direct inspection then proved the root-owned writer had created the
+  per-user launch config as mode `0600`, so the `deck`-owned Gamescope shim could
+  not read it.
 - Historical candidate and deployment records are snapshots, not current truth.
   See [Operator handoff](OPERATOR_HANDOFF.md) and dated deployment records for
   their exact context.
@@ -73,9 +77,12 @@ local ZIP.
   operation.
 - The native TV transition reached a real Gamescope restart but did not reach the
   TV. Live evidence exposed a boot-binding hash mismatch between the config writer
-  and launch shim. The local correction preserves the raw boot identity only in
-  memory for the private binding hash and retains the hashed boot identity in the
-  serialized config. It needs a fresh supervised Ally X + GPD G1 + TV proof.
+  and launch shim, followed by a root-writer/user-reader permission mismatch.
+  The local correction preserves the raw boot identity only in memory for the
+  private binding hash, retains the hashed boot identity in the serialized
+  config, and writes that identity-free config root-owned/read-only to ordinary
+  users (`0644`) so the Gamescope user can consume it. It needs a fresh
+  supervised Ally X + GPD G1 + TV proof.
 - Automatic docking is implemented behind an off-by-default persistent player
   opt-in and remains hardware-validation-required. Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
