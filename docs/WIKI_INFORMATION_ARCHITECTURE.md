@@ -1,24 +1,36 @@
 # GitHub Wiki information architecture
 
 The Wiki is the human guide; repository docs remain engineering authority. The
-Wiki has not yet been published. Create pages only when useful content exists,
-and link back to the owning repository contract rather than duplicating it.
+Wiki has not yet been published. Its reviewed source lives in [`wiki/`](../wiki/README.md).
+Create pages only when useful content exists, and link back to the owning
+repository contract rather than duplicating it.
+
+## Current source set
+
+The initial source set contains Home, Project Overview, Current State, Issues
+Fixed, Getting Started, How HDM Works, Supported Hardware, Safety and eGPU
+Handling, Diagnostics and Privacy, Troubleshooting, Development, and FAQ. The
+combined safety page covers connection, disconnect, and sleep guidance until
+each workflow has enough independently proven player content to justify its own
+page.
+
+`wiki/_Sidebar.md` defines navigation. `wiki/README.md` records publishing and
+authority rules and is not intended to replace the Wiki Home page. Publication
+or synchronization to GitHub still requires explicit maintainer authorization.
 
 ## Initial publish set
 
 | Page | Purpose | Repository authority |
 |---|---|---|
 | Home | Product promise, maturity, placements, safe navigation | `README.md`, `PRODUCT.md` |
+| Project Overview | Goals, non-goals, workflow, and profile direction | `PRODUCT.md`, `ARCHITECTURE.md` |
+| Current State | Evidence-aware implementation and hardware snapshot | `CURRENT_STATE.md`, `ROADMAP.md` |
+| Issues Fixed | Selected fixes with proof level and remaining gates | `CURRENT_STATE.md`, audit and validation records |
 | Getting Started | Current availability, prerequisites, development-only install status | `CURRENT_STATE.md`, `DEPLOYMENT_VALIDATION.md` |
 | How HDM Works | Plain-language placement/health/workflow model | `PRODUCT.md`, `ARCHITECTURE.md` |
-| Portable Mode | Expected internal operation and evidence | `PRODUCT.md`, `HARDWARE_SUPPORT.md` |
-| Boosted Handheld Mode | Goal, current unproven status, no implied availability | `PRODUCT.md`, `CURRENT_STATE.md` |
-| TV Docked Mode | Goal, current supervised status, active-vs-connected distinction | `PRODUCT.md`, `ROADMAP.md` |
-| Connecting an eGPU | Safe preparation and observed attach state | `DEPLOYMENT_VALIDATION.md` |
-| Disconnecting an eGPU | Current shutdown-before-disconnect policy | `SAFETY_INVARIANTS.md`, `HARDWARE_SUPPORT.md` |
-| Sleep & Wake | Player guidance and known first-profile limitation | `SLEEP_WORKFLOW.md` |
-| Diagnostics & Logs | How to collect bounded privacy-safe evidence | `DIAGNOSTICS.md`, `SUPPORT_BUNDLE.md` |
 | Supported Hardware | Compatibility vocabulary and current profile | `HARDWARE_SUPPORT.md` |
+| Safety and eGPU Handling | Current connect, sleep, and shutdown-before-disconnect rules | `SAFETY_INVARIANTS.md`, `DEPLOYMENT_VALIDATION.md` |
+| Diagnostics and Privacy | Bounded privacy-safe evidence and support sharing | `DIAGNOSTICS.md`, `SUPPORT_BUNDLE.md` |
 | Troubleshooting | Symptom-to-diagnostic guidance without raw log dumping | `DIAGNOSTICS.md`, recovery docs |
 | Development | Contributor entry point | `CONTRIBUTING.md`, `docs/DEVELOPMENT.md` |
 | FAQ | Repeated user questions with links to authority | owning repository documents |
@@ -26,6 +38,12 @@ and link back to the owning repository contract rather than duplicating it.
 ## Add after evidence exists
 
 - Gaming with an eGPU
+- Portable Mode
+- Boosted Handheld Mode
+- TV Docked Mode
+- Connecting an eGPU
+- Disconnecting an eGPU
+- Sleep & Wake
 - Controllers
 - Display / HDR / VRR
 - Audio

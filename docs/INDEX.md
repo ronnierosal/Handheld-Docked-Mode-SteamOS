@@ -59,7 +59,8 @@ issue**. Architectural possibility is not support.
   [operator handoff](OPERATOR_HANDOFF.md), [diagnostics](DIAGNOSTICS.md),
   [release pipeline](RELEASE_PIPELINE.md)
 - Reference ancestry: [eGPUBridge parity](EGPUBRIDGE_FEATURE_REVIEW.md)
-- Public documentation plan: [Wiki information architecture](WIKI_INFORMATION_ARCHITECTURE.md)
+- Public documentation: [Wiki source](../wiki/README.md) and
+  [Wiki information architecture](WIKI_INFORMATION_ARCHITECTURE.md)
 - Decisions: [ADR index](adr/README.md)
 - Historical evidence: dated validation, deployment, and supervised-session
   documents in this directory
