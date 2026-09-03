@@ -16,7 +16,7 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `898d9c8322e5352c5733c72fcdcd00e46dffe036` plus the owner-aware journal fix in this change |
+| Audited implementation baseline | `7227e739300f6a5b2f936ca3dff06bae04a1f0f5` plus the launch-time boot-binding fix in this change |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
 | Remote relation | Local `main` was 67 commits ahead of `origin/main` before the governance slice |
@@ -37,10 +37,14 @@ publication.
 - No artifact is promoted as current by this page. Build and verify one package
   from the intended clean commit for each validation session.
 - The last live observation reports installed HDM `0.2.0`, public revision
-  `898d9c8322e5`, on 2026-09-02. The exact Ally X/G1 profile, one EDID-ready TV,
-  an observed-Up link, Idle game state, active internal panel, and inactive TV
-  were observed after USB4 settling. The owner-aware journal correction in the
-  current checkout is not installed or hardware validated.
+  `7227e739300f`, on 2026-09-02. The owner-aware journal correction is installed,
+  and its exact presentation acknowledgement cleared the prior terminal journal.
+  A later watched attach progressed from the authorized USB4 bridge to the exact
+  Ally X/G1 profile, RX 7600M XT, G1 audio function, one EDID-ready TV, observed-Up
+  link, and Idle game state. Automatic docking restarted Gamescope, the handheld
+  screen went dark, and the TV reported a signal but remained black. The launch
+  shim fell back to the internal panel; verification timed out after 15 seconds
+  and HDM verified recovery to Portable.
 - Historical candidate and deployment records are snapshots, not current truth.
   See [Operator handoff](OPERATOR_HANDOFF.md) and dated deployment records for
   their exact context.
@@ -67,18 +71,23 @@ local ZIP.
   are implemented to the evidence levels recorded in [Roadmap](ROADMAP.md).
 - Deterministic transition/recovery behavior does not by itself prove hardware
   operation.
-- The corrected native TV transition still needs a fresh supervised
-  Ally X + GPD G1 + TV proof.
+- The native TV transition reached a real Gamescope restart but did not reach the
+  TV. Live evidence exposed a boot-binding hash mismatch between the config writer
+  and launch shim. The local correction preserves the raw boot identity only in
+  memory for the private binding hash and retains the hashed boot identity in the
+  serialized config. It needs a fresh supervised Ally X + GPD G1 + TV proof.
 - Automatic docking is implemented behind an off-by-default persistent player
   opt-in and remains hardware-validation-required. Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
   before disconnect.
-- A live attach exposed a terminal shared journal that automatic docking
+- A prior live attach exposed a terminal shared journal that automatic docking
   mislabeled as a TV acknowledgement even though both the presentation and
   process-release services rejected ownership. The local correction reports
   the categorical owner, offers exact acknowledgement only for a terminal sleep
   journal, keeps unknown/incomplete journals fail-closed, and re-arms the same
-  attachment after a valid owner acknowledgement. It remains uninstalled.
+  attachment after a valid owner acknowledgement. That correction is installed;
+  the exact presentation acknowledgement and subsequent automatic retry were
+  observed on hardware.
 
 ## Active ownership
 
@@ -95,11 +104,12 @@ hardware-tested behavior.
 
 ## Immediate gates
 
-1. Return the full local verification matrix to green before a new candidate.
-2. Re-observe the installed build and device state before deployment or hardware
-   interpretation.
-3. Complete the separately owned supervised TV-switch proof with one exact,
-   provenance-recorded candidate.
+1. Build the boot-binding correction from a clean commit and verify its embedded
+   revision and checksum.
+2. Shut down before disconnecting the attached G1, then install only while the G1
+   is absent and re-observe the Portable baseline.
+3. Repeat one watched automatic attach and complete the TV-switch proof with the
+   exact provenance-recorded candidate.
 4. Design the Phase 2 unified installed diagnostic report and deployment record.
 5. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
    and synthetic tests before claiming future-device extensibility.

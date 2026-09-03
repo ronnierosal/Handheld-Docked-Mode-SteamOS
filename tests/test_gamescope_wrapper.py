@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from hdm.delivery.gamescope_wrapper import (  # noqa: E402
     MAX_CONFIG_BYTES,
     GamescopeLaunchConfig,
+    _boot_identity,
     _load_config,
     _verified_egpu_binding_sha256,
     config_from_dict,
@@ -90,6 +91,13 @@ class GamescopeConfigTests(unittest.TestCase):
 
 
 class GamescopeSelectionTests(unittest.TestCase):
+    def test_boot_identity_preserves_raw_value_for_binding_and_hash_for_config(self):
+        with patch(
+            "hdm.delivery.gamescope_wrapper.Path.read_text",
+            return_value="boot\n",
+        ):
+            self.assertEqual(_boot_identity(), ("boot", BOOT_HASH))
+
     def test_launch_binding_is_derived_only_from_a_fresh_exact_g1_match(self):
         with patch(
             "hdm.profiles.gpd_g1.match_gpd_g1",
@@ -101,6 +109,25 @@ class GamescopeSelectionTests(unittest.TestCase):
             return_value=GpdG1Match(True, False, reason="incomplete"),
         ):
             self.assertEqual(_verified_egpu_binding_sha256("boot"), "")
+
+    def test_writer_and_launch_revalidation_share_raw_boot_binding_material(self):
+        with patch(
+            "hdm.profiles.gpd_g1.match_gpd_g1",
+            return_value=GpdG1Match(True, True, stable_id=EGPU_ID),
+        ):
+            verified_binding = _verified_egpu_binding_sha256("boot")
+        self.assertEqual(docked_config().egpu_binding_sha256, verified_binding)
+        self.assertEqual(
+            select_launch_configuration(
+                docked_config(),
+                current_boot_id_sha256=BOOT_HASH,
+                connected_connectors=("eDP-1", "HDMI-A-1"),
+                internal_connectors=("eDP-1",),
+                present_vendor_devices=("1002:7480",),
+                verified_egpu_binding_sha256=verified_binding,
+            ),
+            ("HDMI-A-1", "1002:7480"),
+        )
 
     def test_exact_same_boot_docked_evidence_selects_external_gpu(self):
         self.assertEqual(

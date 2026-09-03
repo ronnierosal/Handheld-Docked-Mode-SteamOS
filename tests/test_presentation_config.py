@@ -6,14 +6,20 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from hdm.delivery.presentation_config import PresentationConfigStore  # noqa: E402
+from hdm.delivery.gamescope_wrapper import (  # noqa: E402
+    _verified_egpu_binding_sha256,
+    select_launch_configuration,
+)
 from hdm.domain.control_plane import PlacementState, TransitionBinding  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
+from hdm.profiles.gpd_g1 import GpdG1Match  # noqa: E402
 
 
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -66,6 +72,28 @@ class PresentationConfigStoreTests(unittest.TestCase):
                 (Path(directory) / "presentation.json").read_text(encoding="utf-8"),
             )
             self.assertEqual(store.load(), docked)
+            with patch(
+                "hdm.profiles.gpd_g1.match_gpd_g1",
+                return_value=GpdG1Match(
+                    True,
+                    True,
+                    stable_id=binding().egpu_stable_id,
+                ),
+            ):
+                verified_binding = _verified_egpu_binding_sha256(BOOT_ID)
+            self.assertEqual(
+                select_launch_configuration(
+                    store.load(),
+                    current_boot_id_sha256=hashlib.sha256(
+                        BOOT_ID.encode("utf-8")
+                    ).hexdigest(),
+                    connected_connectors=("eDP-1", "HDMI-A-1"),
+                    internal_connectors=("eDP-1",),
+                    present_vendor_devices=("1002:0000", "1002:7480"),
+                    verified_egpu_binding_sha256=verified_binding,
+                ),
+                ("HDMI-A-1", "1002:7480"),
+            )
 
             docked_igpu = store.write_target(
                 target=PlacementState.DOCKED_IGPU,

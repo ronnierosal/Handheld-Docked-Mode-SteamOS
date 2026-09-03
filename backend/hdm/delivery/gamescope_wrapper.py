@@ -216,11 +216,11 @@ def select_launch_configuration(
     return "", ""
 
 
-def _boot_id_sha256() -> str:
+def _boot_identity() -> tuple[str, str]:
     value = Path("/proc/sys/kernel/random/boot_id").read_text(
         encoding="utf-8", errors="strict"
     ).strip()
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return value, hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _connected_connectors(root: Path = Path("/sys/class/drm")) -> tuple[str, ...]:
@@ -315,16 +315,17 @@ def main() -> int:
     config = _load_config(state_root) if state_root.is_absolute() else None
     connected = _connected_connectors()
     try:
-        boot_id = _boot_id_sha256()
+        raw_boot_id, boot_id_sha256 = _boot_identity()
     except OSError:
-        boot_id = ""
+        raw_boot_id = ""
+        boot_id_sha256 = ""
     output_order, vendor_device = select_launch_configuration(
         config,
-        current_boot_id_sha256=boot_id,
+        current_boot_id_sha256=boot_id_sha256,
         connected_connectors=connected,
         internal_connectors=_internal_connectors(connected),
         present_vendor_devices=_present_vendor_devices(),
-        verified_egpu_binding_sha256=_verified_egpu_binding_sha256(boot_id),
+        verified_egpu_binding_sha256=_verified_egpu_binding_sha256(raw_boot_id),
     )
     arguments = tuple(os.sys.argv[1:])
     environment = dict(os.environ)

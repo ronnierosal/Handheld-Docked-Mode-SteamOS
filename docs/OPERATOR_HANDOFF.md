@@ -12,7 +12,7 @@ state before making a hardware claim.
 - Branch, HEAD, divergence, worktree, version, and active ownership:
   [Current state](CURRENT_STATE.md). Re-run `git rev-parse HEAD` and
   `git status --short --branch` before relying on that snapshot.
-- Last verified installed HDM build on the Ally: `0.2.0`, revision `898d9c8322e5`
+- Last verified installed HDM build on the Ally: `0.2.0`, revision `7227e739300f`
 - Last verified loader state: `plugin_loader.service` active.
 - **Historical held-local lifecycle-fix candidate (2026-09-01):**
   `HandheldDockMode-0.2.0.zip` was rebuilt from clean
@@ -58,6 +58,28 @@ do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
 
+- **Automatic TV launch binding failure and local correction (2026-09-02):**
+  with installed `7227e739300f`, one watched attach first exposed only an
+  authorized G1 USB4 bridge and correctly remained fail-closed. SteamOS then
+  enumerated Titan Ridge, RX 7600M XT `1002:7480`, G1 audio `1002:ab30`, one
+  EDID-ready TV, and an observed-Up link; HDM resolved the exact
+  `gpd-g1-rx7600mxt-titan-ridge` profile and automatically requested the shared
+  TV transition. Gamescope restarted, the handheld screen went dark, and the TV
+  reported a signal but remained black. The new session selected the internal
+  GPU/panel, so the 15-second verifier timed out and HDM recorded verified
+  Portable recovery. Code inspection found that `PresentationConfigStore`
+  hashed the raw boot ID with the exact G1 stable identity, while the launch shim
+  hashed an already-hashed boot ID with that identity. The hashes could never
+  match, forcing the shim's safe internal-panel fallback. The local correction
+  now carries the raw boot ID only in memory for binding revalidation and uses
+  its SHA-256 separately for the serialized boot field. A writer-to-shim
+  regression test and the complete local matrix pass: architecture, 776 Python
+  tests with 5 expected Windows symlink skips, compileall, TypeScript typecheck,
+  64 frontend tests, Rollup, package check, and `git diff --check`. This is
+  **Hardware-Diagnosed and Implemented/Simulated**, not yet hardware validated.
+  Do not install while the G1 is attached. Shut down, disconnect, install the
+  clean candidate, verify Portable baseline, then perform one watched reconnect.
+
 - **Live shared-journal blocker and local owner-aware correction (2026-09-02):**
   after the installed `898d9c8322e5` build observed the exact Ally X/G1/TV
   topology and automatic docking was enabled, it stopped before mutation with
@@ -67,13 +89,10 @@ do not leave a growing queue of completed worktree commits unintegrated.
   journal was deleted or bypassed. The local correction adds categorical shared
   ownership, a strict exact-terminal sleep acknowledgement, legacy
   presentation-journal recognition, honest foreign-workflow labeling, and
-  automatic-dock re-arming after the owning acknowledgement. Targeted backend,
-  typecheck, frontend, architecture, compile, and package checks pass. This is
-  **Implemented/Simulated** locally and not installed. Do not replace the plugin
-  while the G1 is attached. The next safe step is shutdown, physical disconnect,
-  clean candidate build/install, then inspect the owner-aware status before one
-  watched reconnect. A valid acknowledgement while automatic docking remains
-  enabled may immediately request the watched Gamescope/TV transition.
+  automatic-dock re-arming after the owning acknowledgement. It was installed as
+  `7227e739300f`; the live presentation journal was identified, acknowledged by
+  its exact owner, and the automatic coordinator re-armed. This is
+  **Hardware Validated** for owner routing and re-arming only, not for TV success.
 
 - **Automatic G1-to-TV docking implementation (2026-09-02):** the proven
   eGPUBridge behavior was reduced to its required mechanism—write the exact TV
