@@ -167,6 +167,24 @@ class G1AudioHandoffTests(unittest.TestCase):
             self.assertEqual(commands.set_ids, [62])
             self.assertEqual(store.load(), INTERNAL)
 
+    def test_portable_restore_does_not_require_the_removed_g1_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            store = PortableAudioStateStore(root)
+            store.save(INTERNAL)
+            commands = FakeCommands(default=EXTERNAL)
+            handoff = G1AudioHandoff(
+                commands=commands,
+                state=store,
+                resolve_g1_audio_bdf=lambda: "",
+            )
+
+            result = handoff.switch(PlacementState.PORTABLE, USER)
+
+            self.assertTrue(result.succeeded)
+            self.assertEqual(result.code, "audio.default_verified")
+            self.assertEqual(commands.set_ids, [62])
+
     def test_failed_presentation_can_rollback_the_audio_change(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

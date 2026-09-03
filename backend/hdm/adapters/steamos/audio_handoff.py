@@ -86,6 +86,22 @@ class G1AudioHandoff:
     def switch(
         self, target: PlacementState, user: GamescopeUserContext
     ) -> AudioHandoffResult:
+        if target is PlacementState.PORTABLE:
+            before = self._observe(user)
+            if before is None:
+                return AudioHandoffResult(False, "audio.observation_unavailable")
+            wanted_name = self._state.load()
+            portable = tuple(
+                item
+                for item in before.sinks
+                if item.name == wanted_name
+            )
+            if len(portable) != 1:
+                return AudioHandoffResult(False, "audio.portable_sink_unavailable")
+            return self._select(user, before, portable[0])
+
+        if target not in {PlacementState.DOCKED_EGPU, PlacementState.DOCKED_IGPU}:
+            return AudioHandoffResult(False, "audio.target_unsupported")
         audio_bdf = self._resolve_bdf()
         if not audio_bdf:
             return AudioHandoffResult(False, "audio.g1_identity_unverified")
@@ -95,20 +111,6 @@ class G1AudioHandoff:
         external = tuple(item for item in before.sinks if item.device_bdf == audio_bdf)
         if len(external) != 1:
             return AudioHandoffResult(False, "audio.external_sink_ambiguous")
-
-        if target is PlacementState.PORTABLE:
-            wanted_name = self._state.load()
-            portable = tuple(
-                item
-                for item in before.sinks
-                if item.name == wanted_name and item.device_bdf != audio_bdf
-            )
-            if len(portable) != 1:
-                return AudioHandoffResult(False, "audio.portable_sink_unavailable")
-            return self._select(user, before, portable[0])
-
-        if target not in {PlacementState.DOCKED_EGPU, PlacementState.DOCKED_IGPU}:
-            return AudioHandoffResult(False, "audio.target_unsupported")
         if before.default_sink_name == external[0].name:
             if not self._state.load():
                 return AudioHandoffResult(False, "audio.rollback_sink_unavailable")

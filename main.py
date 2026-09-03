@@ -87,6 +87,10 @@ from hdm.application.automatic_dock import (  # noqa: E402
     AutomaticDockCoordinator,
     AutomaticDockStage,
 )
+from hdm.application.native_portable_recovery import (  # noqa: E402
+    NativePortableRecoverySupervisor,
+    NativeRecoveryStage,
+)
 from hdm.application.topology_event_detection import (  # noqa: E402
     TopologyDetectionStatus,
     detect_topology_event,
@@ -181,6 +185,9 @@ class Plugin:
         self._automatic_dock_task: asyncio.Task[None] | None = None
         self._automatic_dock_retry_seconds = 1.0
         self._automatic_dock = AutomaticDockCoordinator()
+        self._native_recovery_task: asyncio.Task[None] | None = None
+        self._native_recovery = NativePortableRecoverySupervisor()
+        self._last_native_recovery_code = ""
         self._automatic_dock_preference_store: AutomaticDockPreferenceStore | None = None
         self._docked_igpu_scheduler: DockedIgpuLifecycleScheduler | None = None
         self._docked_igpu_task: asyncio.Task[None] | None = None
@@ -1012,6 +1019,74 @@ class Plugin:
             )
         self._sleep_guard_task = asyncio.create_task(self._sleep_guard_loop())
         self._automatic_dock_task = asyncio.create_task(self._automatic_dock_loop())
+        self._native_recovery_task = asyncio.create_task(
+            self._native_portable_recovery_loop()
+        )
+
+    async def _native_portable_recovery_loop(self) -> None:
+        """Verify SteamOS' native fallback and restore captured Portable audio."""
+
+        observations = SnapshotTransitionObservationAdapter(self._discovery)
+        clock = SystemMonotonicClock()
+        while True:
+            try:
+                enabled = await asyncio.to_thread(
+                    self._automatic_dock_preferences().load
+                )
+                current = await asyncio.to_thread(observations.observe)
+                status = self._native_recovery.update(
+                    enabled=enabled,
+                    current=current,
+                    now_ms=clock.now_ms(),
+                )
+                if status.code != self._last_native_recovery_code:
+                    severity = (
+                        "error"
+                        if status.stage is NativeRecoveryStage.ACTION_REQUIRED
+                        else "warning"
+                        if status.stage is NativeRecoveryStage.WAITING
+                        else "info"
+                    )
+                    self._events.append(
+                        severity=severity,
+                        code=status.code,
+                        component="native_recovery",
+                        stage=status.stage.value,
+                    )
+                    self._last_native_recovery_code = status.code
+                if status.restore_portable_audio:
+                    resolution = await asyncio.to_thread(
+                        lambda: resolve_gamescope_user(GamescopeDiscovery().scan())
+                    )
+                    if resolution.ok and resolution.context is not None:
+                        audio = await asyncio.to_thread(
+                            self._audio_handoff_service().switch,
+                            PlacementState.PORTABLE,
+                            resolution.context,
+                        )
+                        self._events.append(
+                            severity="info" if audio.succeeded else "warning",
+                            code=audio.code,
+                            component="native_recovery",
+                            stage="audio_restore",
+                        )
+                    else:
+                        self._events.append(
+                            severity="warning",
+                            code="native_recovery.audio_user_unavailable",
+                            component="native_recovery",
+                            stage="audio_restore",
+                        )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                self._events.append(
+                    severity="warning",
+                    code="native_recovery.observation_failed",
+                    component="native_recovery",
+                    stage="observation",
+                )
+            await asyncio.sleep(1.0)
 
     async def _automatic_dock_loop(self) -> None:
         """Submit one exact, idle attach request through the shared transition engine."""
@@ -1215,6 +1290,13 @@ class Plugin:
             except asyncio.CancelledError:
                 pass
             self._automatic_dock_task = None
+        if self._native_recovery_task is not None:
+            self._native_recovery_task.cancel()
+            try:
+                await self._native_recovery_task
+            except asyncio.CancelledError:
+                pass
+            self._native_recovery_task = None
         await self._stop_docked_igpu_lifecycle()
         if self._sleep_guard_task is not None:
             self._sleep_guard_task.cancel()
