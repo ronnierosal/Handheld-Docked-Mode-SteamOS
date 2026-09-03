@@ -22,7 +22,11 @@ from hdm.adapters.steamos.discovery import SteamOsDiscovery  # noqa: E402
 from hdm.adapters.steamos.drm import DrmDiscovery  # noqa: E402
 from hdm.adapters.steamos.pci import PciUsb4Discovery  # noqa: E402
 from hdm.adapters.steamos.wake_diagnostics import WakeDiagnosticsDiscovery  # noqa: E402
-from hdm.adapters.steamos.commands import UserServiceCommandRunner  # noqa: E402
+from hdm.adapters.steamos.commands import (  # noqa: E402
+    PipeWireCommandRunner,
+    UserServiceCommandRunner,
+)
+from hdm.adapters.steamos.audio_handoff import G1AudioHandoff  # noqa: E402
 from hdm.adapters.steamos.gamescope import GamescopeDiscovery  # noqa: E402
 from hdm.adapters.steamos.gamescope_session import (  # noqa: E402
     GamescopeSessionObservationAdapter,
@@ -152,6 +156,7 @@ from hdm.delivery.runtime_state import RootOwnedRuntimeState  # noqa: E402
 from hdm.delivery.automatic_dock_preferences import (  # noqa: E402
     AutomaticDockPreferenceStore,
 )
+from hdm.delivery.audio_state import PortableAudioStateStore  # noqa: E402
 from hdm.delivery.transition_journal_store import FileTransitionJournalStore  # noqa: E402
 from hdm.domain.process_release import ReleasePhase  # noqa: E402
 from hdm.domain.control_plane import (  # noqa: E402
@@ -1017,11 +1022,20 @@ class Plugin:
                 enabled = await asyncio.to_thread(
                     self._automatic_dock_preferences().load
                 )
+                current = await asyncio.to_thread(observations.observe)
+                if infer_placement(current.snapshot) is PlacementState.PORTABLE:
+                    resolution = await asyncio.to_thread(
+                        lambda: resolve_gamescope_user(GamescopeDiscovery().scan())
+                    )
+                    if resolution.ok and resolution.context is not None:
+                        await asyncio.to_thread(
+                            self._audio_handoff_service().remember_portable,
+                            resolution.context,
+                        )
                 if not enabled:
                     delay_seconds = 5.0
                     await asyncio.sleep(delay_seconds)
                     continue
-                current = await asyncio.to_thread(observations.observe)
                 readiness = await asyncio.to_thread(
                     self._record_topology_observation, current.snapshot
                 )
@@ -1304,6 +1318,7 @@ class Plugin:
             commands=UserServiceCommandRunner(),
             resolve_user=lambda: resolve_gamescope_user(GamescopeDiscovery().scan()),
             read_boot_id=self._boot_session_id,
+            audio=self._audio_handoff_service(),
         )
         orchestrator = TransitionOrchestrator(
             observations=observations,
@@ -1319,6 +1334,22 @@ class Plugin:
             integration_ready=lambda: integration.status().ready,
             approvals=self._presentation_transition_approvals,
         )
+
+    def _audio_handoff_service(self) -> G1AudioHandoff:
+        return G1AudioHandoff(
+            commands=PipeWireCommandRunner(),
+            state=PortableAudioStateStore(RootOwnedRuntimeState().ensure()),
+            resolve_g1_audio_bdf=self._verified_g1_audio_bdf,
+        )
+
+    @staticmethod
+    def _verified_g1_audio_bdf() -> str:
+        """Return the audio function only from a fresh exact G1 topology match."""
+        pci = PciUsb4Discovery()
+        matched = match_gpd_g1(
+            DrmDiscovery().scan(), pci.scan_pci(), pci.scan_usb4()
+        )
+        return matched.audio_bdf if matched.verified else ""
 
     def _automatic_dock_preferences(self) -> AutomaticDockPreferenceStore:
         if self._automatic_dock_preference_store is None:

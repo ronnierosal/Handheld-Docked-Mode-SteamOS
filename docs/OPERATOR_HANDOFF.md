@@ -12,7 +12,7 @@ state before making a hardware claim.
 - Branch, HEAD, divergence, worktree, version, and active ownership:
   [Current state](CURRENT_STATE.md). Re-run `git rev-parse HEAD` and
   `git status --short --branch` before relying on that snapshot.
-- Last verified installed HDM build on the Ally: `0.2.0`, revision `7227e739300f`
+- Last verified installed HDM build on the Ally: `0.2.0`, revision `0d66127cd0c2`
 - Last verified loader state: `plugin_loader.service` active.
 - **Historical held-local lifecycle-fix candidate (2026-09-01):**
   `HandheldDockMode-0.2.0.zip` was rebuilt from clean
@@ -57,6 +57,24 @@ Resolve conflicts deliberately. Record the integration and verification here;
 do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
+
+- **Automatic TV success and guarded audio follow-up (2026-09-02):** installed
+  `0d66127cd0c2` completed the watched automatic attach on the exact Ally X + GPD
+  G1 profile. The TV became the only active display, Gamescope selected the RX
+  7600M XT, Steam was visibly present on the TV, and the presentation journal
+  committed. Audio initially remained on the Ally. Live PipeWire evidence showed
+  the exact G1 HDMI function had one SteamOS loopback sink while the internal
+  loopback was default. A reversible supervised default change was verified by
+  PipeWire and the player confirmed TV sound. The current worktree adds a guarded
+  audio child: record the current Portable default before attach, freshly derive
+  the G1 audio function from the exact topology, resolve rather than persist its
+  ephemeral PipeWire node ID, select and verify it after the Gamescope restart is
+  durably queued, and
+  restore the recorded Portable sink on rollback/return. Missing rollback or
+  ambiguous evidence fails before display mutation. Backend tests and architecture
+  checks pass, but the new automatic audio path is **Implemented/Simulated, not
+  installed**. Do not install while attached. Shut down fully, disconnect the G1,
+  install the clean candidate, verify Portable, then perform one watched attach.
 
 - **Automatic TV launch binding failure and local correction (2026-09-02):**
   with installed `7227e739300f`, one watched attach first exposed only an

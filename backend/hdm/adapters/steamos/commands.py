@@ -40,6 +40,76 @@ class UserServiceCommandResult:
     error_code: str = ""
 
 
+@dataclass(frozen=True, slots=True)
+class AudioCommandResult:
+    ok: bool
+    output: bytes = b""
+    code: str = ""
+
+
+class PipeWireCommandRunner:
+    """Run only a bounded dump or numeric default-sink mutation as Gamescope user."""
+
+    RUNUSER = "/usr/bin/runuser"
+    ENV = "/usr/bin/env"
+    PW_DUMP = "/usr/bin/pw-dump"
+    WPCTL = "/usr/bin/wpctl"
+    MAX_OUTPUT_BYTES = 1024 * 1024
+    SAFE_USERNAME = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+
+    def __init__(self, timeout_seconds: float = 5.0, effective_uid=None) -> None:
+        self._timeout_seconds = timeout_seconds
+        self._effective_uid = effective_uid or getattr(os, "geteuid", lambda: -1)
+
+    def dump(self, user) -> AudioCommandResult:
+        return self._run(user, (self.PW_DUMP,), capture=True)
+
+    def set_default(self, user, object_id: int) -> AudioCommandResult:
+        if type(object_id) is not int or object_id <= 0:
+            return AudioCommandResult(False, code="audio.object_id_invalid")
+        return self._run(
+            user, (self.WPCTL, "set-default", str(object_id)), capture=False
+        )
+
+    def _run(
+        self, user, command: tuple[str, ...], *, capture: bool
+    ) -> AudioCommandResult:
+        if self._effective_uid() != 0:
+            return AudioCommandResult(False, code="audio.root_required")
+        if not self.SAFE_USERNAME.fullmatch(user.username) or user.uid <= 0:
+            return AudioCommandResult(False, code="audio.user_invalid")
+        argv = (
+            self.RUNUSER,
+            "-u",
+            user.username,
+            "--",
+            self.ENV,
+            f"XDG_RUNTIME_DIR=/run/user/{user.uid}",
+            f"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{user.uid}/bus",
+            *command,
+        )
+        try:
+            completed = subprocess.run(
+                argv,
+                capture_output=True,
+                check=False,
+                shell=False,
+                timeout=self._timeout_seconds,
+                env={"LANG": "C", "LC_ALL": "C", "PATH": "/usr/bin:/bin"},
+            )
+        except subprocess.TimeoutExpired:
+            return AudioCommandResult(False, code="audio.command_timeout")
+        except (OSError, subprocess.SubprocessError):
+            return AudioCommandResult(False, code="audio.command_unavailable")
+        output = bytes(completed.stdout or b"")
+        error = bytes(completed.stderr or b"")
+        if len(output) + len(error) > self.MAX_OUTPUT_BYTES:
+            return AudioCommandResult(False, code="audio.output_too_large")
+        if completed.returncode != 0:
+            return AudioCommandResult(False, code="audio.command_failed")
+        return AudioCommandResult(True, output if capture else b"")
+
+
 class SleepInhibitorProcess:
     """Own the exact systemd-inhibit process used by the G1 sleep guard."""
 

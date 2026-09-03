@@ -440,8 +440,15 @@ The initial SteamOS peripheral adapter is read-only sysfs inventory only. It
 recognizes gamepad-capable input nodes and sound-card nodes, hashes their paths
 into private opaque bindings, and never opens an input node or invokes an audio
 session command. Unmapped controller identity and unobserved default audio both
-remain non-exact and non-actionable. Profile-specific mapping, delivery, and
-mechanisms remain absent.
+remain non-exact and non-actionable. That generic adapter is not used to
+authorize mutation. The separate exact Ally X/GPD G1 presentation mechanism
+owns one narrow PipeWire child: it records the current Portable default in
+root-only state, freshly derives the G1 audio PCI function from the certified
+topology, resolves the single matching SteamOS loopback sink, selects its
+ephemeral numeric ID, and verifies the new default. It restores the recorded
+sink on presentation rollback or Portable return and exposes no independent
+RPC. The capability remains Experimental pending watched automatic and restore
+proof; controller mechanisms remain absent.
 
 Any future profile-specific mapping is typed reviewed supervised evidence bound
 to the complete opaque inventory fingerprint. A changed inventory invalidates

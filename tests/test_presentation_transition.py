@@ -112,6 +112,29 @@ class FakeCommands:
         return SimpleNamespace(ok=operation not in self.fail)
 
 
+class FakeAudio:
+    def __init__(self, events, *, fail=False, rollback=True):
+        self.events = events
+        self.fail = fail
+        self.rollback_ok = rollback
+
+    def switch(self, target, user):
+        self.events.append(f"audio.{target.value}")
+        return SimpleNamespace(
+            succeeded=not self.fail,
+            code="audio.injected_failure" if self.fail else "audio.default_verified",
+            receipt=SimpleNamespace(
+                changed=True,
+                previous_sink_name="portable",
+                created_portable_state=True,
+            ),
+        )
+
+    def rollback(self, receipt, user):
+        self.events.append("audio.rollback")
+        return self.rollback_ok
+
+
 def mechanism(*, fail=(), ready=True, user=USER, resolved_user=USER, config_fail=0):
     events = []
     config = FakeConfig(events, config_fail)
@@ -126,6 +149,82 @@ def mechanism(*, fail=(), ready=True, user=USER, resolved_user=USER, config_fail
 
 
 class PresentationTransitionMechanismTests(unittest.TestCase):
+    def test_audio_is_verified_after_restart_is_durably_queued(self):
+        events = []
+        config = FakeConfig(events)
+        value = PresentationTransitionMechanism(
+            integration=FakeIntegration(events=events),
+            config=config,
+            commands=FakeCommands(events),
+            resolve_user=lambda: GamescopeUserResolution(USER),
+            read_boot_id=lambda: BOOT_ID,
+            audio=FakeAudio(events),
+        )
+        result = value.apply(
+            PlannedStep(
+                TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                10_000,
+                expected_placement=PlacementState.DOCKED_EGPU,
+            ),
+            binding(),
+            observed(),
+        )
+        self.assertTrue(result.succeeded)
+        self.assertGreater(
+            events.index("audio.docked_egpu"),
+            events.index("command.restart_gamescope_session"),
+        )
+
+    def test_restart_failure_does_not_change_audio(self):
+        events = []
+        config = FakeConfig(events)
+        value = PresentationTransitionMechanism(
+            integration=FakeIntegration(events=events),
+            config=config,
+            commands=FakeCommands(
+                events, (UserServiceOperation.RESTART_GAMESCOPE_SESSION,)
+            ),
+            resolve_user=lambda: GamescopeUserResolution(USER),
+            read_boot_id=lambda: BOOT_ID,
+            audio=FakeAudio(events),
+        )
+        result = value.apply(
+            PlannedStep(
+                TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                10_000,
+                expected_placement=PlacementState.DOCKED_EGPU,
+            ),
+            binding(),
+            observed(),
+        )
+        self.assertEqual(result.code, "presentation.restart_failed")
+        self.assertNotIn("audio.docked_egpu", events)
+
+    def test_audio_failure_after_queued_restart_restores_source_config(self):
+        events = []
+        config = FakeConfig(events)
+        value = PresentationTransitionMechanism(
+            integration=FakeIntegration(events=events),
+            config=config,
+            commands=FakeCommands(events),
+            resolve_user=lambda: GamescopeUserResolution(USER),
+            read_boot_id=lambda: BOOT_ID,
+            audio=FakeAudio(events, fail=True),
+        )
+        result = value.apply(
+            PlannedStep(
+                TransitionStepCode.PRESENTATION_APPLY_DOCKED_EGPU,
+                10_000,
+                expected_placement=PlacementState.DOCKED_EGPU,
+            ),
+            binding(),
+            observed(),
+        )
+        self.assertEqual(result.code, "audio.injected_failure")
+        self.assertEqual(
+            config.targets, [PlacementState.DOCKED_EGPU, PlacementState.PORTABLE]
+        )
+
     def test_apply_orders_reload_verify_config_and_restart(self):
         value, config, events = mechanism()
         result = value.apply(

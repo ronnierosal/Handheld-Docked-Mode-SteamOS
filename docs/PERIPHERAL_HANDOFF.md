@@ -29,9 +29,23 @@ and issues a distinct sample ID on every collection. Timestamp-only collection
 does not invalidate a plan, but any candidate, mapping, completeness, or
 categorical-error change does.
 
-There is no mechanism adapter, Decky RPC, or live handoff authority. The Ally X
-and GPD G1 profile values remain Unknown or Experimental and authorize no
-unsupervised controller/audio change.
+R7c adds one narrow live audio mechanism as a child of the already approved
+presentation transition. It is limited to the exact Ally X + GPD G1 profile and
+does not accept a sink name or numeric node ID from Decky. While Portable, the
+automatic-dock owner records the current PipeWire default sink in root-only
+private state. At transition time the adapter freshly revalidates the complete
+G1 topology, takes its exact HDMI-audio PCI function, resolves the single
+SteamOS loopback sink attached to that function, changes the ephemeral numeric
+node ID, and verifies PipeWire's current default. A missing portable rollback,
+ambiguous sink, changed G1 identity, unavailable command, or failed verification
+stops the transition. Audio changes only after the journaled Gamescope restart is
+durably queued, so an interruption enters the existing source-placement recovery
+path. Controller mutation remains unavailable.
+
+The host audio-handoff capability remains Experimental until automatic docking
+and Portable restoration both pass a watched hardware cycle. The direct
+supervised G1 HDMI selection is hardware exercised; deterministic tests cover
+identity failure, ambiguity, selection, rollback, and restoration.
 
 A pure logical-action router now maps a future controller Safe Undock chord,
 Decky action, or device-button action to the same typed `UNDOCK` request intent
@@ -116,15 +130,17 @@ after every apply, and reverses only already verified steps in reverse order on
 failure. Changed plans, stale samples, mechanism rejection, unavailable ports,
 or unverified rollback end in Action Required rather than claiming recovery.
 
-The runner has no SteamOS controller/audio mechanism, listener, Decky RPC,
-journal construction, or production wiring. It is simulated only. A future
-live integration must add durable parent-transition journal composition and
-supervised controller/audio recovery validation before it can change a device.
+The generic runner still has no production wiring and remains simulated. The
+profile-specific PipeWire child is wired only through the authoritative
+presentation mechanism; it does not create a second request path or expose a
+Decky audio RPC. A future general peripheral integration must add durable child
+substeps and independently verified controller support.
 4. Execute one typed step through the shared transition journal.
 5. Observe and verify the exact target.
 6. On failure, restore the exact rollback binding and verify recovery.
 7. Add privacy-safe diagnostics before supervised hardware experiments.
 
 Implementation and simulation do not verify controller ordering, built-in
-suppression, Bluetooth disconnect/power-off, TV audio selection, or portable
-audio recovery on physical hardware.
+suppression, Bluetooth disconnect/power-off, automatic TV audio selection, or
+portable audio recovery on physical hardware. Direct supervised TV audio
+selection has one player-confirmed proof on the certified profile.

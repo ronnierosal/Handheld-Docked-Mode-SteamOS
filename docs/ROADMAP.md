@@ -37,7 +37,8 @@ No broader label may be inferred from a narrower one.
 | Steam-native preflight blocker | Implemented; lifecycle and blocking behavior hardware tested | Corrected persistent warning dialog still needs one supervised visible proof. |
 | Adaptive polling and discovery timings | Implemented and hardware tested | Continue measuring rather than assuming latency targets. |
 | Redacted support-bundle preview/token/save | Implemented and simulated; includes bounded categorical peripheral observation state when available | Controller-visible preview and save acceptance remain pending. |
-| Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, fresh exact-G1 launch binding, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, a visible manual TV switch, and an off-by-default persistent automatic-dock opt-in with a one-shot exact/stable/idle coordinator are implemented and simulated. Both controls use the same transition engine. | The current candidate requires a new player-present G1/TV hardware proof. Automatic attach must prove partial USB4 settling, the visible Steam/Game Mode restart, active TV output, selected render GPU, and no repeat loop before promotion. Startup recovery wiring remains. |
+| Display/GPU transitions | Durable guarded orchestrator, boot-scoped Gamescope shim/config store, fresh exact-G1 launch binding, reversible conflict-aware drop-in manager, fixed user-service command boundary, presentation mechanism, Decky-native preparation, a visible manual TV switch, and an off-by-default persistent automatic-dock opt-in with a one-shot exact/stable/idle coordinator are implemented. One exact Ally X/G1 automatic attach on installed `0d66127cd0c2` visibly activated the TV, selected the RX 7600M XT, and committed. Both controls use the same transition engine. | Repeat-cycle, return-to-Portable, and startup recovery hardware proof remain. |
+| Exact G1 TV audio handoff | Direct supervised G1 HDMI selection is hardware exercised. A guarded presentation child now records the current Portable default, freshly resolves the exact G1 PipeWire loopback sink, changes and verifies the default, and rolls back on presentation failure. | The automatic path and Portable restoration are implemented/simulated but require one watched hardware cycle before capability promotion. |
 | Docked-iGPU promotion/recovery path | Durable transition path plus bounded natural-exit watcher, serialized lifecycle, non-authorizing preview composition, and single-owner async driver are implemented and simulated; production runs the watcher in no-preview mode and exposes identity-free status/acknowledgement | Hardware proof, production read-only preview construction, and separately gated confirmation/execution remain. |
 | Process release/termination | Approval/classification, redacted Decky inspect/confirm flow, guarded facade, Linux pidfd adapter, mandatory re-scan runner, root-owned durable pre-signal journal, and no-repeat startup recovery implemented and simulated | Supervised disposable-process proof remains. |
 | Physical G1 live removal | Unsupported | A separate teardown experiment must prove it safe before capability enablement. |
@@ -344,15 +345,15 @@ dimensions. Docked-iGPU remains experimental until real proof exists.
 
 ### R7 — Controller and audio handoff
 
-**Status:** PURE POLICY AND COMPOSITE PLANNING IMPLEMENTED — versioned private
+**Status:** POLICY/PLANNING IMPLEMENTED; EXACT-PROFILE AUDIO CHILD INTEGRATED — versioned private
 observations bind semantic generation, fresh sample identity, exact opaque
 controller/audio targets, rollback targets, and categorical failures.
 Controller/audio decisions preserve verified fallbacks, separate promotion from
 suppression, order external disconnect/power-off last, and require verification
 after every future step. Each subsystem fails closed independently; changed or
 repeated shared evidence emits no steps at all. Partial safe work is distinct
-from a fully ready plan. Real Ally/G1 capabilities remain
-Unknown/Experimental; no live mechanism adapter or RPC exists. A bounded
+from a fully ready plan. Real Ally/G1 controller capabilities remain
+Unknown; audio handoff remains Experimental. A bounded
 read-only sysfs inventory now discovers gamepad and sound-card candidates using
 hashed private bindings; absent supervised mapping it reports controller
 identity/default audio as unverified and authorizes no steps. See
@@ -361,7 +362,12 @@ troubleshooting overlay exposes only the associated categorical mapped/unmapped
 diagnostics and remains non-authorizing. Mapping evidence is now typed,
 reviewed, and bound to the complete opaque inventory fingerprint; a changed
 inventory makes it stale and still cannot verify controller input or audio
-output usability.
+output usability. Separately, the authoritative presentation mechanism now owns
+one exact-profile PipeWire child. It records the current Portable default before
+attach, resolves the single SteamOS loopback sink bound to the freshly verified
+G1 HDMI-audio PCI function, selects and verifies its ephemeral node ID, and
+restores the captured sink on rollback or Portable return. It exposes no separate
+RPC and refuses missing rollback or ambiguous identity.
 
 - Add profile capabilities and independently observable input/audio state.
 - Preserve a usable fallback before suppressing built-in controls or changing
@@ -370,9 +376,10 @@ output usability.
 
 **Implemented (simulated execution foundation):** a peripheral plan runner now
 requires fresh same-generation revalidation and a separate post-step verifier,
-then performs bounded reverse-order rollback of already verified work. It has no
-SteamOS mechanism, Decky RPC, journal construction, or production wiring. Live
-controller/audio handoff remains Hardware Validation Required.
+then performs bounded reverse-order rollback of already verified work. The
+generic runner has no production wiring. Direct TV audio selection has one
+player-confirmed hardware proof; automatic audio and Portable restoration remain
+Hardware Validation Required. Controller mutation remains unavailable.
 
 Exit: rollback and disconnect-loss tests pass before certification.
 

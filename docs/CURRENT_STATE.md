@@ -16,17 +16,17 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `22e19446e904bfda8f78719f460cc96ae926bebc` plus the launch-config readability fix in this change |
+| Audited implementation baseline | `0d66127cd0c226f78adc3ebf646192fb95f05699` plus the guarded audio-handoff change in this worktree |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
-| Remote relation | Local `main` was 67 commits ahead of `origin/main` before the governance slice |
+| Remote relation | `origin/main` matched local `73bb8e28d82a` before this audio worktree change |
 | Project version | `0.2.0` from `package.json` |
 
-GitHub does not yet contain the audited local implementation. Do not describe a
-public CI run, release, or remote branch as validating these 67 local commits.
-Before integration, fetch, re-check ancestry and worktree state, run the
-appropriate verification gate, and obtain explicit authorization before push or
-publication.
+GitHub contains the audited `73bb8e28d82a` baseline but not this audio worktree
+change. Do not describe a public CI run, release, or remote branch as validating
+the audio change. Before integration, fetch, re-check ancestry and worktree
+state, run the appropriate verification gate, and obtain explicit authorization
+before push or publication.
 
 ## Build and deployment truth
 
@@ -37,18 +37,23 @@ publication.
 - No artifact is promoted as current by this page. Build and verify one package
   from the intended clean commit for each validation session.
 - The last live observation reports installed HDM `0.2.0`, public revision
-  `7227e739300f`, on 2026-09-02. The owner-aware journal correction is installed,
-  and its exact presentation acknowledgement cleared the prior terminal journal.
-  A later watched attach progressed from the authorized USB4 bridge to the exact
-  Ally X/G1 profile, RX 7600M XT, G1 audio function, one EDID-ready TV, observed-Up
-  link, and Idle game state. Automatic docking restarted Gamescope, the handheld
-  screen went dark, and the TV reported a signal but remained black. The launch
-  shim fell back to the internal panel; verification timed out after 15 seconds
-  and HDM verified recovery to Portable. Candidate `22e19446e904` corrected the
-  boot-binding material, but a repeated watched attach produced the same safe
-  fallback. Direct inspection then proved the root-owned writer had created the
-  per-user launch config as mode `0600`, so the `deck`-owned Gamescope shim could
-  not read it.
+  `0d66127cd0c2`, on 2026-09-02. With the G1 disconnected at installation and
+  automatic TV docking enabled, a watched attach resolved the exact Ally X/G1
+  profile, one EDID-ready TV, observed-Up link, and Idle game state. HDM restarted
+  Gamescope, activated only the TV, and selected the RX 7600M XT for rendering.
+  The player visibly confirmed Steam on the TV, and the durable presentation
+  journal committed successfully. This is the first hardware-validated automatic
+  TV/render transition for this candidate.
+- Audio did not follow that successful transition because the installed build had
+  no live PipeWire handoff. Read-only inspection found the exact G1 HDMI device and
+  its SteamOS loopback sink while the internal loopback remained default. A single
+  supervised `wpctl set-default` using a freshly resolved numeric node ID moved
+  audio to the TV, and the player confirmed TV sound. The current worktree turns
+  that proof into a guarded child of the presentation transition: it captures the
+  current portable sink before attach, resolves the ephemeral G1 loopback node from
+  the freshly verified G1 audio PCI function, changes and verifies the default,
+  and restores the captured sink on transition rollback or Portable return. This
+  code is locally tested but not installed or hardware-validated.
 - Historical candidate and deployment records are snapshots, not current truth.
   See [Operator handoff](OPERATOR_HANDOFF.md) and dated deployment records for
   their exact context.
@@ -75,16 +80,13 @@ local ZIP.
   are implemented to the evidence levels recorded in [Roadmap](ROADMAP.md).
 - Deterministic transition/recovery behavior does not by itself prove hardware
   operation.
-- The native TV transition reached a real Gamescope restart but did not reach the
-  TV. Live evidence exposed a boot-binding hash mismatch between the config writer
-  and launch shim, followed by a root-writer/user-reader permission mismatch.
-  The local correction preserves the raw boot identity only in memory for the
-  private binding hash, retains the hashed boot identity in the serialized
-  config, and writes that identity-free config root-owned/read-only to ordinary
-  users (`0644`) so the Gamescope user can consume it. It needs a fresh
-  supervised Ally X + GPD G1 + TV proof.
-- Automatic docking is implemented behind an off-by-default persistent player
-  opt-in and remains hardware-validation-required. Boosted Handheld and physical
+- Automatic TV/display and render-GPU docking is hardware validated for one watched
+  attach on installed `0d66127cd0c2`. The guarded automatic audio child is locally
+  implemented and simulated; only its direct supervised G1 HDMI selection has
+  hardware proof. Automatic selection and Portable restoration still require a
+  watched install/connect/return cycle.
+- Automatic docking remains behind an off-by-default persistent player opt-in.
+  Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
   before disconnect.
 - A prior live attach exposed a terminal shared journal that automatic docking
@@ -111,12 +113,15 @@ hardware-tested behavior.
 
 ## Immediate gates
 
-1. Build the boot-binding correction from a clean commit and verify its embedded
-   revision and checksum.
+1. Commit and build the guarded audio child from a clean revision; verify its
+   embedded revision and checksum.
 2. Shut down before disconnecting the attached G1, then install only while the G1
-   is absent and re-observe the Portable baseline.
-3. Repeat one watched automatic attach and complete the TV-switch proof with the
-   exact provenance-recorded candidate.
-4. Design the Phase 2 unified installed diagnostic report and deployment record.
-5. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
+   is absent. Keep the Ally Portable long enough for HDM to capture its current
+   default audio sink.
+3. Repeat one watched automatic attach and verify TV picture, RX 7600M XT render
+   selection, automatic TV audio, and one committed transition.
+4. Exercise the supervised return-to-Portable path while the G1 remains attached;
+   verify internal display and the exact captured portable audio before shutdown.
+5. Design the Phase 2 unified installed diagnostic report and deployment record.
+6. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
    and synthetic tests before claiming future-device extensibility.

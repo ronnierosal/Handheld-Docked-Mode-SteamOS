@@ -7,6 +7,7 @@ from typing import Callable, Protocol
 from .steamos.commands import (
     UserServiceCommandRunner,
 )
+from .steamos.audio_handoff import G1AudioHandoff
 from ..delivery.gamescope_integration import GamescopeIntegrationStore
 from ..delivery.presentation_config import PresentationConfigStore
 from ..domain.control_plane import (
@@ -51,12 +52,14 @@ class PresentationTransitionMechanism:
         commands: UserServiceCommandRunner,
         resolve_user: Callable[[], GamescopeUserResolution],
         read_boot_id: Callable[[], str],
+        audio: G1AudioHandoff | None = None,
     ) -> None:
         self._integration = integration
         self._config = config
         self._commands = commands
         self._resolve_user = resolve_user
         self._read_boot_id = read_boot_id
+        self._audio = audio
 
     def apply(
         self,
@@ -148,6 +151,14 @@ class PresentationTransitionMechanism:
             if not self._restore_current_config(current, binding, observation):
                 return MechanismResult(False, f"{prefix}.config_rollback_failed")
             return MechanismResult(False, f"{prefix}.restart_failed")
+        if self._audio is not None:
+            audio_result = self._audio.switch(target, user)
+            if not audio_result.succeeded:
+                if not self._restore_current_config(current, binding, observation):
+                    return MechanismResult(
+                        False, f"{prefix}.config_rollback_failed"
+                    )
+                return MechanismResult(False, audio_result.code)
         return MechanismResult(True, f"{prefix}.restart_queued")
 
     def _user_still_current(self, expected) -> bool:
