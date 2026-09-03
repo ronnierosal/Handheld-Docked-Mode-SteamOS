@@ -15,4 +15,3 @@ class PowerOffResult:
 class SystemPowerPort(Protocol):
     def request_poweroff(self) -> PowerOffResult:
         """Queue one ordinary system power-off request without waiting for exit."""
-
