@@ -87,6 +87,12 @@ local ZIP.
   fully-ready observations before automatic transition. Repeated samples and
   any identity, EDID, link, session, or game regression reset the quorum. This
   remains locally tested pending supervised timing evidence.
+- A locally tested instrumentation update now retains privacy-safe monotonic
+  elapsed time for G1 presence/readiness changes, automatic and supervised
+  presentation attempts/results, Portable return, and shutdown requests.
+  Temporary verbose logging also retains the existing bounded collector timing
+  rows instead of only their count. This does not change polling or transition
+  authority and remains uninstalled/unverified on hardware.
 - One player-directed idle live pull left the Ally backlight black while
   Gamescope and Steam were absent, then SteamOS natively restored Gamescope on
   the internal panel after approximately 80 seconds. The player verified Steam

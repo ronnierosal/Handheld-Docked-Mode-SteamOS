@@ -326,6 +326,16 @@ Do not report the 250 ms sampling cadence as end-to-end connection speed. Any
 identity, EDID, link, session, or game regression during the four-sample quorum
 must reset settling without requesting a transition.
 
+Before the physical connection, enable temporary verbose diagnostics and begin
+a bounded `plugin_loader.service` journal capture. Correlate the operator's
+physical-connect timestamp with `HDM G1 journey` entries for presence,
+readiness, automatic-transition start/result, and their elapsed/duration fields.
+The support bundle should retain those normal journey events plus the verbose
+collector stage/duration rows. Treat a missing early entry as an observation
+boundary, not zero latency. For safe disconnect, retain the supervised Portable
+transition duration and shutdown-request duration, but record physical shutdown
+complete only from the operator's fan/all-LEDs-off confirmation.
+
 The 2026-09-02 watched run on installed `a988c0cf1d61` passed TV-to-Portable
 restoration but failed this stage. Automatic docking had to be disabled before
 acknowledgement to prevent an immediate redock. The fixed power-off request then

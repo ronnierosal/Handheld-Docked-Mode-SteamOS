@@ -374,6 +374,18 @@ resets that stability quorum. This adds a short bounded settle after readiness
 while avoiding a restart on the first transient ready sample. Sampling cannot
 shorten kernel enumeration or the Gamescope restart itself.
 
+The Decky delivery adapter maintains a bounded, boot-local monotonic timing
+timeline for troubleshooting this path. It emits only on categorical G1
+presence/readiness changes and transition or shutdown attempts/results, reusing
+the existing bounded support event log and Decky service journal. Event details
+contain elapsed or operation duration, categorical target/result state, and
+booleans only. The optional verbose snapshot event retains the already-public
+collector timing rows rather than only their count. This instrumentation adds
+no discovery loop, does not drive readiness, and cannot infer physical cable
+time or completed physical power-off. Failure to retain or write a diagnostic
+event is isolated from the transition engine and cannot block or authorize a
+hardware action.
+
 The manual planner supports only the bounded Portable↔Docked-eGPU path and
 verified no-ops. A mutating plan requires exact runtime host/eGPU profile
 resolution, an ephemeral binding to every participating GPU/display, idle game
