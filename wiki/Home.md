@@ -23,7 +23,7 @@ and [safety invariants](https://github.com/ronnierosal/Handheld-Docked-Mode-Stea
 | Portable | Internal GPU to internal panel | Observed on the first hardware profile |
 | Boosted Handheld | Verified eGPU to internal panel | Designed; not available or hardware proven |
 | Docked-iGPU | Internal GPU to external display | Research path; not an implemented product claim |
-| TV Docked / Docked-eGPU | Verified eGPU to its external display | Automatic exact-profile path implemented; successful TV image still requires fresh supervised proof |
+| TV Docked / Docked-eGPU | Verified eGPU to its external display | Automatic exact-profile path hardware tested once; repeated journey validation remains |
 
 HDM keeps physical connection, render GPU, active display, Gamescope state, and
 running-game state separate. A cable or connector reported as `connected` does
@@ -37,5 +37,6 @@ quirk knowledge, not a reason for core workflows to assume every host or eGPU
 behaves the same way.
 
 Start with [Current State](Current-State), [Getting Started](Getting-Started),
-or [How HDM Works](How-HDM-Works). Before touching an eGPU, read
+the [Ally X and GPD G1 incident](Ally-X-and-GPD-G1-Docking-Incident), or
+[How HDM Works](How-HDM-Works). Before touching an eGPU, read
 [Safety and eGPU Handling](Safety-and-eGPU-Handling).

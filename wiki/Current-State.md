@@ -18,15 +18,16 @@ before building, installing, testing, or making a support claim.
 - An exact-profile automatic TV Docked path behind an off-by-default persistent
   player opt-in
 
-Implementation and simulation do not prove that a physical transition succeeds.
+Implementation and simulation do not prove that every physical transition will
+succeed; the evidence below records one watched success.
 
 ## Latest supervised hardware result
 
 The installed build observed on 2026-09-02 successfully detected the authorized
 USB4 path, exact Ally X/G1 profile, RX 7600M XT, G1 audio, an EDID-ready TV,
-link health, and an idle game state. Automatic docking restarted Gamescope. The
-handheld panel went dark and the TV detected a signal, but the TV stayed black.
-HDM timed out and verified recovery to Portable.
+link health, and an idle game state. Earlier automatic-docking attempts
+restarted Gamescope, but the TV stayed black and HDM verified recovery to
+Portable.
 
 The investigation found two distinct launch-binding defects:
 
@@ -34,9 +35,12 @@ The investigation found two distinct launch-binding defects:
 2. after that was corrected, the root-owned config was written with permissions
    that prevented the Gamescope user from reading it.
 
-Both have narrow code fixes. The readability fix still requires a new clean
-build, controlled installation, and supervised Ally X + GPD G1 + TV test before
-the TV transition can be described as hardware working.
+Both received narrow code fixes. After the readability fix was installed, a
+watched attach made the TV the only active display, selected the RX 7600M XT,
+showed Steam on the TV, and committed the transition. Audio initially remained
+on the Ally; direct supervised selection moved it to the TV and the player
+confirmed sound. The guarded automatic audio implementation remains simulated
+pending installation and watched validation.
 
 ## Capability status
 
@@ -44,7 +48,8 @@ the TV transition can be described as hardware working.
 |---|---|
 | Exact first-profile detection | Implemented and observed on hardware |
 | Read-only diagnostics | Implemented; privacy-safe public projection |
-| Automatic TV Docked transition | Implemented; successful TV image not yet hardware proven after latest fix |
+| Automatic TV Docked transition | Implemented and hardware tested once for TV activity and external rendering |
+| G1 HDMI audio handoff | Direct selection hardware tested; guarded automatic selection and Portable restoration simulated |
 | Failure rollback to Portable | Observed during the latest supervised attempt |
 | Boosted Handheld | Not available; hardware behavior unproven |
 | Physical live G1 removal | Unsupported |
@@ -52,3 +57,5 @@ the TV transition can be described as hardware working.
 
 The current GPD G1 rule is still: restore or retain a safe state, shut down, and
 only then physically disconnect it.
+
+See the complete [Ally X and GPD G1 docking incident](Ally-X-and-GPD-G1-Docking-Incident).

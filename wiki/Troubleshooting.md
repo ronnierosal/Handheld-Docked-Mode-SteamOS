@@ -21,8 +21,21 @@ Unknown.
 
 Connector presence does not prove active output. Review the observed Gamescope
 output, active display category, render GPU, restart generation, verification
-stage, and recovery result. The latest supervised automatic-docking attempt
-produced exactly this symptom and safely returned to Portable.
+stage, and recovery result. Earlier supervised attempts produced exactly this
+symptom and safely returned to Portable. The cause was first a mismatched
+private launch binding and then a root-created config that the Gamescope user
+could not read. The corrected path subsequently completed one watched TV
+transition. See the detailed
+[Ally X and GPD G1 incident](Ally-X-and-GPD-G1-Docking-Incident).
+
+### The TV works, but sound still comes from the handheld
+
+Display success does not establish audio success. Inspect the current default
+SteamOS loopback sink and associate an external candidate with the freshly
+verified eGPU audio function. PipeWire numeric node IDs are transient: resolve
+one immediately before use, never store or accept one from the UI, and preserve
+a verified Portable rollback target. The guarded automatic audio path still
+needs watched hardware validation.
 
 ### A TV transition falls back to the handheld
 

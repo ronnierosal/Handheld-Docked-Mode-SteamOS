@@ -1,8 +1,7 @@
 # HDM Wiki source
 
 This directory is the reviewed source for the Handheld Dock Mode GitHub Wiki.
-It is not the engineering source of truth and has not been published from this
-checkout. Start at [Home](Home.md).
+It is not the engineering source of truth. Start at [Home](Home.md).
 
 Repository contracts own product, safety, architecture, support, and current
 implementation claims. Wiki pages explain those contracts in shorter player and

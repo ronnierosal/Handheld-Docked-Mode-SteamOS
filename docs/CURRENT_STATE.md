@@ -16,17 +16,16 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `0d66127cd0c226f78adc3ebf646192fb95f05699` plus the guarded audio-handoff change in this worktree |
+| Audited implementation baseline | `80bd8d4cfd6665387e806a548cfa040d508a5bd9` |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
-| Remote relation | `origin/main` matched local `73bb8e28d82a` before this audio worktree change |
+| Remote relation | Mutable; run the commands above before relying on it |
 | Project version | `0.2.0` from `package.json` |
 
-GitHub contains the audited `73bb8e28d82a` baseline but not this audio worktree
-change. Do not describe a public CI run, release, or remote branch as validating
-the audio change. Before integration, fetch, re-check ancestry and worktree
-state, run the appropriate verification gate, and obtain explicit authorization
-before push or publication.
+Do not describe a public CI run, release, or remote branch as hardware
+validation. Before integration, fetch, re-check ancestry and worktree state,
+run the appropriate verification gate, and obtain explicit authorization before
+push or publication.
 
 ## Build and deployment truth
 
@@ -53,7 +52,7 @@ before push or publication.
   current portable sink before attach, resolves the ephemeral G1 loopback node from
   the freshly verified G1 audio PCI function, changes and verifies the default,
   and restores the captured sink on transition rollback or Portable return. This
-  code is locally tested but not installed or hardware-validated.
+  code is committed and locally tested but not installed or hardware-validated.
 - Historical candidate and deployment records are snapshots, not current truth.
   See [Operator handoff](OPERATOR_HANDOFF.md) and dated deployment records for
   their exact context.
@@ -113,15 +112,13 @@ hardware-tested behavior.
 
 ## Immediate gates
 
-1. Commit and build the guarded audio child from a clean revision; verify its
-   embedded revision and checksum.
-2. Shut down before disconnecting the attached G1, then install only while the G1
+1. Shut down before disconnecting the attached G1, then install only while the G1
    is absent. Keep the Ally Portable long enough for HDM to capture its current
    default audio sink.
-3. Repeat one watched automatic attach and verify TV picture, RX 7600M XT render
+2. Repeat one watched automatic attach and verify TV picture, RX 7600M XT render
    selection, automatic TV audio, and one committed transition.
-4. Exercise the supervised return-to-Portable path while the G1 remains attached;
+3. Exercise the supervised return-to-Portable path while the G1 remains attached;
    verify internal display and the exact captured portable audio before shutdown.
-5. Design the Phase 2 unified installed diagnostic report and deployment record.
-6. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
+4. Design the Phase 2 unified installed diagnostic report and deployment record.
+5. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
    and synthetic tests before claiming future-device extensibility.
