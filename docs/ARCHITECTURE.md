@@ -367,10 +367,12 @@ Gamescope, advances sleep, or describes physical removal as safe.
 
 While that observer is waiting on a correlated unexpected loss, production
 sampling tightens from one second to 250 ms. Exact attach settling likewise uses
-a 250 ms follow-up sample and then returns to the ordinary one-second cadence
-until every identity, EDID, link, session, and idle-game gate passes. Faster
-sampling changes response latency only; it cannot shorten kernel enumeration or
-the Gamescope restart itself.
+250 ms samples. Automatic docking requires four distinct consecutive samples
+with the same exact G1 identity and verified EDID, link, Gamescope, and idle-game
+state before it requests a restart; a repeated sample or any gate regression
+resets that stability quorum. This adds a short bounded settle after readiness
+while avoiding a restart on the first transient ready sample. Sampling cannot
+shorten kernel enumeration or the Gamescope restart itself.
 
 The manual planner supports only the bounded Portable↔Docked-eGPU path and
 verified no-ops. A mutating plan requires exact runtime host/eGPU profile

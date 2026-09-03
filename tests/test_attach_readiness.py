@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from hdm.application.attach_readiness import (  # noqa: E402
     AttachReadinessLifecycle,
     AttachReadinessStage,
+    READY_STABILITY_SAMPLES,
     arm_attach_readiness,
     observe_attach_readiness,
 )
@@ -145,15 +146,27 @@ class AttachReadinessTests(unittest.TestCase):
         lifecycle = AttachReadinessLifecycle()
 
         armed = lifecycle.update(detect_topology_event(before, attached), attached)
-        ready = lifecycle.update(
-            detect_topology_event(
-                attached, observed("attached", "sample-c", link_up(attached.snapshot))
-            ),
-            observed("attached", "sample-c", link_up(attached.snapshot)),
-        )
+        results = []
+        prior = attached
+        for index in range(READY_STABILITY_SAMPLES):
+            fresh = observed(
+                "attached",
+                f"sample-{index + 3}",
+                link_up(attached.snapshot),
+            )
+            results.append(
+                lifecycle.update(detect_topology_event(prior, fresh), fresh)
+            )
+            prior = fresh
 
         self.assertEqual(armed.stage, AttachReadinessStage.SETTLING)
-        self.assertEqual(ready.stage, AttachReadinessStage.READY_IDLE)
+        self.assertTrue(
+            all(
+                result.stage is AttachReadinessStage.SETTLING
+                for result in results[:-1]
+            )
+        )
+        self.assertEqual(results[-1].stage, AttachReadinessStage.READY_IDLE)
 
     def test_exact_startup_candidate_requires_a_later_fresh_sample(self):
         first = observed(
@@ -163,12 +176,75 @@ class AttachReadinessTests(unittest.TestCase):
 
         armed = lifecycle.arm_current(first)
         still_same = lifecycle.update(detect_topology_event(first, first), first)
-        fresh = observed("attached", "sample-b", first.snapshot)
-        ready = lifecycle.update(detect_topology_event(first, fresh), fresh)
+        prior = first
+        results = []
+        for index in range(READY_STABILITY_SAMPLES):
+            fresh = observed("attached", f"sample-{index + 2}", first.snapshot)
+            results.append(lifecycle.update(detect_topology_event(prior, fresh), fresh))
+            prior = fresh
 
         self.assertEqual(armed.stage, AttachReadinessStage.SETTLING)
         self.assertEqual(still_same.stage, AttachReadinessStage.SETTLING)
-        self.assertEqual(ready.stage, AttachReadinessStage.READY_IDLE)
+        self.assertEqual(results[-1].stage, AttachReadinessStage.READY_IDLE)
+
+    def test_repeated_ready_sample_cannot_satisfy_stability_quorum(self):
+        before = observed("portable", "sample-a", snapshot("portable.json"))
+        attached = observed("attached", "sample-b", snapshot("connected-internal.json"))
+        lifecycle = AttachReadinessLifecycle()
+        lifecycle.update(detect_topology_event(before, attached), attached)
+        ready_sample = observed(
+            "attached", "sample-c", link_up(attached.snapshot)
+        )
+
+        results = [
+            lifecycle.update(detect_topology_event(attached, ready_sample), ready_sample)
+            for _ in range(READY_STABILITY_SAMPLES + 1)
+        ]
+
+        self.assertTrue(
+            all(result.stage is AttachReadinessStage.SETTLING for result in results)
+        )
+
+    def test_readiness_regression_resets_stability_quorum(self):
+        before = observed("portable", "sample-a", snapshot("portable.json"))
+        attached = observed("attached", "sample-b", snapshot("connected-internal.json"))
+        lifecycle = AttachReadinessLifecycle()
+        lifecycle.update(detect_topology_event(before, attached), attached)
+
+        prior = attached
+        for index in range(READY_STABILITY_SAMPLES - 1):
+            ready = observed(
+                "attached",
+                f"ready-before-regression-{index}",
+                link_up(attached.snapshot),
+            )
+            status = lifecycle.update(detect_topology_event(prior, ready), ready)
+            self.assertEqual(status.stage, AttachReadinessStage.SETTLING)
+            prior = ready
+
+        regressed = observed("attached", "regressed", attached.snapshot)
+        status = lifecycle.update(detect_topology_event(prior, regressed), regressed)
+        self.assertEqual(status.stage, AttachReadinessStage.WAITING_FOR_LINK_HEALTH)
+        self.assertEqual(status.code, "attach.link_unverified")
+
+        prior = regressed
+        results = []
+        for index in range(READY_STABILITY_SAMPLES):
+            ready = observed(
+                "attached",
+                f"ready-after-regression-{index}",
+                link_up(attached.snapshot),
+            )
+            results.append(lifecycle.update(detect_topology_event(prior, ready), ready))
+            prior = ready
+
+        self.assertTrue(
+            all(
+                result.stage is AttachReadinessStage.SETTLING
+                for result in results[:-1]
+            )
+        )
+        self.assertEqual(results[-1].stage, AttachReadinessStage.READY_IDLE)
 
 
 if __name__ == "__main__":

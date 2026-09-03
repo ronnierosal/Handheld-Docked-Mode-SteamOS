@@ -81,6 +81,12 @@ local ZIP.
   verified Portable through **Prepare G1 disconnect**. Unprivileged capture
   could not verify the Gamescope render selector, so this run does not add a new
   render-GPU claim.
+- The first-attempt recovery, later successful retry, and intervening USB
+  controller AER errors do not prove that a shorter delay is safe. The runtime
+  branch keeps 250 ms sampling but requires four distinct consecutive
+  fully-ready observations before automatic transition. Repeated samples and
+  any identity, EDID, link, session, or game regression reset the quorum. This
+  remains locally tested pending supervised timing evidence.
 - One player-directed idle live pull left the Ally backlight black while
   Gamescope and Steam were absent, then SteamOS natively restored Gamescope on
   the internal panel after approximately 80 seconds. The player verified Steam

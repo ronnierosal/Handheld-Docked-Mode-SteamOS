@@ -319,6 +319,13 @@ Portable/controller state before testing a new attach. Any unknown game,
 non-Portable placement, changed generation, active journal, lost controller, or
 incomplete shutdown stops the stage.
 
+For the next automatic-attach run, capture five timestamps separately: physical
+connection, exact G1 PCI/driver availability, DRM connector plus EDID readiness,
+the fourth distinct fully-ready HDM sample, and active TV after Gamescope restart.
+Do not report the 250 ms sampling cadence as end-to-end connection speed. Any
+identity, EDID, link, session, or game regression during the four-sample quorum
+must reset settling without requesting a transition.
+
 The 2026-09-02 watched run on installed `a988c0cf1d61` passed TV-to-Portable
 restoration but failed this stage. Automatic docking had to be disabled before
 acknowledgement to prevent an immediate redock. The fixed power-off request then

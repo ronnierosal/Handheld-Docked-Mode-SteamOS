@@ -291,20 +291,27 @@ class MainProcessDeliveryTests(unittest.TestCase):
                 True, EgpuLinkState.UP, Confidence.OBSERVED, "egpu.link_observed"
             ),
         )
-        fresh_docked = replace(docked, observed_at="2026-08-30T19:02:25-07:00")
-        api = SnapshotApi(portable, docked, fresh_docked)
+        docked_samples = tuple(
+            replace(
+                docked,
+                observed_at=f"2026-08-30T19:02:{second:02d}-07:00",
+            )
+            for second in range(21, 26)
+        )
+        api = SnapshotApi(portable, *docked_samples)
         plugin._api = api
 
-        asyncio.run(plugin.get_snapshot())
-        asyncio.run(plugin.get_snapshot())
-        delivered = asyncio.run(plugin.get_snapshot())
+        delivered = None
+        for _ in range(6):
+            delivered = asyncio.run(plugin.get_snapshot())
         history = asyncio.run(plugin.get_action_history())
 
-        self.assertEqual(api.calls, 3)
+        self.assertEqual(api.calls, 6)
         self.assertEqual(
             [entry["code"] for entry in history["entries"]],
             ["topology.egpu_attached"],
         )
+        self.assertIsNotNone(delivered)
         self.assertEqual(delivered["attach_readiness"]["stage"], "ready_idle")
         self.assertEqual(delivered["diagnostics"]["build"], plugin._build_info)
 
