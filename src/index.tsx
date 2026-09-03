@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   acknowledgeDockedIgpuStatus,
+  acknowledgeSleepJournal,
   getSnapshot,
   getPeripheralStatus,
   getActionHistory,
@@ -25,6 +26,7 @@ import {
   acknowledgeSupervisedTvSwitch,
   executeSupervisedTvSwitch,
   getSupervisedTvSwitchStatus,
+  getTransitionJournalStatus,
   executeProcessRelease,
   getProcessReleaseStatus,
   getDockedIgpuStatus,
@@ -46,6 +48,7 @@ import {
   type ProcessReleasePhase,
   type ProcessReleasePreviewPayload,
   type SupportBundlePreviewPayload,
+  type TransitionJournalStatusPayload,
 } from "./backend";
 import { createDeckySteamSuspendAdapter } from "./decky-steam-suspend";
 import { deliverBlockedAttempt } from "./blocked-attempt-delivery";
@@ -76,6 +79,8 @@ import {
 
 
 const LABELS: Record<string, string> = {
+  "journal.foreign_workflow": "Another workflow needs attention",
+  "automatic_dock.rearmed_after_acknowledgement": "Re-checking attachment",
   boosted_handheld: "Boosted Handheld",
   certified: "Certified",
   degraded: "Degraded",
@@ -433,6 +438,9 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [tvSwitchBusy, setTvSwitchBusy] = useState(false);
   const [tvSwitchMessage, setTvSwitchMessage] = useState("");
   const [tvSwitchAcknowledgementId, setTvSwitchAcknowledgementId] = useState("");
+  const [journalStatus, setJournalStatus] = useState<TransitionJournalStatusPayload | null>(null);
+  const [journalBusy, setJournalBusy] = useState(false);
+  const [journalMessage, setJournalMessage] = useState("");
   const [processBusy, setProcessBusy] = useState(false);
   const [processMessage, setProcessMessage] = useState("");
   const [processAcknowledgementId, setProcessAcknowledgementId] = useState("");
@@ -448,6 +456,33 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const processModal = useRef<ReturnType<typeof showModal> | null>(null);
   const diagnosticLoggingModal = useRef<ReturnType<typeof showModal> | null>(null);
 
+  const refreshTransitionJournal = useCallback(async () => {
+    try {
+      const status = await getTransitionJournalStatus();
+      setJournalStatus(status);
+      if (status.code === "journal.idle") {
+        setJournalMessage("");
+      } else if (status.owner === "sleep" && status.acknowledgement_required) {
+        setJournalMessage(
+          "A prior sleep result must be acknowledged before HDM can switch displays.",
+        );
+      } else if (status.code === "journal.recovery_required") {
+        setJournalMessage(
+          `An interrupted ${label(status.owner)} workflow requires recovery. HDM will not retry it automatically.`,
+        );
+      } else if (status.owner === "unknown") {
+        setJournalMessage(
+          "The safety journal owner is unknown. HDM will not clear it or switch displays.",
+        );
+      } else {
+        setJournalMessage(`A prior ${label(status.owner)} result still needs attention.`);
+      }
+    } catch {
+      setJournalStatus(null);
+      setJournalMessage("Shared safety-journal status is unavailable. HDM will not switch displays.");
+    }
+  }, []);
+
   useEffect(() => () => {
     supportModal.current?.Close();
     supportModal.current = null;
@@ -460,6 +495,10 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     diagnosticLoggingModal.current?.Close();
     diagnosticLoggingModal.current = null;
   }, []);
+
+  useEffect(() => {
+    void refreshTransitionJournal();
+  }, [refreshTransitionJournal]);
 
   useEffect(() => {
     let disposed = false;
@@ -478,7 +517,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   useEffect(() => {
     let disposed = false;
     void getProcessReleaseStatus().then((status) => {
-      if (disposed || status.code === "process_release.idle") {
+      if (
+        disposed
+        || status.code === "process_release.idle"
+        || status.code === "process_release.foreign_journal"
+      ) {
         return;
       }
       if (status.acknowledgement_required && status.acknowledgement_id) {
@@ -502,7 +545,11 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   useEffect(() => {
     let disposed = false;
     void getSupervisedTvSwitchStatus().then((status) => {
-      if (disposed || status.code === "transition.idle") {
+      if (
+        disposed
+        || status.code === "transition.idle"
+        || status.code === "transition.foreign_journal"
+      ) {
         return;
       }
       if (status.acknowledgement_required && status.acknowledgement_id) {
@@ -541,6 +588,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           "Automatic docking status is unavailable; no restart will be requested.",
         );
       }
+      await refreshTransitionJournal();
       const linkDecision = decideLinkHealthNotification(
         linkHealthNotification.current,
         nextPayload,
@@ -589,7 +637,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
         setLoading(false);
       }
     }
-  }, [preflight, quickAccessVisible, showDiagnostics]);
+  }, [preflight, quickAccessVisible, refreshTransitionJournal, showDiagnostics]);
 
   useEffect(() => {
     if (quickAccessVisible) {
@@ -977,13 +1025,45 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setTvSwitchMessage(result.acknowledged
         ? "TV switch result acknowledged."
         : "TV switch result could not be acknowledged.");
-      if (result.acknowledged) setTvSwitchAcknowledgementId("");
+      if (result.acknowledged) {
+        setTvSwitchAcknowledgementId("");
+        await refreshTransitionJournal();
+      }
     } catch {
       setTvSwitchMessage("TV switch acknowledgement is unavailable.");
     } finally {
       setTvSwitchBusy(false);
     }
-  }, [tvSwitchAcknowledgementId]);
+  }, [refreshTransitionJournal, tvSwitchAcknowledgementId]);
+
+  const acknowledgePriorSleep = useCallback(async () => {
+    const acknowledgementId = journalStatus?.owner === "sleep"
+      ? journalStatus.acknowledgement_id
+      : "";
+    if (!acknowledgementId) return;
+    setJournalBusy(true);
+    try {
+      const result = await acknowledgeSleepJournal(acknowledgementId);
+      setJournalMessage(result.acknowledged
+        ? "Prior sleep result acknowledged. Automatic docking is re-checking this attachment."
+        : "The exact sleep result could not be acknowledged.");
+      if (result.acknowledged) {
+        setJournalStatus({
+          schema_version: 1,
+          code: "journal.idle",
+          owner: "none",
+          acknowledgement_required: false,
+          action_required: false,
+          acknowledgement_id: "",
+          durable: true,
+        });
+      }
+    } catch {
+      setJournalMessage("Sleep-result acknowledgement is unavailable.");
+    } finally {
+      setJournalBusy(false);
+    }
+  }, [journalStatus]);
 
   const runProcessRelease = useCallback(async (
     phase: ProcessReleasePhase,
@@ -1064,12 +1144,13 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       setProcessAcknowledgementId("");
       setForceReceiptToken("");
       setProcessMessage("Process-release result acknowledged. Inspect again if blockers remain.");
+      await refreshTransitionJournal();
     } catch {
       setProcessMessage("Process-release acknowledgement failed.");
     } finally {
       setProcessBusy(false);
     }
-  }, [processAcknowledgementId]);
+  }, [processAcknowledgementId, refreshTransitionJournal]);
 
   const reviewForceClose = useCallback(async () => {
     if (!forceReceiptToken) {
@@ -1172,12 +1253,40 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             <ButtonItem
               layout="below"
               onClick={() => void executeTvSwitch()}
-              disabled={tvSwitchBusy || Boolean(tvSwitchAcknowledgementId)}
+              disabled={
+                tvSwitchBusy
+                || Boolean(tvSwitchAcknowledgementId)
+                || Boolean(journalStatus && journalStatus.code !== "journal.idle")
+              }
             >
               {tvSwitchBusy ? "Switching…" : "Switch to TV now"}
             </ButtonItem>
           </PanelSectionRow>
           {tvSwitchMessage && <PanelSectionRow>{tvSwitchMessage}</PanelSectionRow>}
+          {journalStatus && journalStatus.code !== "journal.idle" && (
+            <DiagnosticRow name="Safety journal" value={label(journalStatus.owner)} />
+          )}
+          {journalMessage && <PanelSectionRow>{journalMessage}</PanelSectionRow>}
+          {journalStatus?.owner === "sleep"
+            && journalStatus.acknowledgement_required
+            && journalStatus.acknowledgement_id && (
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={() => void acknowledgePriorSleep()}
+                disabled={journalBusy}
+              >
+                {journalBusy ? "Acknowledging…" : "Acknowledge prior sleep result"}
+              </ButtonItem>
+            </PanelSectionRow>
+          )}
+          {tvSwitchAcknowledgementId && (
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={() => void acknowledgeTvSwitch()} disabled={tvSwitchBusy}>
+                Acknowledge prior TV switch result
+              </ButtonItem>
+            </PanelSectionRow>
+          )}
           <PanelSectionRow>
             <ButtonItem layout="below" onClick={toggleTroubleshooting}>
               {showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting"}
@@ -1448,13 +1557,6 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             Preparation only. This control cannot restart Gamescope or switch displays.
           </PanelSectionRow>
           {presentationMessage && <PanelSectionRow>{presentationMessage}</PanelSectionRow>}
-          {tvSwitchAcknowledgementId && (
-            <PanelSectionRow>
-              <ButtonItem layout="below" onClick={() => void acknowledgeTvSwitch()} disabled={tvSwitchBusy}>
-                Acknowledge TV switch result
-              </ButtonItem>
-            </PanelSectionRow>
-          )}
         </PanelSection>
       )}
 

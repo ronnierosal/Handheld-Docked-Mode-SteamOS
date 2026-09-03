@@ -44,6 +44,8 @@ const approveSupervisedTvSwitch = callable("approve_supervised_tv_switch");
 const executeSupervisedTvSwitch = callable("execute_supervised_tv_switch");
 const acknowledgeSupervisedTvSwitch = callable("acknowledge_supervised_tv_switch");
 const getSupervisedTvSwitchStatus = callable("get_supervised_tv_switch_status");
+const getTransitionJournalStatus = callable("get_transition_journal_status");
+const acknowledgeSleepJournal = callable("acknowledge_sleep_journal");
 const getProcessReleaseStatus = callable("get_process_release_status");
 const previewProcessRelease = callable("preview_process_release");
 const approveProcessRelease = callable("approve_process_release");
@@ -1015,6 +1017,8 @@ class SleepPreflightCoordinator {
 }
 
 const LABELS = {
+    "journal.foreign_workflow": "Another workflow needs attention",
+    "automatic_dock.rearmed_after_acknowledgement": "Re-checking attachment",
     boosted_handheld: "Boosted Handheld",
     certified: "Certified",
     degraded: "Degraded",
@@ -1188,6 +1192,9 @@ function Content({ preflight }) {
     const [tvSwitchBusy, setTvSwitchBusy] = SP_REACT.useState(false);
     const [tvSwitchMessage, setTvSwitchMessage] = SP_REACT.useState("");
     const [tvSwitchAcknowledgementId, setTvSwitchAcknowledgementId] = SP_REACT.useState("");
+    const [journalStatus, setJournalStatus] = SP_REACT.useState(null);
+    const [journalBusy, setJournalBusy] = SP_REACT.useState(false);
+    const [journalMessage, setJournalMessage] = SP_REACT.useState("");
     const [processBusy, setProcessBusy] = SP_REACT.useState(false);
     const [processMessage, setProcessMessage] = SP_REACT.useState("");
     const [processAcknowledgementId, setProcessAcknowledgementId] = SP_REACT.useState("");
@@ -1202,6 +1209,31 @@ function Content({ preflight }) {
     const automaticDockModal = SP_REACT.useRef(null);
     const processModal = SP_REACT.useRef(null);
     const diagnosticLoggingModal = SP_REACT.useRef(null);
+    const refreshTransitionJournal = SP_REACT.useCallback(async () => {
+        try {
+            const status = await getTransitionJournalStatus();
+            setJournalStatus(status);
+            if (status.code === "journal.idle") {
+                setJournalMessage("");
+            }
+            else if (status.owner === "sleep" && status.acknowledgement_required) {
+                setJournalMessage("A prior sleep result must be acknowledged before HDM can switch displays.");
+            }
+            else if (status.code === "journal.recovery_required") {
+                setJournalMessage(`An interrupted ${label(status.owner)} workflow requires recovery. HDM will not retry it automatically.`);
+            }
+            else if (status.owner === "unknown") {
+                setJournalMessage("The safety journal owner is unknown. HDM will not clear it or switch displays.");
+            }
+            else {
+                setJournalMessage(`A prior ${label(status.owner)} result still needs attention.`);
+            }
+        }
+        catch {
+            setJournalStatus(null);
+            setJournalMessage("Shared safety-journal status is unavailable. HDM will not switch displays.");
+        }
+    }, []);
     SP_REACT.useEffect(() => () => {
         supportModal.current?.Close();
         supportModal.current = null;
@@ -1214,6 +1246,9 @@ function Content({ preflight }) {
         diagnosticLoggingModal.current?.Close();
         diagnosticLoggingModal.current = null;
     }, []);
+    SP_REACT.useEffect(() => {
+        void refreshTransitionJournal();
+    }, [refreshTransitionJournal]);
     SP_REACT.useEffect(() => {
         let disposed = false;
         void getAutomaticDockStatus().then((status) => {
@@ -1231,7 +1266,9 @@ function Content({ preflight }) {
     SP_REACT.useEffect(() => {
         let disposed = false;
         void getProcessReleaseStatus().then((status) => {
-            if (disposed || status.code === "process_release.idle") {
+            if (disposed
+                || status.code === "process_release.idle"
+                || status.code === "process_release.foreign_journal") {
                 return;
             }
             if (status.acknowledgement_required && status.acknowledgement_id) {
@@ -1252,7 +1289,9 @@ function Content({ preflight }) {
     SP_REACT.useEffect(() => {
         let disposed = false;
         void getSupervisedTvSwitchStatus().then((status) => {
-            if (disposed || status.code === "transition.idle") {
+            if (disposed
+                || status.code === "transition.idle"
+                || status.code === "transition.foreign_journal") {
                 return;
             }
             if (status.acknowledgement_required && status.acknowledgement_id) {
@@ -1287,6 +1326,7 @@ function Content({ preflight }) {
             catch {
                 setAutomaticDockMessage("Automatic docking status is unavailable; no restart will be requested.");
             }
+            await refreshTransitionJournal();
             const linkDecision = decideLinkHealthNotification(linkHealthNotification.current, nextPayload);
             linkHealthNotification.current = linkDecision.memory;
             if (linkDecision.notification) {
@@ -1329,7 +1369,7 @@ function Content({ preflight }) {
                 setLoading(false);
             }
         }
-    }, [preflight, quickAccessVisible, showDiagnostics]);
+    }, [preflight, quickAccessVisible, refreshTransitionJournal, showDiagnostics]);
     SP_REACT.useEffect(() => {
         if (quickAccessVisible) {
             return;
@@ -1672,8 +1712,10 @@ function Content({ preflight }) {
             setTvSwitchMessage(result.acknowledged
                 ? "TV switch result acknowledged."
                 : "TV switch result could not be acknowledged.");
-            if (result.acknowledged)
+            if (result.acknowledged) {
                 setTvSwitchAcknowledgementId("");
+                await refreshTransitionJournal();
+            }
         }
         catch {
             setTvSwitchMessage("TV switch acknowledgement is unavailable.");
@@ -1681,7 +1723,38 @@ function Content({ preflight }) {
         finally {
             setTvSwitchBusy(false);
         }
-    }, [tvSwitchAcknowledgementId]);
+    }, [refreshTransitionJournal, tvSwitchAcknowledgementId]);
+    const acknowledgePriorSleep = SP_REACT.useCallback(async () => {
+        const acknowledgementId = journalStatus?.owner === "sleep"
+            ? journalStatus.acknowledgement_id
+            : "";
+        if (!acknowledgementId)
+            return;
+        setJournalBusy(true);
+        try {
+            const result = await acknowledgeSleepJournal(acknowledgementId);
+            setJournalMessage(result.acknowledged
+                ? "Prior sleep result acknowledged. Automatic docking is re-checking this attachment."
+                : "The exact sleep result could not be acknowledged.");
+            if (result.acknowledged) {
+                setJournalStatus({
+                    schema_version: 1,
+                    code: "journal.idle",
+                    owner: "none",
+                    acknowledgement_required: false,
+                    action_required: false,
+                    acknowledgement_id: "",
+                    durable: true,
+                });
+            }
+        }
+        catch {
+            setJournalMessage("Sleep-result acknowledgement is unavailable.");
+        }
+        finally {
+            setJournalBusy(false);
+        }
+    }, [journalStatus]);
     const runProcessRelease = SP_REACT.useCallback(async (phase, receiptToken) => {
         setProcessBusy(true);
         setProcessMessage("");
@@ -1749,6 +1822,7 @@ function Content({ preflight }) {
             setProcessAcknowledgementId("");
             setForceReceiptToken("");
             setProcessMessage("Process-release result acknowledged. Inspect again if blockers remain.");
+            await refreshTransitionJournal();
         }
         catch {
             setProcessMessage("Process-release acknowledgement failed.");
@@ -1756,7 +1830,7 @@ function Content({ preflight }) {
         finally {
             setProcessBusy(false);
         }
-    }, [processAcknowledgementId]);
+    }, [processAcknowledgementId, refreshTransitionJournal]);
     const reviewForceClose = SP_REACT.useCallback(async () => {
         if (!forceReceiptToken) {
             return;
@@ -1821,7 +1895,11 @@ function Content({ preflight }) {
                                                 ? "Disable automatic TV docking"
                                                 : "Enable automatic TV docking" }) }), SP_JSX.jsx(DiagnosticRow, { name: "Automatic TV docking", value: automaticDockStatus?.enabled
                                         ? label(automaticDockStatus.code)
-                                        : "Off" }), automaticDockMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: automaticDockMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy || Boolean(tvSwitchAcknowledgementId), children: tvSwitchBusy ? "Switching…" : "Switch to TV now" }) }), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) })] }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+                                        : "Off" }), automaticDockMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: automaticDockMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy
+                                            || Boolean(tvSwitchAcknowledgementId)
+                                            || Boolean(journalStatus && journalStatus.code !== "journal.idle"), children: tvSwitchBusy ? "Switching…" : "Switch to TV now" }) }), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage }), journalStatus && journalStatus.code !== "journal.idle" && (SP_JSX.jsx(DiagnosticRow, { name: "Safety journal", value: label(journalStatus.owner) })), journalMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: journalMessage }), journalStatus?.owner === "sleep"
+                                    && journalStatus.acknowledgement_required
+                                    && journalStatus.acknowledgement_id && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgePriorSleep(), disabled: journalBusy, children: journalBusy ? "Acknowledging…" : "Acknowledge prior sleep result" }) })), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge prior TV switch result" }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) })] }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
                                 ? "Checking…"
                                 : sleepGuard?.required
                                     ? sleepGuard.active
@@ -1843,7 +1921,7 @@ function Content({ preflight }) {
                                     ? () => void stopDiagnosticLogging()
                                     : requestDiagnosticLogging, disabled: diagnosticLoggingBusy, children: diagnosticLoggingStatus?.enabled
                                     ? "Disable verbose diagnostics"
-                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage }), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge TV switch result" }) }))] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
+                                    : "Enable verbose diagnostics" }) }), diagnosticLoggingMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: diagnosticLoggingMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectPresentationPreparation(), disabled: presentationBusy, children: presentationBusy ? "Checking…" : "Prepare supervised display validation" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preparation only. This control cannot restart Gamescope or switch displays." }), presentationMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: presentationMessage })] })), SP_JSX.jsx(DFL.PanelSection, { title: "Navigation", children: SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: returnToStatus, children: "Back to top" }) }) })] }) }));
 }
 function showBlockedAttempt(warning, onClose) {
     let modal;

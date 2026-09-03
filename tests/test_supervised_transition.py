@@ -464,13 +464,24 @@ class SupervisedTransitionTests(unittest.TestCase):
             placement=PlacementState.PORTABLE,
             code="sleep.blocked",
         )
-        value, _, store = service(Observations(), journal=journal)
+        value, _, store = service(
+            Observations(VersionedObservation("generation-1", snapshot())),
+            journal=journal,
+        )
 
         status = value.status()
         self.assertEqual(status.code, "transition.foreign_journal")
         self.assertTrue(status.action_required)
         self.assertFalse(status.acknowledgement_required)
         self.assertFalse(value.acknowledge("sleep-operation-1"))
+        self.assertIs(store.current, journal)
+
+        automatic = value.execute_automatic(
+            PlacementState.DOCKED_EGPU,
+            expected_generation="generation-1",
+            standing_consent=True,
+        )
+        self.assertEqual(automatic.code, "journal.foreign_workflow")
         self.assertIs(store.current, journal)
 
     def test_interrupted_recovery_delegates_to_orchestrator(self):

@@ -61,6 +61,8 @@ class DeckyContractTests(unittest.TestCase):
                 "execute_supervised_tv_switch",
                 "acknowledge_supervised_tv_switch",
                 "get_supervised_tv_switch_status",
+                "get_transition_journal_status",
+                "acknowledge_sleep_journal",
                 "get_process_release_status",
                 "preview_process_release",
                 "approve_process_release",
@@ -121,6 +123,7 @@ class DeckyContractTests(unittest.TestCase):
             "preview_supervised_tv_switch",
             "approve_supervised_tv_switch",
             "get_supervised_tv_switch_status",
+            "get_transition_journal_status",
             "get_process_release_status",
         }
         methods = {
@@ -154,6 +157,8 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"execute_supervised_tv_switch"', source)
         self.assertIn('"acknowledge_supervised_tv_switch"', source)
         self.assertIn('"get_supervised_tv_switch_status"', source)
+        self.assertIn('"get_transition_journal_status"', source)
+        self.assertIn('"acknowledge_sleep_journal"', source)
         ui_source = (ROOT / "src" / "index.tsx").read_text(encoding="utf-8")
         self.assertIn("showPresentationPreparationBlocked", ui_source)
         self.assertIn('title: "Display validation is not ready"', ui_source)

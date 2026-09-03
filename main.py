@@ -100,6 +100,9 @@ from hdm.application.experimental_transition import (  # noqa: E402
 from hdm.application.supervised_transition import (  # noqa: E402
     SupervisedPresentationTransitionService,
 )
+from hdm.application.shared_transition_journal import (  # noqa: E402
+    SharedTransitionJournalService,
+)
 from hdm.application.transition_orchestrator import TransitionOrchestrator  # noqa: E402
 from hdm.application.guarded_process_release import (  # noqa: E402
     GuardedProcessReleaseService,
@@ -777,6 +780,8 @@ class Plugin:
             )
         except Exception:
             acknowledged = False
+        if acknowledged:
+            self._automatic_dock.reset_after_acknowledgement()
         return {"schema_version": 1, "acknowledged": acknowledged}
 
     async def get_supervised_tv_switch_status(
@@ -812,6 +817,47 @@ class Plugin:
                 "acknowledgement_id": "",
                 "durable": False,
             }
+
+    async def get_transition_journal_status(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Identify the categorical owner of the shared durable journal."""
+        try:
+            status = await asyncio.to_thread(self._transition_journal_service().status)
+            return {
+                "schema_version": 1,
+                "code": status.code,
+                "owner": status.owner.value,
+                "acknowledgement_required": status.acknowledgement_required,
+                "action_required": status.action_required,
+                "acknowledgement_id": status.operation_id,
+                "durable": status.durable,
+            }
+        except Exception:
+            return {
+                "schema_version": 1,
+                "code": "journal.unavailable",
+                "owner": "unknown",
+                "acknowledgement_required": False,
+                "action_required": True,
+                "acknowledgement_id": "",
+                "durable": False,
+            }
+
+    async def acknowledge_sleep_journal(
+        self, acknowledgement_id: str
+    ) -> dict[str, object]:
+        """Clear only the exact terminal result owned by canonical sleep."""
+        try:
+            acknowledged = await asyncio.to_thread(
+                self._transition_journal_service().acknowledge_sleep,
+                acknowledgement_id,
+            )
+        except Exception:
+            acknowledged = False
+        if acknowledged:
+            self._automatic_dock.reset_after_acknowledgement()
+        return {"schema_version": 1, "acknowledged": acknowledged}
 
     async def preview_process_release(
         self,
@@ -896,6 +942,8 @@ class Plugin:
             )
         except Exception:
             acknowledged = False
+        if acknowledged:
+            self._automatic_dock.reset_after_acknowledgement()
         return {"schema_version": 1, "acknowledged": acknowledged}
 
     async def _main(self) -> None:
@@ -1329,6 +1377,12 @@ class Plugin:
             recovery=recovery,
         )
         return self._process_release
+
+    @staticmethod
+    def _transition_journal_service() -> SharedTransitionJournalService:
+        return SharedTransitionJournalService(
+            FileTransitionJournalStore(RootOwnedRuntimeState().ensure())
+        )
 
     @staticmethod
     def _process_preview_failure(phase: str) -> dict[str, object]:

@@ -325,6 +325,72 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertFalse(disabled["enabled"])
         self.assertNotIn("generation", json.dumps((initial, enabled, disabled)))
 
+    def test_tv_journal_acknowledgement_rearms_automatic_docking(self):
+        plugin, _service = self.plugin()
+
+        class TransitionService:
+            def acknowledge(self, _operation_id):
+                return True
+
+        plugin._presentation_transition_service = lambda: TransitionService()
+        plugin._automatic_dock._attempted = True
+
+        result = asyncio.run(
+            plugin.acknowledge_supervised_tv_switch("operation-public-1")
+        )
+
+        self.assertTrue(result["acknowledged"])
+        self.assertFalse(plugin._automatic_dock._attempted)
+
+    def test_sleep_journal_acknowledgement_rearms_automatic_docking(self):
+        plugin, _service = self.plugin()
+
+        class JournalService:
+            def acknowledge_sleep(self, _operation_id):
+                return True
+
+        plugin._transition_journal_service = lambda: JournalService()
+        plugin._automatic_dock._attempted = True
+
+        result = asyncio.run(plugin.acknowledge_sleep_journal("operation-public-1"))
+
+        self.assertTrue(result["acknowledged"])
+        self.assertFalse(plugin._automatic_dock._attempted)
+
+    def test_shared_journal_status_exposes_only_owner_and_acknowledgement(self):
+        plugin, _service = self.plugin()
+
+        class Owner:
+            value = "sleep"
+
+        class JournalService:
+            def status(self):
+                return types.SimpleNamespace(
+                    code="sleep.blocked",
+                    owner=Owner(),
+                    acknowledgement_required=True,
+                    action_required=True,
+                    operation_id="operation-public-1",
+                    durable=True,
+                )
+
+        plugin._transition_journal_service = lambda: JournalService()
+
+        result = asyncio.run(plugin.get_transition_journal_status())
+
+        self.assertEqual(result["owner"], "sleep")
+        self.assertEqual(result["acknowledgement_id"], "operation-public-1")
+        self.assertNotIn("request_id", result)
+
+    def test_process_journal_acknowledgement_rearms_automatic_docking(self):
+        plugin, _service = self.plugin()
+        plugin._automatic_dock._attempted = True
+
+        result = asyncio.run(plugin.acknowledge_process_release("operation-public-1"))
+
+        self.assertTrue(result["acknowledged"])
+        self.assertFalse(plugin._automatic_dock._attempted)
+
     def test_preview_and_approval_use_enum_and_opaque_receipt_only(self):
         plugin, service = self.plugin()
         inspection = asyncio.run(plugin.preview_process_release("graceful"))

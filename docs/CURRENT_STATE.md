@@ -16,7 +16,7 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `8d96b9c398f77c26ebbef50b5fb1c7d402695169` |
+| Audited implementation baseline | `898d9c8322e5352c5733c72fcdcd00e46dffe036` plus the owner-aware journal fix in this change |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
 | Remote relation | Local `main` was 67 commits ahead of `origin/main` before the governance slice |
@@ -36,10 +36,11 @@ publication.
   manifest. ZIP filenames alone are never provenance.
 - No artifact is promoted as current by this page. Build and verify one package
   from the intended clean commit for each validation session.
-- The last authoritative repository note reports installed HDM `0.2.0`, public
-  revision `fd2d38f2fa04`, observed on 2026-09-01. A 2026-09-02 read-only SSH
-  attempt could not reach the Ally, so the current installed build is
-  **Unknown** until it is observed again.
+- The last live observation reports installed HDM `0.2.0`, public revision
+  `898d9c8322e5`, on 2026-09-02. The exact Ally X/G1 profile, one EDID-ready TV,
+  an observed-Up link, Idle game state, active internal panel, and inactive TV
+  were observed after USB4 settling. The owner-aware journal correction in the
+  current checkout is not installed or hardware validated.
 - Historical candidate and deployment records are snapshots, not current truth.
   See [Operator handoff](OPERATOR_HANDOFF.md) and dated deployment records for
   their exact context.
@@ -72,6 +73,12 @@ local ZIP.
   opt-in and remains hardware-validation-required. Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
   before disconnect.
+- A live attach exposed a terminal shared journal that automatic docking
+  mislabeled as a TV acknowledgement even though both the presentation and
+  process-release services rejected ownership. The local correction reports
+  the categorical owner, offers exact acknowledgement only for a terminal sleep
+  journal, keeps unknown/incomplete journals fail-closed, and re-arms the same
+  attachment after a valid owner acknowledgement. It remains uninstalled.
 
 ## Active ownership
 

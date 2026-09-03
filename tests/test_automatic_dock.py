@@ -103,6 +103,29 @@ class AutomaticDockCoordinatorTests(unittest.TestCase):
         self.assertFalse(running.should_switch)
         self.assertEqual(running.status.stage, AutomaticDockStage.WAITING)
 
+    def test_acknowledgement_or_opt_out_rearms_the_same_attachment(self):
+        coordinator = AutomaticDockCoordinator()
+        ready = readiness(AttachReadinessStage.READY_IDLE, "attach.ready_idle")
+        attached = current("connected-internal.json")
+        self.assertTrue(
+            coordinator.update(
+                enabled=True, readiness=ready, current=attached
+            ).should_switch
+        )
+
+        coordinator.reset_after_acknowledgement()
+        self.assertTrue(
+            coordinator.update(
+                enabled=True, readiness=ready, current=attached
+            ).should_switch
+        )
+        coordinator.update(enabled=False, readiness=ready, current=attached)
+        self.assertTrue(
+            coordinator.update(
+                enabled=True, readiness=ready, current=attached
+            ).should_switch
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

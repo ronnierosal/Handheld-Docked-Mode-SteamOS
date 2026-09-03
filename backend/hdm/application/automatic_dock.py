@@ -62,6 +62,7 @@ class AutomaticDockCoordinator:
         if not profiles.exact_egpu:
             self._attempted = False
         if not enabled:
+            self._attempted = False
             self._status = AutomaticDockStatus(
                 AutomaticDockStage.DISABLED, "automatic_dock.disabled", False
             )
@@ -103,6 +104,16 @@ class AutomaticDockCoordinator:
             stage = AutomaticDockStage.WAITING
         self._status = AutomaticDockStatus(stage, readiness.code, True)
         return AutomaticDockDecision(self._status)
+
+    def reset_after_acknowledgement(self) -> AutomaticDockStatus:
+        """Permit one fresh re-evaluation after the player clears a journal."""
+        self._attempted = False
+        self._status = AutomaticDockStatus(
+            AutomaticDockStage.OBSERVING,
+            "automatic_dock.rearmed_after_acknowledgement",
+            True,
+        )
+        return self._status
 
     def record_result(self, code: str, *, succeeded: bool) -> AutomaticDockStatus:
         self._status = AutomaticDockStatus(

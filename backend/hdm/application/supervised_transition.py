@@ -393,6 +393,8 @@ class SupervisedPresentationTransitionService:
             return "journal.unavailable"
         if current is None:
             return ""
+        if not self._is_presentation_journal(current):
+            return "journal.foreign_workflow"
         return (
             "journal.acknowledgement_required"
             if current.terminal
@@ -411,7 +413,7 @@ class SupervisedPresentationTransitionService:
             journal.entries
             and journal.entries[0].code == "request.accepted"
             and dict(journal.entries[0].details).get("capability")
-            == "presentation_transition"
+            in (None, "presentation_transition")
         )
 
     def _observe(self):

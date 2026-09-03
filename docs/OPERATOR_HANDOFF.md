@@ -12,7 +12,7 @@ state before making a hardware claim.
 - Branch, HEAD, divergence, worktree, version, and active ownership:
   [Current state](CURRENT_STATE.md). Re-run `git rev-parse HEAD` and
   `git status --short --branch` before relying on that snapshot.
-- Last verified installed HDM build on the Ally: `0.2.0`, revision `fd2d38f2fa04`
+- Last verified installed HDM build on the Ally: `0.2.0`, revision `898d9c8322e5`
 - Last verified loader state: `plugin_loader.service` active.
 - **Historical held-local lifecycle-fix candidate (2026-09-01):**
   `HandheldDockMode-0.2.0.zip` was rebuilt from clean
@@ -57,6 +57,23 @@ Resolve conflicts deliberately. Record the integration and verification here;
 do not leave a growing queue of completed worktree commits unintegrated.
 
 ## Continuity status
+
+- **Live shared-journal blocker and local owner-aware correction (2026-09-02):**
+  after the installed `898d9c8322e5` build observed the exact Ally X/G1/TV
+  topology and automatic docking was enabled, it stopped before mutation with
+  `journal.acknowledgement_required`. Direct bounded Decky status calls showed
+  `transition.foreign_journal` and `process_release.foreign_journal`, proving
+  that neither visible owner could supply the acknowledgement button. No
+  journal was deleted or bypassed. The local correction adds categorical shared
+  ownership, a strict exact-terminal sleep acknowledgement, legacy
+  presentation-journal recognition, honest foreign-workflow labeling, and
+  automatic-dock re-arming after the owning acknowledgement. Targeted backend,
+  typecheck, frontend, architecture, compile, and package checks pass. This is
+  **Implemented/Simulated** locally and not installed. Do not replace the plugin
+  while the G1 is attached. The next safe step is shutdown, physical disconnect,
+  clean candidate build/install, then inspect the owner-aware status before one
+  watched reconnect. A valid acknowledgement while automatic docking remains
+  enabled may immediately request the watched Gamescope/TV transition.
 
 - **Automatic G1-to-TV docking implementation (2026-09-02):** the proven
   eGPUBridge behavior was reduced to its required mechanism—write the exact TV

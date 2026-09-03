@@ -397,6 +397,37 @@ export const getSupervisedTvSwitchStatus = callable<
   SupervisedTvSwitchStatusPayload
 >("get_supervised_tv_switch_status");
 
+export type TransitionJournalOwner =
+  | "none"
+  | "presentation"
+  | "process_release"
+  | "sleep"
+  | "unknown";
+
+export interface TransitionJournalStatusPayload {
+  schema_version: number;
+  code: string;
+  owner: TransitionJournalOwner;
+  acknowledgement_required: boolean;
+  action_required: boolean;
+  acknowledgement_id: string;
+  durable: boolean;
+}
+
+export interface SleepJournalAcknowledgementPayload {
+  schema_version: number;
+  acknowledged: boolean;
+}
+
+export const getTransitionJournalStatus = callable<
+  [],
+  TransitionJournalStatusPayload
+>("get_transition_journal_status");
+export const acknowledgeSleepJournal = callable<
+  [string],
+  SleepJournalAcknowledgementPayload
+>("acknowledge_sleep_journal");
+
 export type ProcessReleasePhase = "graceful" | "force";
 
 export interface ProcessReleaseTargetPayload {

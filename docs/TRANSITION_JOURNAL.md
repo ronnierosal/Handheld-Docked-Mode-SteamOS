@@ -89,13 +89,30 @@ automatic attach authority.
 The exact transition binding and experimental approval identity are not written
 to this privacy-safe journal.
 
+### Shared owner-aware delivery
+
+The Decky delivery layer reads the one shared journal through an owner-aware
+status service. It identifies only `presentation`, `process_release`, `sleep`,
+or `unknown`; request identity is never returned. A terminal sleep result now
+has an explicit controller-visible acknowledgement because canonical sleep is
+not otherwise exposed as a Decky workflow. That endpoint validates the exact
+operation ID, terminal state, and `sleep.requested` owner marker before using
+the store's matching-terminal-only clear operation. It cannot clear an
+incomplete, presentation, process-release, or unknown journal.
+
+Older presentation journals created before the categorical capability marker
+are recognized only by their original `request.accepted` first event. New
+presentation journals retain the explicit `presentation_transition` marker.
+Unknown owner state remains Action Required and cannot be cleared.
+
 ## Current boundary
 
-The store is now constructed by Decky for guarded process release under the
-root-owned state directory. Process execution durably records `step_started`
-before signaling, and startup recovery terminalizes an incomplete release
-without repeating a signal. The presentation runtime orchestrator and mechanism
-remain unconstructed; no display/GPU transition endpoint is enabled.
+The store is constructed by Decky for guarded process release and supervised
+presentation transitions under the root-owned state directory. Process
+execution durably records `step_started` before signaling, and startup recovery
+terminalizes an incomplete release without repeating a signal. Presentation
+requests use the same journal and transition engine; manual confirmation and
+the off-by-default automatic docking opt-in converge on that one path.
 
 The canonical sleep coordinator uses the same port in deterministic tests and
 persists each active stage before returning its directives. It remains unwired
