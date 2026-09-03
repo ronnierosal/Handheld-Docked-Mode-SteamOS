@@ -72,6 +72,7 @@ class AttachReadinessTests(unittest.TestCase):
         watch, attached = self._watch()
         settling = observe_attach_readiness(watch, attached)
         self.assertEqual(settling.stage, AttachReadinessStage.SETTLING)
+        self.assertEqual(settling.poll_after_ms, 250)
 
         changed = replace(
             attached.snapshot,

@@ -24,6 +24,7 @@ from hdm.adapters.steamos.pci import PciUsb4Discovery  # noqa: E402
 from hdm.adapters.steamos.wake_diagnostics import WakeDiagnosticsDiscovery  # noqa: E402
 from hdm.adapters.steamos.commands import (  # noqa: E402
     PipeWireCommandRunner,
+    SystemPowerCommandRunner,
     UserServiceCommandRunner,
 )
 from hdm.adapters.steamos.audio_handoff import G1AudioHandoff  # noqa: E402
@@ -90,6 +91,10 @@ from hdm.application.automatic_dock import (  # noqa: E402
 from hdm.application.native_portable_recovery import (  # noqa: E402
     NativePortableRecoverySupervisor,
     NativeRecoveryStage,
+)
+from hdm.application.safe_disconnect_shutdown import (  # noqa: E402
+    SafeDisconnectShutdownApprovalStore,
+    SafeDisconnectShutdownService,
 )
 from hdm.application.topology_event_detection import (  # noqa: E402
     TopologyDetectionStatus,
@@ -207,6 +212,9 @@ class Plugin:
         self._support_writer = SupportBundleFileWriter()
         self._presentation_approvals = PresentationActivationApprovalStore()
         self._presentation_transition_approvals = ExperimentalTransitionApprovalStore()
+        self._safe_disconnect_shutdown_approvals = (
+            SafeDisconnectShutdownApprovalStore()
+        )
         self._process_approvals = ProcessReleaseApprovalStore()
         self._process_receipts = GracefulReleaseReceiptStore()
         self._process_release: GuardedProcessReleaseService | None = None
@@ -781,6 +789,80 @@ class Plugin:
             "acknowledgement_required": bool(result.operation_id and result.durable),
         }
 
+    async def approve_supervised_portable_switch(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Issue one short-lived permit to return a verified idle dock to Portable."""
+        try:
+            preview = await asyncio.to_thread(
+                self._presentation_transition_service().preview,
+                PlacementState.PORTABLE,
+                user_confirmed=True,
+            )
+            return {
+                "schema_version": 1,
+                "approval_token": preview.approval_token,
+                "blockers": list(preview.blockers),
+            }
+        except Exception:
+            return {
+                "schema_version": 1,
+                "approval_token": "",
+                "blockers": ["transition.approval_failed"],
+            }
+
+    async def execute_supervised_portable_switch(
+        self, approval_token: str
+    ) -> dict[str, object]:
+        """Execute only the approved return-to-Portable transition."""
+        return await self.execute_supervised_tv_switch(approval_token)
+
+    async def approve_safe_disconnect_shutdown(
+        self, _request: object = None
+    ) -> dict[str, object]:
+        """Approve shutdown only from a fresh idle Portable observation."""
+        try:
+            preview = await asyncio.to_thread(
+                self._safe_disconnect_shutdown_service().preview,
+                user_confirmed=True,
+            )
+            return {
+                "schema_version": 1,
+                "ready": preview.ready,
+                "approval_token": preview.approval_token,
+                "blockers": list(preview.blockers),
+            }
+        except Exception:
+            return {
+                "schema_version": 1,
+                "ready": False,
+                "approval_token": "",
+                "blockers": ["safe_disconnect.service_unavailable"],
+            }
+
+    async def execute_safe_disconnect_shutdown(
+        self, approval_token: str
+    ) -> dict[str, object]:
+        """Queue system power-off; never claim removal safe while still powered."""
+        try:
+            result = await asyncio.to_thread(
+                self._safe_disconnect_shutdown_service().execute,
+                approval_token,
+            )
+        except Exception:
+            result = None
+        code = (
+            result.code if result is not None else "safe_disconnect.execution_failed"
+        )
+        accepted = bool(result and result.accepted)
+        self._events.append(
+            severity="info" if accepted else "warning",
+            code=code,
+            component="safe_disconnect",
+            stage="shutdown",
+        )
+        return {"schema_version": 1, "accepted": accepted, "code": code}
+
     async def acknowledge_supervised_tv_switch(
         self, acknowledgement_id: str
     ) -> dict[str, object]:
@@ -1029,6 +1111,7 @@ class Plugin:
         observations = SnapshotTransitionObservationAdapter(self._discovery)
         clock = SystemMonotonicClock()
         while True:
+            delay_seconds = 1.0
             try:
                 enabled = await asyncio.to_thread(
                     self._automatic_dock_preferences().load
@@ -1039,6 +1122,10 @@ class Plugin:
                     current=current,
                     now_ms=clock.now_ms(),
                 )
+                if status.stage is NativeRecoveryStage.WAITING:
+                    delay_seconds = 0.25
+                elif status.stage is NativeRecoveryStage.ACTION_REQUIRED:
+                    delay_seconds = 2.0
                 if status.code != self._last_native_recovery_code:
                     severity = (
                         "error"
@@ -1086,7 +1173,7 @@ class Plugin:
                     component="native_recovery",
                     stage="observation",
                 )
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(delay_seconds)
 
     async def _automatic_dock_loop(self) -> None:
         """Submit one exact, idle attach request through the shared transition engine."""
@@ -1122,6 +1209,9 @@ class Plugin:
                     enabled=enabled,
                     readiness=readiness,
                     current=current,
+                )
+                delay_seconds = min(
+                    delay_seconds, readiness.poll_after_ms / 1_000
                 )
                 if decision.status.stage is AutomaticDockStage.DOCKED:
                     delay_seconds = 15.0
@@ -1422,6 +1512,13 @@ class Plugin:
             commands=PipeWireCommandRunner(),
             state=PortableAudioStateStore(RootOwnedRuntimeState().ensure()),
             resolve_g1_audio_bdf=self._verified_g1_audio_bdf,
+        )
+
+    def _safe_disconnect_shutdown_service(self) -> SafeDisconnectShutdownService:
+        return SafeDisconnectShutdownService(
+            observations=SnapshotTransitionObservationAdapter(self._discovery),
+            power=SystemPowerCommandRunner(),
+            approvals=self._safe_disconnect_shutdown_approvals,
         )
 
     @staticmethod

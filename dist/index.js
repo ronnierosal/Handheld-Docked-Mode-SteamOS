@@ -42,8 +42,12 @@ const preparePresentationIntegration = callable("prepare_presentation_integratio
 callable("preview_supervised_tv_switch");
 const approveSupervisedTvSwitch = callable("approve_supervised_tv_switch");
 const executeSupervisedTvSwitch = callable("execute_supervised_tv_switch");
+const approveSupervisedPortableSwitch = callable("approve_supervised_portable_switch");
+const executeSupervisedPortableSwitch = callable("execute_supervised_portable_switch");
 const acknowledgeSupervisedTvSwitch = callable("acknowledge_supervised_tv_switch");
 const getSupervisedTvSwitchStatus = callable("get_supervised_tv_switch_status");
+const approveSafeDisconnectShutdown = callable("approve_safe_disconnect_shutdown");
+const executeSafeDisconnectShutdown = callable("execute_safe_disconnect_shutdown");
 const getTransitionJournalStatus = callable("get_transition_journal_status");
 const acknowledgeSleepJournal = callable("acknowledge_sleep_journal");
 const getProcessReleaseStatus = callable("get_process_release_status");
@@ -1103,6 +1107,18 @@ function showAutomaticDockConfirmation(onConfirm, onClose) {
         }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "When HDM verifies this Ally X, the exact GPD G1, one ready TV, a healthy link, and no running game, it will restart Steam Game Mode onto the TV." }), SP_JSX.jsx("p", { children: "The screen will briefly show Steam shutting down. USB4 presence alone never triggers the restart, and physical live removal remains unsupported." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
     return modal;
 }
+function showSafeDisconnectConfirmation(portable, onConfirm, onClose) {
+    let modal;
+    const close = () => {
+        modal.Close();
+        onClose();
+    };
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: portable ? "Shut down for G1 disconnect?" : "Return to Ally for G1 disconnect?", strOKButtonText: portable ? "Shut down" : "Return to Ally", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
+            close();
+            onConfirm();
+        }, onCancel: close, children: SP_JSX.jsx("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: portable ? (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will revalidate idle Portable mode and request a normal system shutdown." }), SP_JSX.jsx("p", { children: "Disconnect the G1 only after the fans stop and every top power LED is off." })] })) : (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will require no running game, then restart Game Mode on the Ally display." }), SP_JSX.jsx("p", { children: "After Portable is verified, acknowledge the result and use this control again to shut down. Do not unplug yet." })] })) }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    return modal;
+}
 function showPresentationPreparationBlocked(blockers) {
     // The preparation result appears below its controller-focused button. Steam's
     // Quick Access navigation can leave that row off-screen, so also surface the
@@ -1171,6 +1187,8 @@ function Content({ preflight }) {
     const [automaticDockStatus, setAutomaticDockStatus] = SP_REACT.useState(null);
     const [automaticDockBusy, setAutomaticDockBusy] = SP_REACT.useState(false);
     const [automaticDockMessage, setAutomaticDockMessage] = SP_REACT.useState("");
+    const [safeDisconnectBusy, setSafeDisconnectBusy] = SP_REACT.useState(false);
+    const [safeDisconnectMessage, setSafeDisconnectMessage] = SP_REACT.useState("");
     const [dockedIgpuStatus, setDockedIgpuStatus] = SP_REACT.useState(null);
     const [dockedIgpuMessage, setDockedIgpuMessage] = SP_REACT.useState("");
     const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = SP_REACT.useState(null);
@@ -1207,6 +1225,7 @@ function Content({ preflight }) {
     const supportModal = SP_REACT.useRef(null);
     const presentationModal = SP_REACT.useRef(null);
     const automaticDockModal = SP_REACT.useRef(null);
+    const safeDisconnectModal = SP_REACT.useRef(null);
     const processModal = SP_REACT.useRef(null);
     const diagnosticLoggingModal = SP_REACT.useRef(null);
     const refreshTransitionJournal = SP_REACT.useCallback(async () => {
@@ -1241,6 +1260,8 @@ function Content({ preflight }) {
         presentationModal.current = null;
         automaticDockModal.current?.Close();
         automaticDockModal.current = null;
+        safeDisconnectModal.current?.Close();
+        safeDisconnectModal.current = null;
         processModal.current?.Close();
         processModal.current = null;
         diagnosticLoggingModal.current?.Close();
@@ -1298,11 +1319,11 @@ function Content({ preflight }) {
                 setTvSwitchAcknowledgementId(status.acknowledgement_id);
             }
             setTvSwitchMessage(status.action_required
-                ? "A prior TV transition needs acknowledgement. HDM did not claim the TV is active."
-                : `Previous TV switch result: ${label(status.code)}.`);
+                ? "A prior display transition needs acknowledgement. HDM did not claim its target is active."
+                : `Previous display transition result: ${label(status.code)}.`);
         }).catch(() => {
             if (!disposed) {
-                setTvSwitchMessage("TV transition safety state is unavailable. HDM did not claim success.");
+                setTvSwitchMessage("Display-transition safety state is unavailable. HDM did not claim success.");
             }
         });
         return () => {
@@ -1703,6 +1724,66 @@ function Content({ preflight }) {
             automaticDockModal.current = null;
         });
     }, [automaticDockStatus?.enabled, changeAutomaticDock]);
+    const executeSafeDisconnect = SP_REACT.useCallback(async () => {
+        setSafeDisconnectBusy(true);
+        setSafeDisconnectMessage("");
+        const portable = payload?.inference.mode === "portable";
+        try {
+            if (portable) {
+                const approval = await approveSafeDisconnectShutdown();
+                if (!approval.ready || !approval.approval_token || approval.blockers.length > 0) {
+                    setSafeDisconnectMessage(approval.blockers.length > 0
+                        ? `Shutdown blocked: ${approval.blockers.map(label).join(", ")}.`
+                        : "Shutdown approval was not issued. Inspect again.");
+                    return;
+                }
+                toaster.toast({
+                    title: "HDM is shutting down the Ally",
+                    body: "Disconnect the G1 only after the fans and every top power LED are off.",
+                    critical: true,
+                    duration: 30000,
+                });
+                const outcome = await executeSafeDisconnectShutdown(approval.approval_token);
+                setSafeDisconnectMessage(outcome.accepted
+                    ? "Shutdown requested. Wait until the Ally is completely off before disconnecting the G1."
+                    : `Shutdown was not requested: ${label(outcome.code)}.`);
+                return;
+            }
+            const approval = await approveSupervisedPortableSwitch();
+            if (!approval.approval_token || approval.blockers.length > 0) {
+                setSafeDisconnectMessage(approval.blockers.length > 0
+                    ? `Return to Ally blocked: ${approval.blockers.map(label).join(", ")}.`
+                    : "Portable transition approval was not issued. Inspect again.");
+                return;
+            }
+            toaster.toast({
+                title: "HDM is returning to the Ally",
+                body: "Do not disconnect the G1. Wait for Portable verification, then shut down.",
+                critical: true,
+                duration: 30000,
+            });
+            const outcome = await executeSupervisedPortableSwitch(approval.approval_token);
+            setTvSwitchAcknowledgementId(outcome.acknowledgement_required ? outcome.acknowledgement_id : "");
+            setSafeDisconnectMessage(outcome.accepted
+                ? `Portable transition result: ${label(outcome.code)}.`
+                : `Portable transition was not accepted: ${label(outcome.code)}.`);
+        }
+        catch {
+            setSafeDisconnectMessage(portable
+                ? "Shutdown was not requested. Keep the G1 connected."
+                : "Portable transition did not complete. Keep the G1 connected.");
+        }
+        finally {
+            setSafeDisconnectBusy(false);
+        }
+    }, [payload?.inference.mode]);
+    const requestSafeDisconnect = SP_REACT.useCallback(() => {
+        const portable = payload?.inference.mode === "portable";
+        safeDisconnectModal.current?.Close();
+        safeDisconnectModal.current = showSafeDisconnectConfirmation(portable, () => void executeSafeDisconnect(), () => {
+            safeDisconnectModal.current = null;
+        });
+    }, [executeSafeDisconnect, payload?.inference.mode]);
     const acknowledgeTvSwitch = SP_REACT.useCallback(async () => {
         if (!tvSwitchAcknowledgementId)
             return;
@@ -1710,15 +1791,15 @@ function Content({ preflight }) {
         try {
             const result = await acknowledgeSupervisedTvSwitch(tvSwitchAcknowledgementId);
             setTvSwitchMessage(result.acknowledged
-                ? "TV switch result acknowledged."
-                : "TV switch result could not be acknowledged.");
+                ? "Display transition result acknowledged."
+                : "Display transition result could not be acknowledged.");
             if (result.acknowledged) {
                 setTvSwitchAcknowledgementId("");
                 await refreshTransitionJournal();
             }
         }
         catch {
-            setTvSwitchMessage("TV switch acknowledgement is unavailable.");
+            setTvSwitchMessage("Display transition acknowledgement is unavailable.");
         }
         finally {
             setTvSwitchBusy(false);
@@ -1897,9 +1978,16 @@ function Content({ preflight }) {
                                         ? label(automaticDockStatus.code)
                                         : "Off" }), automaticDockMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: automaticDockMessage })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void executeTvSwitch(), disabled: tvSwitchBusy
                                             || Boolean(tvSwitchAcknowledgementId)
-                                            || Boolean(journalStatus && journalStatus.code !== "journal.idle"), children: tvSwitchBusy ? "Switching…" : "Switch to TV now" }) }), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage }), journalStatus && journalStatus.code !== "journal.idle" && (SP_JSX.jsx(DiagnosticRow, { name: "Safety journal", value: label(journalStatus.owner) })), journalMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: journalMessage }), journalStatus?.owner === "sleep"
+                                            || Boolean(journalStatus && journalStatus.code !== "journal.idle"), children: tvSwitchBusy ? "Switching…" : "Switch to TV now" }) }), tvSwitchMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: tvSwitchMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: requestSafeDisconnect, disabled: safeDisconnectBusy
+                                            || !disconnect?.applicable
+                                            || Boolean(tvSwitchAcknowledgementId)
+                                            || Boolean(journalStatus && journalStatus.code !== "journal.idle"), children: safeDisconnectBusy
+                                            ? "Checking…"
+                                            : payload?.inference.mode === "portable"
+                                                ? "Shut down to disconnect G1"
+                                                : "Prepare G1 disconnect" }) }), safeDisconnectMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: safeDisconnectMessage })), journalStatus && journalStatus.code !== "journal.idle" && (SP_JSX.jsx(DiagnosticRow, { name: "Safety journal", value: label(journalStatus.owner) })), journalMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: journalMessage }), journalStatus?.owner === "sleep"
                                     && journalStatus.acknowledgement_required
-                                    && journalStatus.acknowledgement_id && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgePriorSleep(), disabled: journalBusy, children: journalBusy ? "Acknowledging…" : "Acknowledge prior sleep result" }) })), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge prior TV switch result" }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) })] }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
+                                    && journalStatus.acknowledgement_id && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgePriorSleep(), disabled: journalBusy, children: journalBusy ? "Acknowledging…" : "Acknowledge prior sleep result" }) })), tvSwitchAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeTvSwitch(), disabled: tvSwitchBusy, children: "Acknowledge prior display transition result" }) })), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleTroubleshooting, children: showDiagnostics ? "Hide troubleshooting" : "Open troubleshooting" }) })] }), needsAttention && (SP_JSX.jsx(DFL.PanelSectionRow, { children: error || healthAttention[0] || `${snapshot?.blockers.length} safety check${snapshot?.blockers.length === 1 ? "" : "s"} needs attention.` })), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only status refreshes while this panel is open." }), sleepGuard?.required && sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: showSleepWarning, children: "Show sleep warning again" }) }))] }), SP_JSX.jsxs(DFL.PanelSection, { title: "Journey status", children: [journeyRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: toggleJourneyDetails, children: showJourneyDetails ? "Hide journey details" : "Open journey details" }) })] }), showJourneyDetails && (SP_JSX.jsx("div", { ref: journeyDetailsAnchor, children: SP_JSX.jsxs(DFL.PanelSection, { title: "Journey details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only local policy status. It does not perform dock, undock, recovery, or game actions." }), journeyDetailRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.detail }, row.name)))] }) })), SP_JSX.jsxs(DFL.PanelSection, { title: "Sleep protection", children: [SP_JSX.jsx(DiagnosticRow, { name: "System inhibitor", value: loading
                                 ? "Checking…"
                                 : sleepGuard?.required
                                     ? sleepGuard.active

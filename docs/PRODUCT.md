@@ -73,6 +73,13 @@ The physical power button remains platform-owned: HDM must not delay, suppress,
 or synthesize ordinary Sleep merely to recognize a gesture. See [physical
 power-button Safe Undock feasibility](POWER_BUTTON_SAFE_UNDOCK.md).
 
+Until a verified global controller-event source exists, the Decky panel owns
+the controller-focusable fallback. **Prepare G1 disconnect** first routes the
+dock through the ordinary verified Portable transition. After its durable
+result is acknowledged, the same control may request a normal shutdown from a
+fresh idle Portable observation. “Safe” means the Ally has completely powered
+off; this workflow does not promise powered live removal.
+
 Current scope does not include TDP control, automatic graphics tuning, game
 configuration writes, Steam Library badges, travel automation, or controller
 wake. Future work must place those behind narrow telemetry, device-profile,

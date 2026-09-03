@@ -365,6 +365,13 @@ contradictory evidence becomes Action Required. A verified result may restore
 the root-captured Portable audio sink, but the observer never restarts
 Gamescope, advances sleep, or describes physical removal as safe.
 
+While that observer is waiting on a correlated unexpected loss, production
+sampling tightens from one second to 250 ms. Exact attach settling likewise uses
+a 250 ms follow-up sample and then returns to the ordinary one-second cadence
+until every identity, EDID, link, session, and idle-game gate passes. Faster
+sampling changes response latency only; it cannot shorten kernel enumeration or
+the Gamescope restart itself.
+
 The manual planner supports only the bounded Portable↔Docked-eGPU path and
 verified no-ops. A mutating plan requires exact runtime host/eGPU profile
 resolution, an ephemeral binding to every participating GPU/display, idle game
@@ -387,6 +394,16 @@ automatic attach coordinator both construct this facade. Manual use consumes a
 short-lived on-screen approval; automatic use requires persistent player opt-in
 and an exact unchanged generation. Both enter the same journaled plan and remain
 Hardware Validation Required.
+
+The controller-focusable Safe Disconnect fallback exposes the already-modeled
+Docked-eGPU-to-Portable target through that same supervised facade. A separate
+`SafeDisconnectShutdownService` accepts shutdown only after a fresh exact-host,
+known-idle, verified-Portable observation. Confirmation creates one backend-only
+approval valid for at most 30 seconds; execution consumes it, requires the same
+semantic generation, and invokes only `/usr/bin/systemctl --no-block poweroff`
+through a root-only fixed command adapter. It does not unbind, reset USB4, or
+authorize removal while powered. A terminal presentation journal must still be
+acknowledged before the UI enables shutdown.
 
 That same durable path now treats exact idle Docked-iGPU as a supported source
 for a Docked-eGPU target. Boot config represents Docked-iGPU explicitly as TV

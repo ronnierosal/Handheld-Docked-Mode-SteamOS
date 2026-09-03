@@ -22,12 +22,16 @@ import {
   acknowledgeProcessRelease,
   approveProcessRelease,
   approvePresentationPreparation,
+  approveSafeDisconnectShutdown,
+  approveSupervisedPortableSwitch,
   approveSupervisedTvSwitch,
   acknowledgeSupervisedTvSwitch,
   executeSupervisedTvSwitch,
   getSupervisedTvSwitchStatus,
   getTransitionJournalStatus,
   executeProcessRelease,
+  executeSafeDisconnectShutdown,
+  executeSupervisedPortableSwitch,
   getProcessReleaseStatus,
   getDockedIgpuStatus,
   getDiagnosticLoggingStatus,
@@ -262,6 +266,50 @@ function showAutomaticDockConfirmation(
   return modal;
 }
 
+function showSafeDisconnectConfirmation(
+  portable: boolean,
+  onConfirm: () => void,
+  onClose: () => void,
+): ReturnType<typeof showModal> {
+  let modal: ReturnType<typeof showModal>;
+  const close = () => {
+    modal.Close();
+    onClose();
+  };
+  modal = showModal(
+    <ConfirmModal
+      strTitle={portable ? "Shut down for G1 disconnect?" : "Return to Ally for G1 disconnect?"}
+      strOKButtonText={portable ? "Shut down" : "Return to Ally"}
+      strCancelButtonText="Cancel"
+      bDestructiveWarning={true}
+      bDisableBackgroundDismiss={true}
+      bHideCloseIcon={true}
+      onOK={() => {
+        close();
+        onConfirm();
+      }}
+      onCancel={close}
+    >
+      <div style={{ fontSize: "13px", lineHeight: "18px" }}>
+        {portable ? (
+          <>
+            <p>HDM will revalidate idle Portable mode and request a normal system shutdown.</p>
+            <p>Disconnect the G1 only after the fans stop and every top power LED is off.</p>
+          </>
+        ) : (
+          <>
+            <p>HDM will require no running game, then restart Game Mode on the Ally display.</p>
+            <p>After Portable is verified, acknowledge the result and use this control again to shut down. Do not unplug yet.</p>
+          </>
+        )}
+      </div>
+    </ConfirmModal>,
+    window,
+    { strTitle: "Handheld Dock Mode", bNeverPopOut: true },
+  );
+  return modal;
+}
+
 function showPresentationPreparationBlocked(blockers: string[]): void {
   // The preparation result appears below its controller-focused button. Steam's
   // Quick Access navigation can leave that row off-screen, so also surface the
@@ -413,6 +461,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const [automaticDockStatus, setAutomaticDockStatus] = useState<AutomaticDockStatusPayload | null>(null);
   const [automaticDockBusy, setAutomaticDockBusy] = useState(false);
   const [automaticDockMessage, setAutomaticDockMessage] = useState("");
+  const [safeDisconnectBusy, setSafeDisconnectBusy] = useState(false);
+  const [safeDisconnectMessage, setSafeDisconnectMessage] = useState("");
   const [dockedIgpuStatus, setDockedIgpuStatus] = useState<DockedIgpuStatusPayload | null>(null);
   const [dockedIgpuMessage, setDockedIgpuMessage] = useState("");
   const [diagnosticLoggingStatus, setDiagnosticLoggingStatus] = useState<DiagnosticLoggingStatusPayload | null>(null);
@@ -453,6 +503,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
   const supportModal = useRef<ReturnType<typeof showModal> | null>(null);
   const presentationModal = useRef<ReturnType<typeof showModal> | null>(null);
   const automaticDockModal = useRef<ReturnType<typeof showModal> | null>(null);
+  const safeDisconnectModal = useRef<ReturnType<typeof showModal> | null>(null);
   const processModal = useRef<ReturnType<typeof showModal> | null>(null);
   const diagnosticLoggingModal = useRef<ReturnType<typeof showModal> | null>(null);
 
@@ -490,6 +541,8 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     presentationModal.current = null;
     automaticDockModal.current?.Close();
     automaticDockModal.current = null;
+    safeDisconnectModal.current?.Close();
+    safeDisconnectModal.current = null;
     processModal.current?.Close();
     processModal.current = null;
     diagnosticLoggingModal.current?.Close();
@@ -557,12 +610,12 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
       }
       setTvSwitchMessage(
         status.action_required
-          ? "A prior TV transition needs acknowledgement. HDM did not claim the TV is active."
-          : `Previous TV switch result: ${label(status.code)}.`,
+          ? "A prior display transition needs acknowledgement. HDM did not claim its target is active."
+          : `Previous display transition result: ${label(status.code)}.`,
       );
     }).catch(() => {
       if (!disposed) {
-        setTvSwitchMessage("TV transition safety state is unavailable. HDM did not claim success.");
+        setTvSwitchMessage("Display-transition safety state is unavailable. HDM did not claim success.");
       }
     });
     return () => {
@@ -1017,20 +1070,97 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
     );
   }, [automaticDockStatus?.enabled, changeAutomaticDock]);
 
+  const executeSafeDisconnect = useCallback(async () => {
+    setSafeDisconnectBusy(true);
+    setSafeDisconnectMessage("");
+    const portable = payload?.inference.mode === "portable";
+    try {
+      if (portable) {
+        const approval = await approveSafeDisconnectShutdown();
+        if (!approval.ready || !approval.approval_token || approval.blockers.length > 0) {
+          setSafeDisconnectMessage(
+            approval.blockers.length > 0
+              ? `Shutdown blocked: ${approval.blockers.map(label).join(", ")}.`
+              : "Shutdown approval was not issued. Inspect again.",
+          );
+          return;
+        }
+        toaster.toast({
+          title: "HDM is shutting down the Ally",
+          body: "Disconnect the G1 only after the fans and every top power LED are off.",
+          critical: true,
+          duration: 30000,
+        });
+        const outcome = await executeSafeDisconnectShutdown(approval.approval_token);
+        setSafeDisconnectMessage(
+          outcome.accepted
+            ? "Shutdown requested. Wait until the Ally is completely off before disconnecting the G1."
+            : `Shutdown was not requested: ${label(outcome.code)}.`,
+        );
+        return;
+      }
+
+      const approval = await approveSupervisedPortableSwitch();
+      if (!approval.approval_token || approval.blockers.length > 0) {
+        setSafeDisconnectMessage(
+          approval.blockers.length > 0
+            ? `Return to Ally blocked: ${approval.blockers.map(label).join(", ")}.`
+            : "Portable transition approval was not issued. Inspect again.",
+        );
+        return;
+      }
+      toaster.toast({
+        title: "HDM is returning to the Ally",
+        body: "Do not disconnect the G1. Wait for Portable verification, then shut down.",
+        critical: true,
+        duration: 30000,
+      });
+      const outcome = await executeSupervisedPortableSwitch(approval.approval_token);
+      setTvSwitchAcknowledgementId(
+        outcome.acknowledgement_required ? outcome.acknowledgement_id : "",
+      );
+      setSafeDisconnectMessage(
+        outcome.accepted
+          ? `Portable transition result: ${label(outcome.code)}.`
+          : `Portable transition was not accepted: ${label(outcome.code)}.`,
+      );
+    } catch {
+      setSafeDisconnectMessage(
+        portable
+          ? "Shutdown was not requested. Keep the G1 connected."
+          : "Portable transition did not complete. Keep the G1 connected.",
+      );
+    } finally {
+      setSafeDisconnectBusy(false);
+    }
+  }, [payload?.inference.mode]);
+
+  const requestSafeDisconnect = useCallback(() => {
+    const portable = payload?.inference.mode === "portable";
+    safeDisconnectModal.current?.Close();
+    safeDisconnectModal.current = showSafeDisconnectConfirmation(
+      portable,
+      () => void executeSafeDisconnect(),
+      () => {
+        safeDisconnectModal.current = null;
+      },
+    );
+  }, [executeSafeDisconnect, payload?.inference.mode]);
+
   const acknowledgeTvSwitch = useCallback(async () => {
     if (!tvSwitchAcknowledgementId) return;
     setTvSwitchBusy(true);
     try {
       const result = await acknowledgeSupervisedTvSwitch(tvSwitchAcknowledgementId);
       setTvSwitchMessage(result.acknowledged
-        ? "TV switch result acknowledged."
-        : "TV switch result could not be acknowledged.");
+        ? "Display transition result acknowledged."
+        : "Display transition result could not be acknowledged.");
       if (result.acknowledged) {
         setTvSwitchAcknowledgementId("");
         await refreshTransitionJournal();
       }
     } catch {
-      setTvSwitchMessage("TV switch acknowledgement is unavailable.");
+      setTvSwitchMessage("Display transition acknowledgement is unavailable.");
     } finally {
       setTvSwitchBusy(false);
     }
@@ -1263,6 +1393,27 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
             </ButtonItem>
           </PanelSectionRow>
           {tvSwitchMessage && <PanelSectionRow>{tvSwitchMessage}</PanelSectionRow>}
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={requestSafeDisconnect}
+              disabled={
+                safeDisconnectBusy
+                || !disconnect?.applicable
+                || Boolean(tvSwitchAcknowledgementId)
+                || Boolean(journalStatus && journalStatus.code !== "journal.idle")
+              }
+            >
+              {safeDisconnectBusy
+                ? "Checking…"
+                : payload?.inference.mode === "portable"
+                  ? "Shut down to disconnect G1"
+                  : "Prepare G1 disconnect"}
+            </ButtonItem>
+          </PanelSectionRow>
+          {safeDisconnectMessage && (
+            <PanelSectionRow>{safeDisconnectMessage}</PanelSectionRow>
+          )}
           {journalStatus && journalStatus.code !== "journal.idle" && (
             <DiagnosticRow name="Safety journal" value={label(journalStatus.owner)} />
           )}
@@ -1283,7 +1434,7 @@ function Content({ preflight }: { preflight: SleepPreflightCoordinator }) {
           {tvSwitchAcknowledgementId && (
             <PanelSectionRow>
               <ButtonItem layout="below" onClick={() => void acknowledgeTvSwitch()} disabled={tvSwitchBusy}>
-                Acknowledge prior TV switch result
+                Acknowledge prior display transition result
               </ButtonItem>
             </PanelSectionRow>
           )}

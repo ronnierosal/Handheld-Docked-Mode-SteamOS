@@ -102,6 +102,22 @@ fresh Portable state, and then restores the previously captured Portable audio
 sink. Unknown or contradictory evidence and timeout require attention without
 display mutation. Shutdown-before-disconnect remains the supported rule.
 
+## What the later reconnect taught us
+
+After the native recovery supervisor was installed, a later G1 attach produced
+USB4 and PCI evidence for the RX 7600M XT but no bound `amdgpu` driver, DRM card,
+or TV connector. HDM correctly refused to dock. This separates successful
+Portable fallback from subsequent driver/tunnel recovery; one does not prove
+the other. No driver probe, unbind, or USB4 reset was attempted.
+
+The next local candidate adds a controller-focusable **Prepare G1 disconnect**
+workflow. It returns TV Docked to verified Portable through the same durable
+transition engine, requires acknowledgement, then allows a separately confirmed
+normal shutdown only from fresh idle Portable evidence. Cable removal remains
+permitted only after fans and every power LED are off. Attach settling and
+correlated unexpected-loss observation tighten to 250 ms, but kernel USB4/PCI
+enumeration and Gamescope restart remain independent timing budgets.
+
 See [Troubleshooting](Troubleshooting),
 [Safety and eGPU Handling](Safety-and-eGPU-Handling), and
 [Issues Fixed](Issues-Fixed).

@@ -388,6 +388,14 @@ export const executeSupervisedTvSwitch = callable<
   [string],
   SupervisedTvSwitchOutcomePayload
 >("execute_supervised_tv_switch");
+export const approveSupervisedPortableSwitch = callable<
+  [],
+  SupervisedTvSwitchApprovalPayload
+>("approve_supervised_portable_switch");
+export const executeSupervisedPortableSwitch = callable<
+  [string],
+  SupervisedTvSwitchOutcomePayload
+>("execute_supervised_portable_switch");
 export const acknowledgeSupervisedTvSwitch = callable<
   [string],
   SupervisedTvSwitchAcknowledgementPayload
@@ -396,6 +404,28 @@ export const getSupervisedTvSwitchStatus = callable<
   [],
   SupervisedTvSwitchStatusPayload
 >("get_supervised_tv_switch_status");
+
+export interface SafeDisconnectShutdownApprovalPayload {
+  schema_version: number;
+  ready: boolean;
+  approval_token: string;
+  blockers: string[];
+}
+
+export interface SafeDisconnectShutdownOutcomePayload {
+  schema_version: number;
+  accepted: boolean;
+  code: string;
+}
+
+export const approveSafeDisconnectShutdown = callable<
+  [],
+  SafeDisconnectShutdownApprovalPayload
+>("approve_safe_disconnect_shutdown");
+export const executeSafeDisconnectShutdown = callable<
+  [string],
+  SafeDisconnectShutdownOutcomePayload
+>("execute_safe_disconnect_shutdown");
 
 export type TransitionJournalOwner =
   | "none"

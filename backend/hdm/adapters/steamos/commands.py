@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Sequence
 
 from ...ports.presentation_activation import UserServiceOperation
+from ...ports.system_power import PowerOffResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -430,3 +431,40 @@ class UserServiceCommandRunner:
             returncode=completed.returncode,
             output=decoded,
         )
+
+
+class SystemPowerCommandRunner:
+    """Queue only the fixed, ordinary system power-off operation."""
+
+    SYSTEMCTL = "/usr/bin/systemctl"
+    COMMAND = (SYSTEMCTL, "--no-block", "poweroff")
+    CLEAN_ENVIRONMENT = {
+        "LANG": "C",
+        "LC_ALL": "C",
+        "PATH": "/usr/bin:/bin",
+    }
+
+    def __init__(self, timeout_seconds: float = 5.0, effective_uid=None) -> None:
+        self._timeout_seconds = timeout_seconds
+        self._effective_uid = effective_uid or getattr(os, "geteuid", lambda: -1)
+
+    def request_poweroff(self) -> PowerOffResult:
+        if self._effective_uid() != 0:
+            return PowerOffResult(False, "safe_disconnect.root_required")
+        try:
+            completed = subprocess.run(
+                self.COMMAND,
+                capture_output=True,
+                check=False,
+                shell=False,
+                text=False,
+                timeout=self._timeout_seconds,
+                env=dict(self.CLEAN_ENVIRONMENT),
+            )
+        except subprocess.TimeoutExpired:
+            return PowerOffResult(False, "safe_disconnect.poweroff_timeout")
+        except (OSError, subprocess.SubprocessError):
+            return PowerOffResult(False, "safe_disconnect.poweroff_unavailable")
+        if completed.returncode != 0:
+            return PowerOffResult(False, "safe_disconnect.poweroff_failed")
+        return PowerOffResult(True, "safe_disconnect.poweroff_requested")

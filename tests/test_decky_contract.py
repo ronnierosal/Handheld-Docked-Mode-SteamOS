@@ -59,6 +59,10 @@ class DeckyContractTests(unittest.TestCase):
                 "preview_supervised_tv_switch",
                 "approve_supervised_tv_switch",
                 "execute_supervised_tv_switch",
+                "approve_supervised_portable_switch",
+                "execute_supervised_portable_switch",
+                "approve_safe_disconnect_shutdown",
+                "execute_safe_disconnect_shutdown",
                 "acknowledge_supervised_tv_switch",
                 "get_supervised_tv_switch_status",
                 "get_transition_journal_status",
@@ -80,6 +84,8 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn("audio=self._audio_handoff_service()", source)
         self.assertIn("PipeWireCommandRunner", source)
         self.assertIn("PortableAudioStateStore", source)
+        self.assertIn("SafeDisconnectShutdownService", source)
+        self.assertIn("SystemPowerCommandRunner", source)
         self.assertIn("SupervisedPresentationTransitionService", source)
         self.assertIn("TransitionOrchestrator", source)
         self.assertIn("config=PresentationConfigStore(presentation_state_root)", source)
@@ -125,6 +131,8 @@ class DeckyContractTests(unittest.TestCase):
             "approve_presentation_preparation",
             "preview_supervised_tv_switch",
             "approve_supervised_tv_switch",
+            "approve_supervised_portable_switch",
+            "approve_safe_disconnect_shutdown",
             "get_supervised_tv_switch_status",
             "get_transition_journal_status",
             "get_process_release_status",
@@ -158,6 +166,10 @@ class DeckyContractTests(unittest.TestCase):
         self.assertIn('"preview_supervised_tv_switch"', source)
         self.assertIn('"approve_supervised_tv_switch"', source)
         self.assertIn('"execute_supervised_tv_switch"', source)
+        self.assertIn('"approve_supervised_portable_switch"', source)
+        self.assertIn('"execute_supervised_portable_switch"', source)
+        self.assertIn('"approve_safe_disconnect_shutdown"', source)
+        self.assertIn('"execute_safe_disconnect_shutdown"', source)
         self.assertIn('"acknowledge_supervised_tv_switch"', source)
         self.assertIn('"get_supervised_tv_switch_status"', source)
         self.assertIn('"get_transition_journal_status"', source)

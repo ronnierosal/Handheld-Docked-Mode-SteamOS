@@ -299,6 +299,24 @@ session/process change, unknown placement, or provenance mismatch. A verified
 TV result or verified Portable rollback is required; connected HDMI alone never
 passes this stage.
 
+#### D5.2 — Player-watched shutdown-before-disconnect proof
+
+Run only after TV Docked is visibly verified, no game is running, controls and
+SSH are available, and the current presentation journal is idle. The player may
+select **Prepare G1 disconnect** and confirm the return to Ally. HDM must use the
+same durable transition engine, visibly recover the internal display, verify
+the internal render GPU and Portable audio, and expose the exact terminal
+acknowledgement after Game Mode returns.
+
+After acknowledgement, the control must read **Shut down to disconnect G1**.
+The player may confirm it only while HDM still reports idle Portable. The Ally
+must complete a normal shutdown. Do not disconnect on an accepted RPC or a dark
+screen alone: wait until fans stop and every top power LED is off. Only then may
+the player remove the G1 cable. Boot again with the G1 absent and capture the
+Portable/controller state before testing a new attach. Any unknown game,
+non-Portable placement, changed generation, active journal, lost controller, or
+incomplete shutdown stops the stage.
+
 The first watched G1/TV attempt did not switch output; the shim retained the
 internal panel because the transition launch configuration was written where the
 shim could not read it. Treat that attempt as a failed acceptance result. The

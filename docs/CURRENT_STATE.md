@@ -90,8 +90,21 @@ local ZIP.
   and built-in controls after recovery. A local supervisor now binds the last
   exact idle TV-Docked observation, waits for and verifies that native Portable
   recovery, and then restores the captured Portable audio sink. It never
-  restarts Gamescope or authorizes removal. This code is implemented/simulated,
-  not installed or hardware tested.
+  restarts Gamescope or authorizes removal. This code is implemented/simulated
+  and installed as revision `85be5385255a`; it has not been exercised through
+  another intentional pull.
+- A later attach on that installed revision exposed a distinct reconnect
+  failure: USB4 and PCI enumerated the RX 7600M XT, but `amdgpu` did not bind,
+  no G1 DRM device or external connector appeared, and HDM correctly remained
+  Portable. No driver probe, bind, unbind, or USB4 reset was attempted. This is
+  evidence that native Portable recovery does not by itself guarantee a clean
+  subsequent reconnect.
+- The current implementation adds a controller-focusable two-stage disconnect
+  fallback: use the existing durable transition engine to return to Portable,
+  acknowledge its result, then issue one separately confirmed power-off request
+  only from fresh idle Portable evidence. It also reduces exact attach-settling
+  and correlated-loss observation to 250 ms. These changes are implemented and
+  simulated, not installed or hardware tested.
 - Automatic docking remains behind an off-by-default persistent player opt-in.
   Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
@@ -127,9 +140,14 @@ hardware-tested behavior.
    selection, automatic TV audio, and one committed transition.
 3. Exercise the supervised return-to-Portable path while the G1 remains attached;
    verify internal display and the exact captured portable audio before shutdown.
-4. Install the native-recovery supervisor only during a G1-disconnected
-   supervised session, then validate ordinary attach/return behavior before any
-   separately approved repeat of an unexpected-loss scenario.
-5. Design the Phase 2 unified installed diagnostic report and deployment record.
-6. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
+4. Validate ordinary attach/return behavior with the installed native-recovery
+   supervisor before any separately approved repeat of an unexpected-loss
+   scenario.
+5. Validate TV-to-Portable, durable acknowledgement, confirmed shutdown, and
+   complete power-off before cable removal. Do not perform a powered live pull.
+6. Diagnose the observed unbound-G1 reconnect with a separately approved,
+   supervised one-shot driver-probe experiment before adding any recovery
+   mutation.
+7. Design the Phase 2 unified installed diagnostic report and deployment record.
+8. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
    and synthetic tests before claiming future-device extensibility.

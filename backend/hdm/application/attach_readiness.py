@@ -141,7 +141,7 @@ def _status(stage: AttachReadinessStage, code: str) -> AttachReadinessStatus:
         (
             30_000
             if stage is AttachReadinessStage.IDLE
-            else 750 if stage is AttachReadinessStage.SETTLING else 1_000
+            else 250 if stage is AttachReadinessStage.SETTLING else 1_000
         ),
     )
 

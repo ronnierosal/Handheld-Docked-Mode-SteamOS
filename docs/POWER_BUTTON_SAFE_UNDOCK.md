@@ -31,9 +31,12 @@ exact **Guide + Y** held for 1.2 seconds. Its pure policy emits
 delivery relay accepts one verified opaque event at most once and has no input
 listener, mechanism, or transition authority.
 
-No UI may claim physical power-button support. The fallback is also dormant
-until a controller input adapter can verify/debounce input and deliver it to the
-one authoritative transition-request sink.
+No UI may claim physical power-button support. Guide + Y remains dormant until
+a controller input adapter can verify/debounce input and deliver it to the one
+authoritative transition-request sink. A controller-focusable Decky fallback is
+implemented separately: return to verified Portable, acknowledge the durable
+transition, then issue one confirmed normal shutdown. Physical removal remains
+prohibited until the Ally is completely off.
 
 ## Future gate
 

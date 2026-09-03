@@ -22,6 +22,7 @@ REQUIRED_FILES = (
     "backend/hdm/adapters/presentation_transition.py",
     "backend/hdm/application/presentation_activation.py",
     "backend/hdm/application/supervised_transition.py",
+    "backend/hdm/application/safe_disconnect_shutdown.py",
     "backend/hdm/application/shared_transition_journal.py",
     "backend/hdm/application/guarded_process_release.py",
     "backend/hdm/application/docked_igpu_lifecycle.py",
@@ -35,6 +36,7 @@ REQUIRED_FILES = (
     "backend/hdm/delivery/runtime_state.py",
     "backend/hdm/delivery/transition_journal_store.py",
     "backend/hdm/ports/presentation_activation.py",
+    "backend/hdm/ports/system_power.py",
     "backend/hdm/ports/gamescope_session.py",
     "backend/hdm/domain/gamescope_session.py",
     "bin/gamescope",
@@ -104,6 +106,10 @@ def main() -> int:
             "preview_supervised_tv_switch",
             "approve_supervised_tv_switch",
             "execute_supervised_tv_switch",
+            "approve_supervised_portable_switch",
+            "execute_supervised_portable_switch",
+            "approve_safe_disconnect_shutdown",
+            "execute_safe_disconnect_shutdown",
             "acknowledge_supervised_tv_switch",
             "get_supervised_tv_switch_status",
             "get_transition_journal_status",
@@ -116,7 +122,7 @@ def main() -> int:
         }
         if public_methods != allowed_methods:
             failures.append(
-                "Decky RPCs must remain limited to diagnostics/logging, read-only peripheral/watcher/action-history status, automatic-dock preference/status, approved support export, supervised preparation, the guarded TV transition path, and guarded process release"
+                "Decky RPCs must remain limited to diagnostics/logging, read-only peripheral/watcher/action-history status, automatic-dock preference/status, approved support export, supervised presentation, confirmed shutdown-before-disconnect, and guarded process release"
             )
 
     delivery_sources = "\n".join(
@@ -134,7 +140,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        "Plugin package check passed: diagnostics/logging, read-only peripheral/watcher/action-history status, automatic-dock preference/status, support export, sleep guard, supervised preparation, the guarded TV transition path, and guarded process release only."
+        "Plugin package check passed: diagnostics/logging, read-only peripheral/watcher/action-history status, automatic-dock preference/status, support export, sleep guard, supervised presentation, confirmed shutdown-before-disconnect, and guarded process release only."
     )
     return 0
 
