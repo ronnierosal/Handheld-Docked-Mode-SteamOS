@@ -189,6 +189,36 @@ journal or allow the Decky UI to supply a command target.
 - Repeated connect, return, shutdown/disconnect, sleep/recovery, reconnect, and
   gameplay cycles remain required before the end-to-end journey is certified.
 
+## Follow-up: observed idle live pull and native recovery
+
+A later player-directed test physically removed the G1 while the successful TV
+Docked session was idle. HDM did not authorize the pull. The external DRM path
+disappeared immediately, the Ally panel backlight returned with a black image,
+and Gamescope and Steam were absent while the operating system, SSH, and Decky
+plugin remained responsive. The post-loss snapshot retained incomplete
+USB4/PCI evidence, so the G1 profile correctly became Unknown rather than
+claiming verified removal.
+
+SteamOS then relaunched Gamescope on the internal panel and restarted Steam
+without an HDM mutation. The observed interval from connector loss to the new
+internal Gamescope session was approximately 80 seconds. The player confirmed
+that the Steam interface and built-in controller worked after recovery.
+
+This is useful recovery evidence, but it is not proof that G1 live removal is
+safe. The test did not establish clean PCIe/AER/kernel teardown evidence,
+running-game survival, repeatability, audio restoration, or recovery from every
+failure stage.
+
+The follow-up implementation therefore supervises rather than races the native
+path. It arms only from an exact, idle TV-Docked observation, recognizes the
+specific correlated degraded interval, waits at most 120 seconds, and accepts
+success only after a fresh observation verifies Portable. It does not restart
+Gamescope or authorize removal. After verified Portable recovery, it may
+restore only the root-captured Portable audio sink; that restoration no longer
+depends on the disappeared G1 audio identity. Unknown game state, missing
+internal-path evidence, uncorrelated samples, or timeout becomes Action
+Required without display mutation.
+
 Related contracts: [Safety invariants](SAFETY_INVARIANTS.md),
 [Architecture](ARCHITECTURE.md), [Peripheral handoff](PERIPHERAL_HANDOFF.md),
 [Roadmap](ROADMAP.md), and [Operator handoff](OPERATOR_HANDOFF.md).

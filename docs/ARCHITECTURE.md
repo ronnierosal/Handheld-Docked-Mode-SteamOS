@@ -355,6 +355,16 @@ later canonical re-check. It is not constructed by Decky and has no production
 mechanism adapter. See
 [Unexpected-undock recovery coordinator](UNEXPECTED_UNDOCK_RECOVERY.md).
 
+A separate production observer now supervises SteamOS' own recovery without
+activating that dormant display mechanism. `NativePortableRecoverySupervisor`
+keeps an in-memory exact idle TV-Docked baseline, recognizes only a correlated
+interval in which Gamescope is stopped, the bound external display is verified
+disconnected, and the bound internal GPU/panel remain available, then waits at
+most 120 seconds for a fresh verified Portable observation. Timeout or
+contradictory evidence becomes Action Required. A verified result may restore
+the root-captured Portable audio sink, but the observer never restarts
+Gamescope, advances sleep, or describes physical removal as safe.
+
 The manual planner supports only the bounded Portable↔Docked-eGPU path and
 verified no-ops. A mutating plan requires exact runtime host/eGPU profile
 resolution, an ephemeral binding to every participating GPU/display, idle game

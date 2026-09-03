@@ -86,6 +86,22 @@ return. PipeWire numeric node IDs are ephemeral and are never persisted.
   sleep/recovery, and reconnect journey before certification.
 - Continue to shut down fully before physically disconnecting the G1.
 
+## What the later live-pull observation taught us
+
+In one player-directed idle test, the G1 was physically removed while TV Docked.
+The Ally backlight returned black, Gamescope and Steam stopped, and the G1
+profile became Unknown because stale/incomplete USB4 evidence remained. The
+operating system, network, and Decky stayed alive. Roughly 80 seconds later,
+SteamOS restarted Gamescope on the internal panel and restarted Steam; the
+player confirmed both the interface and built-in controller worked.
+
+That is recovery evidence, not safe-removal certification. HDM's follow-up code
+therefore observes the native path instead of racing it with another restart.
+It arms only from exact idle TV Docked, waits up to 120 seconds, verifies a
+fresh Portable state, and then restores the previously captured Portable audio
+sink. Unknown or contradictory evidence and timeout require attention without
+display mutation. Shutdown-before-disconnect remains the supported rule.
+
 See [Troubleshooting](Troubleshooting),
 [Safety and eGPU Handling](Safety-and-eGPU-Handling), and
 [Issues Fixed](Issues-Fixed).

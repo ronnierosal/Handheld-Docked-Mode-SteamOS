@@ -13,6 +13,13 @@ uses injected observation, clock/wait, and recovery-mechanism ports. Exact
 hardware identities remain ephemeral mechanism inputs and never enter the
 bounded result trace.
 
+This dormant action coordinator is distinct from the production
+`NativePortableRecoverySupervisor`. The latter has no display mechanism: it
+binds an exact idle TV-Docked baseline, observes the degraded Gamescope-down
+interval seen during the 2026-09-02 Ally X/GPD G1 test, waits for SteamOS to
+restart on the internal panel, and verifies Portable. Only after that verified
+native result may it restore the previously captured Portable audio sink.
+
 ## Guarded sequence
 
 ```text

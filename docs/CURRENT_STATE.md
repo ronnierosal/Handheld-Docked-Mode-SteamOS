@@ -16,7 +16,7 @@ git rev-list --left-right --count origin/main...HEAD
 | Field | Audited value |
 |---|---|
 | Branch | `main` |
-| Audited implementation baseline | `80bd8d4cfd6665387e806a548cfa040d508a5bd9` |
+| Audited implementation baseline | `4492a7b81251f31240444fae192ae5dc9291f50b` |
 | Governance integration | Repository-governance commits follow that baseline locally; inspect `git log` for the live tip |
 | Worktree | Clean at the audit baseline; verify live before acting |
 | Remote relation | Mutable; run the commands above before relying on it |
@@ -84,6 +84,14 @@ local ZIP.
   implemented and simulated; only its direct supervised G1 HDMI selection has
   hardware proof. Automatic selection and Portable restoration still require a
   watched install/connect/return cycle.
+- One player-directed idle live pull left the Ally backlight black while
+  Gamescope and Steam were absent, then SteamOS natively restored Gamescope on
+  the internal panel after approximately 80 seconds. The player verified Steam
+  and built-in controls after recovery. A local supervisor now binds the last
+  exact idle TV-Docked observation, waits for and verifies that native Portable
+  recovery, and then restores the captured Portable audio sink. It never
+  restarts Gamescope or authorizes removal. This code is implemented/simulated,
+  not installed or hardware tested.
 - Automatic docking remains behind an off-by-default persistent player opt-in.
   Boosted Handheld and physical
   live eGPU removal are not available. The current G1 policy remains shutdown
@@ -119,6 +127,9 @@ hardware-tested behavior.
    selection, automatic TV audio, and one committed transition.
 3. Exercise the supervised return-to-Portable path while the G1 remains attached;
    verify internal display and the exact captured portable audio before shutdown.
-4. Design the Phase 2 unified installed diagnostic report and deployment record.
-5. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
+4. Install the native-recovery supervisor only during a G1-disconnected
+   supervised session, then validate ordinary attach/return behavior before any
+   separately approved repeat of an unexpected-loss scenario.
+5. Design the Phase 2 unified installed diagnostic report and deployment record.
+6. Resolve the P0/P1 hardware-coupling findings with narrow profile-driven seams
    and synthetic tests before claiming future-device extensibility.
