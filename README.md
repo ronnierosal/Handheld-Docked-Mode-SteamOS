@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="docs/images/hdm-icon.jpg" alt="Handheld Dock Mode icon" width="260">
+<img src="docs/images/re-gear-icon.png" alt="Re-Gear: handheld today, console tomorrow" width="320">
 
-# Handheld Dock Mode
+# Re-Gear
 
 **Safety-first, games-first reliability companion for SteamOS handheld PCs**
 
-HDM aims to make handheld gaming console-simple: status first, low overhead,
+Re-Gear aims to make handheld gaming console-simple: status first, low overhead,
 and no avoidable surprises. It verifies GPU, display, Gamescope, game, and
 hardware state before any future dock-mode action.
 
@@ -30,7 +30,7 @@ hardware state before any future dock-mode action.
 
 ## 📖 About
 
-Handheld Dock Mode (HDM) is a Decky Loader-native reliability companion for
+Re-Gear (formerly Handheld Dock Mode / HDM) is a Decky Loader-native reliability companion for
 console-like SteamOS handheld gaming. Its North Star is to reduce PC-gaming
 paper cuts by detecting problems, preventing avoidable failures, explaining
 state in player language, and safely guiding or performing verified recovery

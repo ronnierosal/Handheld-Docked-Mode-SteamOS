@@ -1,3 +1,8 @@
+/** Player-facing name; keep legacy installation and safety-state identities separate. */
+const PRODUCT_NAME = "Re-Gear";
+
+var brandIcon = 'http://127.0.0.1:1337/plugins/Handheld Dock Mode/assets/re-gear-icon-b6b48854.png';
+
 const manifest = {"name":"Handheld Dock Mode"};
 const API_VERSION = 2;
 const internalAPIConnection = window.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
@@ -197,7 +202,7 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
                 : "unavailable",
         },
         { name: "Snapshot schema", value: String(snapshot.schema_version) },
-        { name: "Reported HDM build", value: reportedBuildLabel(payload.diagnostics.build) },
+        { name: "Reported Re-Gear build", value: reportedBuildLabel(payload.diagnostics.build) },
         {
             name: "Device profile",
             value: profiles.host.status === "exact"
@@ -285,7 +290,7 @@ function diagnosticOverlayRows(payload, dockedIgpuStatus = null, loggingStatus =
                 .join(" · ") || "unavailable",
         },
         {
-            name: "HDM overhead",
+            name: "Re-Gear overhead",
             value: overheadMeasurementLabel(payload.diagnostics.overhead_measurement),
         },
         {
@@ -377,7 +382,7 @@ function StatusCard({ name, value }) {
 const HEALTH_BLOCKER_MESSAGES = {
     "health.placement_degraded": "Current mode needs attention.",
     "health.placement_unknown": "Current mode needs verification.",
-    "health.workflow_unknown": "HDM recovery status needs review.",
+    "health.workflow_unknown": "Re-Gear recovery status needs review.",
     "health.session_degraded": "Steam session is not usable.",
     "health.session_unknown": "Steam session status needs verification.",
     "health.display_degraded": "Active display is not usable.",
@@ -390,8 +395,8 @@ const HEALTH_BLOCKER_MESSAGES = {
     "health.controller_unknown": "Built-in controls need verification.",
     "health.audio_degraded": "Current audio output is not usable.",
     "health.audio_unknown": "Current audio output needs verification.",
-    "health.no_observations": "HDM health evidence is unavailable.",
-    "health.duplicate_component": "HDM health evidence is inconsistent.",
+    "health.no_observations": "Re-Gear health evidence is unavailable.",
+    "health.duplicate_component": "Re-Gear health evidence is inconsistent.",
 };
 function healthStatusLabel(health, loading = false) {
     if (loading) {
@@ -418,7 +423,7 @@ function healthAttentionMessages(health) {
     if (!health || health.state === "ready" || !Array.isArray(health.blockers)) {
         return [];
     }
-    const messages = health.blockers.map((blocker) => HEALTH_BLOCKER_MESSAGES[blocker] ?? "HDM health evidence needs review.");
+    const messages = health.blockers.map((blocker) => HEALTH_BLOCKER_MESSAGES[blocker] ?? "Re-Gear health evidence needs review.");
     return [...new Set(messages)].slice(0, 3);
 }
 
@@ -460,7 +465,7 @@ function decideLinkHealthNotification(previous, payload) {
             notification: wasUnstable
                 ? {
                     title: "eGPU link observed again",
-                    body: "HDM is preserving the current setup. Verify the display and controls before changing it.",
+                    body: "Re-Gear is preserving the current setup. Verify the display and controls before changing it.",
                     critical: false,
                 }
                 : null,
@@ -473,7 +478,7 @@ function decideLinkHealthNotification(previous, payload) {
         memory: { ...current, instabilityNotified: true },
         notification: {
             title: current.state === "down" ? "eGPU link is down" : "eGPU link needs verification",
-            body: "HDM is preserving the current setup. Avoid disconnecting until the link is stable.",
+            body: "Re-Gear is preserving the current setup. Avoid disconnecting until the link is stable.",
             critical: false,
         },
     };
@@ -592,7 +597,7 @@ const JOURNEY_STATES = {
     },
     link_instability: {
         stable_observed: ["Stable state observed", "Two observed samples matched; this is not a performance or link-quality rating."],
-        instability_observed: ["State change observed", "Review the current link observation; HDM does not diagnose cable quality."],
+        instability_observed: ["State change observed", "Review the current link observation; Re-Gear does not diagnose cable quality."],
         evidence_insufficient: ["Evidence incomplete", "Fresh observed link evidence is unavailable."],
     },
     offline_readiness: {
@@ -749,7 +754,7 @@ function connectionProgress(payload) {
             label: snapshot.egpu_link.applicable && snapshot.egpu_link.state === "down"
                 ? "eGPU link needs attention"
                 : "eGPU link needs verification",
-            detail: "HDM is preserving the current setup. Verify the display and controls before changing it.",
+            detail: "Re-Gear is preserving the current setup. Verify the display and controls before changing it.",
             settling: true,
         };
     }
@@ -903,7 +908,7 @@ function warningForBlockedAttempt(observation) {
     return {
         kind: "unknown",
         title: "Sleep blocked — safety state is unknown",
-        body: "HDM could not verify that the eGPU is safely absent, so the sleep request was not started.",
+        body: "Re-Gear could not verify that the eGPU is safely absent, so the sleep request was not started.",
         critical: true,
     };
 }
@@ -1109,7 +1114,7 @@ function showSupportBundlePreview(preview, onClose) {
     };
     // Let Decky resolve Steam's visible SP window. This plugin executes in the
     // invisible SharedJSContext, so using its global window hides the dialog.
-    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Redacted support bundle preview", strOKButtonText: "Close preview", bAlertDialog: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close, children: SP_JSX.jsxs("div", { style: { fontSize: "12px", lineHeight: "17px" }, children: [SP_JSX.jsx("p", { children: "Review this exact redacted JSON before copying or saving it. The save approval expires after five minutes and can be used once." }), SP_JSX.jsx("div", { style: { maxHeight: "55vh", overflow: "hidden" }, children: SP_JSX.jsx(DFL.ScrollPanel, { children: SP_JSX.jsx("pre", { style: { whiteSpace: "pre-wrap" }, children: preview.preview_json }) }) })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Redacted support bundle preview", strOKButtonText: "Close preview", bAlertDialog: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close, children: SP_JSX.jsxs("div", { style: { fontSize: "12px", lineHeight: "17px" }, children: [SP_JSX.jsx("p", { children: "Review this exact redacted JSON before copying or saving it. The save approval expires after five minutes and can be used once." }), SP_JSX.jsx("div", { style: { maxHeight: "55vh", overflow: "hidden" }, children: SP_JSX.jsx(DFL.ScrollPanel, { children: SP_JSX.jsx("pre", { style: { whiteSpace: "pre-wrap" }, children: preview.preview_json }) }) })] }) }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
 function showPresentationPreparationConfirmation(onConfirm, onClose) {
@@ -1121,7 +1126,7 @@ function showPresentationPreparationConfirmation(onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Prepare experimental display validation?", strOKButtonText: "Prepare", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs HDM's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "Continue only with the eGPU disconnected, no game running, and the handheld screen visible." }), SP_JSX.jsx("p", { children: "This installs Re-Gear's reversible Gamescope startup integration and reloads the user service configuration. It does not restart Gamescope, switch displays, or select a GPU." })] }) }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
 function showAutomaticDockConfirmation(onConfirm, onClose) {
@@ -1133,7 +1138,7 @@ function showAutomaticDockConfirmation(onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Enable automatic TV docking?", strOKButtonText: "Enable", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "When HDM verifies this Ally X, the exact GPD G1, one ready TV, a healthy link, and no running game, it will restart Steam Game Mode onto the TV." }), SP_JSX.jsx("p", { children: "The screen will briefly show Steam shutting down. USB4 presence alone never triggers the restart, and physical live removal remains unsupported." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: "When Re-Gear verifies this Ally X, the exact GPD G1, one ready TV, a healthy link, and no running game, it will restart Steam Game Mode onto the TV." }), SP_JSX.jsx("p", { children: "The screen will briefly show Steam shutting down. USB4 presence alone never triggers the restart, and physical live removal remains unsupported." })] }) }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
 function showSafeDisconnectConfirmation(portable, onConfirm, onClose) {
@@ -1145,7 +1150,7 @@ function showSafeDisconnectConfirmation(portable, onConfirm, onClose) {
     modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: portable ? "Shut down for G1 disconnect?" : "Return to Ally for G1 disconnect?", strOKButtonText: portable ? "Shut down" : "Return to Ally", strCancelButtonText: "Cancel", bDestructiveWarning: true, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsx("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: portable ? (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will revalidate idle Portable mode and request a normal system shutdown." }), SP_JSX.jsx("p", { children: "The request cannot prove physical power-off. Keep the G1 connected until the fan stops and every top power LED is off." }), SP_JSX.jsx("p", { children: "If the fan remains on after 60 seconds, keep the G1 connected and hold the Ally power button until the fan stops." })] })) : (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "HDM will require no running game, then restart Game Mode on the Ally display." }), SP_JSX.jsx("p", { children: "After Portable is verified, acknowledge the result and use this control again to shut down. Do not unplug yet." })] })) }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsx("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: portable ? (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "Re-Gear will revalidate idle Portable mode and request a normal system shutdown." }), SP_JSX.jsx("p", { children: "The request cannot prove physical power-off. Keep the G1 connected until the fan stops and every top power LED is off." }), SP_JSX.jsx("p", { children: "If the fan remains on after 60 seconds, keep the G1 connected and hold the Ally power button until the fan stops." })] })) : (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx("p", { children: "Re-Gear will require no running game, then restart Game Mode on the Ally display." }), SP_JSX.jsx("p", { children: "After Portable is verified, acknowledge the result and use this control again to shut down. Do not unplug yet." })] })) }) }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
 function showPresentationPreparationBlocked(blockers) {
@@ -1158,7 +1163,7 @@ function showPresentationPreparationBlocked(blockers) {
     toaster.toast({
         title: "Display validation is not ready",
         body: ownsPresentationPath
-            ? "Another display integration is active. HDM will not replace it."
+            ? "Another display integration is active. Re-Gear will not replace it."
             : `Preparation blocked: ${blockers.map(label).join(", ")}.`,
         critical: true,
         duration: 12000,
@@ -1176,7 +1181,7 @@ function showProcessReleaseConfirmation(preview, onConfirm, onClose) {
             onConfirm();
         }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsx("p", { children: force
                         ? "Force close may lose unsaved work. Only the exact processes that survived the approved graceful attempt are eligible."
-                        : "HDM will request a graceful close only for the exact ordinary user processes listed below." }), preview.targets.map((target, index) => (SP_JSX.jsxs("p", { children: [target.name, " \u2014 ", target.resources.map(label).join(", ")] }, `${target.name}-${index}`))), preview.protected_client_count > 0 && (SP_JSX.jsxs("p", { children: [preview.protected_client_count, " protected client(s) will not be closed."] })), SP_JSX.jsx("p", { children: "Clearing software clients does not authorize physical eGPU removal. Shut down before disconnecting the eGPU." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+                        : "Re-Gear will request a graceful close only for the exact ordinary user processes listed below." }), preview.targets.map((target, index) => (SP_JSX.jsxs("p", { children: [target.name, " \u2014 ", target.resources.map(label).join(", ")] }, `${target.name}-${index}`))), preview.protected_client_count > 0 && (SP_JSX.jsxs("p", { children: [preview.protected_client_count, " protected client(s) will not be closed."] })), SP_JSX.jsx("p", { children: "Clearing software clients does not authorize physical eGPU removal. Shut down before disconnecting the eGPU." })] }) }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
 function showDiagnosticLoggingConfirmation(durationLabel, onConfirm, onClose) {
@@ -1185,14 +1190,14 @@ function showDiagnosticLoggingConfirmation(durationLabel, onConfirm, onClose) {
         modal.Close();
         onClose();
     };
-    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Enable verbose HDM diagnostics?", strOKButtonText: "Enable", strCancelButtonText: "Cancel", bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: "Enable verbose Re-Gear diagnostics?", strOKButtonText: "Enable", strCancelButtonText: "Cancel", bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: () => {
             close();
             onConfirm();
-        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsxs("p", { children: ["HDM will retain additional sanitized, HDM-only events for ", durationLabel, ". Storage remains capped and verbose logging will not survive a reboot."] }), SP_JSX.jsx("p", { children: "Logs stay on this handheld unless you separately preview, save, and share a support bundle." })] }) }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+        }, onCancel: close, children: SP_JSX.jsxs("div", { style: { fontSize: "13px", lineHeight: "18px" }, children: [SP_JSX.jsxs("p", { children: ["Re-Gear will retain additional sanitized, Re-Gear-only events for ", durationLabel, ". Storage remains capped and verbose logging will not survive a reboot."] }), SP_JSX.jsx("p", { children: "Logs stay on this handheld unless you separately preview, save, and share a support bundle." })] }) }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
-function MonitorIcon() {
-    return (SP_JSX.jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: [SP_JSX.jsx("rect", { x: "3", y: "4", width: "18", height: "13", rx: "2" }), SP_JSX.jsx("path", { d: "M8 21h8M12 17v4" })] }));
+function BrandIcon({ size = 24 }) {
+    return (SP_JSX.jsx("img", { src: brandIcon, alt: "", "aria-hidden": "true", width: size, height: size, style: { objectFit: "contain", flexShrink: 0 } }));
 }
 function preflightObservation(payload) {
     const { snapshot } = payload;
@@ -1266,13 +1271,13 @@ function Content({ preflight }) {
                 setJournalMessage("");
             }
             else if (status.owner === "sleep" && status.acknowledgement_required) {
-                setJournalMessage("A prior sleep result must be acknowledged before HDM can switch displays.");
+                setJournalMessage("A prior sleep result must be acknowledged before Re-Gear can switch displays.");
             }
             else if (status.code === "journal.recovery_required") {
-                setJournalMessage(`An interrupted ${label(status.owner)} workflow requires recovery. HDM will not retry it automatically.`);
+                setJournalMessage(`An interrupted ${label(status.owner)} workflow requires recovery. Re-Gear will not retry it automatically.`);
             }
             else if (status.owner === "unknown") {
-                setJournalMessage("The safety journal owner is unknown. HDM will not clear it or switch displays.");
+                setJournalMessage("The safety journal owner is unknown. Re-Gear will not clear it or switch displays.");
             }
             else {
                 setJournalMessage(`A prior ${label(status.owner)} result still needs attention.`);
@@ -1280,7 +1285,7 @@ function Content({ preflight }) {
         }
         catch {
             setJournalStatus(null);
-            setJournalMessage("Shared safety-journal status is unavailable. HDM will not switch displays.");
+            setJournalMessage("Shared safety-journal status is unavailable. Re-Gear will not switch displays.");
         }
     }, []);
     SP_REACT.useEffect(() => () => {
@@ -1349,11 +1354,11 @@ function Content({ preflight }) {
                 setTvSwitchAcknowledgementId(status.acknowledgement_id);
             }
             setTvSwitchMessage(status.action_required
-                ? "A prior display transition needs acknowledgement. HDM did not claim its target is active."
+                ? "A prior display transition needs acknowledgement. Re-Gear did not claim its target is active."
                 : `Previous display transition result: ${label(status.code)}.`);
         }).catch(() => {
             if (!disposed) {
-                setTvSwitchMessage("Display-transition safety state is unavailable. HDM did not claim success.");
+                setTvSwitchMessage("Display-transition safety state is unavailable. Re-Gear did not claim success.");
             }
         });
         return () => {
@@ -1707,8 +1712,8 @@ function Content({ preflight }) {
                 return;
             }
             toaster.toast({
-                title: "HDM is switching to the TV",
-                body: "Watch the handheld screen while HDM verifies the transition.",
+                title: "Re-Gear is switching to the TV",
+                body: "Watch the handheld screen while Re-Gear verifies the transition.",
                 critical: true,
                 duration: 30000,
             });
@@ -1719,7 +1724,7 @@ function Content({ preflight }) {
                 : `TV switch was not accepted: ${label(outcome.code)}.`);
         }
         catch {
-            setTvSwitchMessage("TV switch did not complete. HDM did not claim success.");
+            setTvSwitchMessage("TV switch did not complete. Re-Gear did not claim success.");
         }
         finally {
             setTvSwitchBusy(false);
@@ -1732,7 +1737,7 @@ function Content({ preflight }) {
             const status = await setAutomaticDockEnabled(enabled, enabled);
             setAutomaticDockStatus(status);
             setAutomaticDockMessage(status.enabled
-                ? "Automatic TV docking is enabled. HDM is waiting for complete G1 and TV evidence."
+                ? "Automatic TV docking is enabled. Re-Gear is waiting for complete G1 and TV evidence."
                 : status.code === "automatic_dock.disabled"
                     ? "Automatic TV docking is disabled."
                     : `Automatic TV docking was not changed: ${label(status.code)}.`);
@@ -1768,7 +1773,7 @@ function Content({ preflight }) {
                     return;
                 }
                 toaster.toast({
-                    title: "HDM requested an Ally shutdown",
+                    title: "Re-Gear requested an Ally shutdown",
                     body: "Completion is unverified. Keep the G1 connected until the fan and every top power LED are off.",
                     critical: true,
                     duration: 30000,
@@ -1787,7 +1792,7 @@ function Content({ preflight }) {
                 return;
             }
             toaster.toast({
-                title: "HDM is returning to the Ally",
+                title: "Re-Gear is returning to the Ally",
                 body: "Do not disconnect the G1. Wait for Portable verification, then shut down.",
                 critical: true,
                 duration: 30000,
@@ -1996,7 +2001,7 @@ function Content({ preflight }) {
         });
     }, []);
     const sectionVisibility = quickAccessSectionVisibility(showDiagnostics);
-    return (SP_JSX.jsx(SP_JSX.Fragment, { children: SP_JSX.jsxs("div", { ref: statusAnchor, tabIndex: -1, children: [SP_JSX.jsx(DFL.PanelSection, { title: "At a glance", children: SP_JSX.jsxs(DFL.Focusable, { ref: statusFocusAnchor, "aria-label": "HDM status summary", onGamepadFocus: () => {
+    return (SP_JSX.jsx(SP_JSX.Fragment, { children: SP_JSX.jsxs("div", { ref: statusAnchor, tabIndex: -1, children: [SP_JSX.jsx(DFL.PanelSection, { title: "At a glance", children: SP_JSX.jsxs(DFL.Focusable, { ref: statusFocusAnchor, "aria-label": "Re-Gear status summary", onGamepadFocus: () => {
                             if (statusAnchor.current)
                                 scrollToTopOfOwningPanel(statusAnchor.current);
                         }, children: [atAGlanceRows({
@@ -2037,7 +2042,7 @@ function Content({ preflight }) {
                                 ? `${preflightStatus.blockedAttemptCount} observed this session`
                                 : "None observed this session" }), preflightStatus.error && (SP_JSX.jsx(DFL.PanelSectionRow, { children: preflightStatus.error })), sleepGuard?.required && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [!sleepWarningHidden && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: gameUsesEgpu
                                                 ? "A game is using the eGPU. Sleep is blocked to prevent the known immediate-wake behavior and workload risk."
-                                                : "The attached eGPU is known to wake this handheld immediately after sleep. Sleep remains blocked until the eGPU is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), sectionVisibility.disconnectReadiness && SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), closeEligibleClientCount > 0 && !processAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectProcessRelease("graceful"), disabled: processBusy, children: processBusy ? "Checking…" : "Close eligible eGPU processes" }) })), forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void reviewForceClose(), disabled: processBusy, children: "Review force close" }) })), processAcknowledgementId && !forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeProcessResult(), disabled: processBusy, children: "Acknowledge process-release result" }) })), processMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: processMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Process closure always requires confirmation. Software readiness never authorizes physical eGPU removal." })] }), needsAttention && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), healthAttention.map((message) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: message }, message))), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), sectionVisibility.support && SP_JSX.jsxs(DFL.PanelSection, { title: "Support bundle", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preview a bounded HDM-only report before copying or saving it. Raw hardware IDs, addresses, usernames, home paths, and command lines are excluded or redacted." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void createSupportPreview(), disabled: supportBusy, children: supportBusy ? "Working…" : "Preview redacted support bundle" }) }), supportPreview && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DiagnosticRow, { name: "Preview size", value: `${supportPreview.size_bytes} bytes` }), SP_JSX.jsx(DiagnosticRow, { name: "Recent events", value: String(supportPreview.event_count) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: reviewSupportPreview, disabled: supportBusy, children: "Review exact redacted JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void copySupportPreview(), disabled: supportBusy, children: "Copy reviewed JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void saveApprovedSupportPreview(), disabled: supportBusy, children: "Save reviewed bundle to Downloads" }) })] })), supportMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: supportMessage })] }), sectionVisibility.diagnostics && (SP_JSX.jsxs(DFL.PanelSection, { title: "Troubleshooting details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden." }), optionalDiagnosticsDeferred && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "Additional troubleshooting checks wait until HDM confirms no game is running." })), overlayRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), dockedIgpuStatus?.acknowledgement_required && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeDockedIgpuWatch(), children: "Acknowledge Docked-iGPU watcher state" }) })), dockedIgpuMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: dockedIgpuMessage })), SP_JSX.jsx(DFL.DropdownItem, { label: "Verbose logging duration", description: "Temporary, sanitized, capped, and off by default", rgOptions: DIAGNOSTIC_LOGGING_OPTIONS, selectedOption: diagnosticLoggingDuration, disabled: diagnosticLoggingBusy || diagnosticLoggingStatus?.enabled === true, onChange: (option) => {
+                                                : "The attached eGPU is known to wake this handheld immediately after sleep. Sleep remains blocked until the eGPU is verified absent." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: hideSleepWarning, children: "Never show this explanation again" }) })] })), sleepWarningHidden && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "The explanation is hidden. Sleep protection remains active." }))] }))] }), sectionVisibility.disconnectReadiness && SP_JSX.jsxs(DFL.PanelSection, { title: "Disconnect readiness", children: [SP_JSX.jsx(DiagnosticRow, { name: "Status", value: disconnectStatus }), disconnect?.applicable && (SP_JSX.jsx(DiagnosticRow, { name: "Resource clients", value: String(disconnect.clients.length) })), (disconnect?.storage_devices ?? 0) > 0 && (SP_JSX.jsx(DiagnosticRow, { name: "eGPU storage", value: disconnect?.storage_in_use ? "In use — blocked" : "Not mounted" })), disconnect?.error && SP_JSX.jsx(DFL.PanelSectionRow, { children: disconnect.error }), closeEligibleClientCount > 0 && !processAcknowledgementId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void inspectProcessRelease("graceful"), disabled: processBusy, children: processBusy ? "Checking…" : "Close eligible eGPU processes" }) })), forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void reviewForceClose(), disabled: processBusy, children: "Review force close" }) })), processAcknowledgementId && !forceReceiptToken && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeProcessResult(), disabled: processBusy, children: "Acknowledge process-release result" }) })), processMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: processMessage }), SP_JSX.jsx(DFL.PanelSectionRow, { children: "Process closure always requires confirmation. Software readiness never authorizes physical eGPU removal." })] }), needsAttention && (SP_JSX.jsxs(DFL.PanelSection, { title: "Needs attention", children: [error && SP_JSX.jsx(DFL.PanelSectionRow, { children: error }), healthAttention.map((message) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: message }, message))), snapshot?.blockers.map((blocker) => (SP_JSX.jsx(DFL.PanelSectionRow, { children: blocker.message }, blocker.code)))] })), sectionVisibility.support && SP_JSX.jsxs(DFL.PanelSection, { title: "Support bundle", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Preview a bounded Re-Gear-only report before copying or saving it. Raw hardware IDs, addresses, usernames, home paths, and command lines are excluded or redacted." }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void createSupportPreview(), disabled: supportBusy, children: supportBusy ? "Working…" : "Preview redacted support bundle" }) }), supportPreview && (SP_JSX.jsxs(SP_JSX.Fragment, { children: [SP_JSX.jsx(DiagnosticRow, { name: "Preview size", value: `${supportPreview.size_bytes} bytes` }), SP_JSX.jsx(DiagnosticRow, { name: "Recent events", value: String(supportPreview.event_count) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: reviewSupportPreview, disabled: supportBusy, children: "Review exact redacted JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void copySupportPreview(), disabled: supportBusy, children: "Copy reviewed JSON" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void saveApprovedSupportPreview(), disabled: supportBusy, children: "Save reviewed bundle to Downloads" }) })] })), supportMessage && SP_JSX.jsx(DFL.PanelSectionRow, { children: supportMessage })] }), sectionVisibility.diagnostics && (SP_JSX.jsxs(DFL.PanelSection, { title: "Troubleshooting details", children: [SP_JSX.jsx(DFL.PanelSectionRow, { children: "Read-only technical evidence. Raw hardware identities, connector names, and process IDs are hidden." }), optionalDiagnosticsDeferred && (SP_JSX.jsx(DFL.PanelSectionRow, { children: "Additional troubleshooting checks wait until Re-Gear confirms no game is running." })), overlayRows.map((row) => (SP_JSX.jsx(DiagnosticRow, { name: row.name, value: row.value }, row.name))), dockedIgpuStatus?.acknowledgement_required && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => void acknowledgeDockedIgpuWatch(), children: "Acknowledge Docked-iGPU watcher state" }) })), dockedIgpuMessage && (SP_JSX.jsx(DFL.PanelSectionRow, { children: dockedIgpuMessage })), SP_JSX.jsx(DFL.DropdownItem, { label: "Verbose logging duration", description: "Temporary, sanitized, capped, and off by default", rgOptions: DIAGNOSTIC_LOGGING_OPTIONS, selectedOption: diagnosticLoggingDuration, disabled: diagnosticLoggingBusy || diagnosticLoggingStatus?.enabled === true, onChange: (option) => {
                                 setDiagnosticLoggingDuration(option.data);
                             } }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: diagnosticLoggingStatus?.enabled
                                     ? () => void stopDiagnosticLogging()
@@ -2053,7 +2058,7 @@ function showBlockedAttempt(warning, onClose) {
     };
     // Let Decky resolve Steam's visible SP window after the Power menu closes.
     // SharedJSContext's global window is not a player-visible modal parent.
-    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: warning.title, strDescription: warning.body, strOKButtonText: "OK", bAlertDialog: true, bDestructiveWarning: warning.critical, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close }), window, { strTitle: "Handheld Dock Mode", bNeverPopOut: true });
+    modal = DFL.showModal(SP_JSX.jsx(DFL.ConfirmModal, { strTitle: warning.title, strDescription: warning.body, strOKButtonText: "OK", bAlertDialog: true, bDestructiveWarning: warning.critical, bDisableBackgroundDismiss: true, bHideCloseIcon: true, onOK: close }), window, { strTitle: PRODUCT_NAME, bNeverPopOut: true });
     return modal;
 }
 var index = definePlugin(() => {
@@ -2107,9 +2112,9 @@ var index = definePlugin(() => {
     preflight.start();
     return {
         name: "Handheld Dock Mode",
-        titleView: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "Handheld Dock Mode" }),
+        titleView: SP_JSX.jsxs("div", { className: DFL.staticClasses.Title, style: { display: "flex", alignItems: "center", gap: 8 }, children: [SP_JSX.jsx(BrandIcon, { size: 36 }), PRODUCT_NAME] }),
         content: SP_JSX.jsx(Content, { preflight: preflight }),
-        icon: SP_JSX.jsx(MonitorIcon, {}),
+        icon: SP_JSX.jsx(BrandIcon, {}),
         alwaysRender: true,
         onDismount() {
             if (warningTimer !== null) {

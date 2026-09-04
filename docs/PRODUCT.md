@@ -1,5 +1,19 @@
 # Product definition
 
+## Brand identity
+
+The player-facing brand is **Re-Gear**, formerly Handheld Dock Mode (HDM).
+Use that spelling and capitalization in new UI and product copy. The existing
+status colors and functional icons remain unchanged; the README and plugin use
+the supplied Re-Gear brand artwork. Historical evidence retains its original name.
+
+This is a presentation-only rebrand. Decky identity `Handheld Dock Mode`,
+package/install directory `HandheldDockMode`, `hdm` modules and commands,
+`handheld-dock-mode` state/helper paths, stored preference keys, and managed-file
+markers remain unchanged for compatibility. Their migration requires separate
+upgrade, rollback, and safety-state continuity tests. The Decky plugin list may
+therefore still show the legacy name while the opened panel shows Re-Gear.
+
 ## Objective
 
 HDM's North Star is console-like SteamOS handheld gaming: systematically reduce
