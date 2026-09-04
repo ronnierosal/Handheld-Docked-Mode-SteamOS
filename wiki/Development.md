@@ -4,8 +4,8 @@
 **Evidence reviewed:** 2026-09-02<br>
 **Maturity:** active development with safety-critical boundaries
 
-Read [Contributing](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/CONTRIBUTING.md),
-the [development workflow](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/DEVELOPMENT.md),
+Read [Contributing](https://github.com/ronnierosal/Re-Gear/blob/main/CONTRIBUTING.md),
+the [development workflow](https://github.com/ronnierosal/Re-Gear/blob/main/docs/DEVELOPMENT.md),
 and `AGENTS.md` before changing the repository.
 
 ## Working principles

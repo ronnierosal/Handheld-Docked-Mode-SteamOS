@@ -5,7 +5,7 @@
 **Maturity:** one exact first profile; capability status varies
 
 The authoritative compatibility model is
-[Hardware support](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/HARDWARE_SUPPORT.md).
+[Hardware support](https://github.com/ronnierosal/Re-Gear/blob/main/docs/HARDWARE_SUPPORT.md).
 
 ## Initial validated profile
 
@@ -16,7 +16,7 @@ The authoritative compatibility model is
 | Render GPU | AMD Radeon RX 7600M XT |
 | Display path | TV attached through a G1 display output |
 
-HDM matches the full recorded host and eGPU topology conservatively. A similar
+Re-Gear matches the full recorded host and eGPU topology conservatively. A similar
 product name or matching GPU PCI ID alone is not enough. Runtime card numbers,
 connector suffixes, and bus addresses are rediscovered and are never persistent
 identity.

@@ -1,6 +1,6 @@
 # Security policy
 
-HDM is in active development and has no supported public end-user release yet.
+Re-Gear is in active development and has no supported public end-user release yet.
 
 ## Reporting a vulnerability
 

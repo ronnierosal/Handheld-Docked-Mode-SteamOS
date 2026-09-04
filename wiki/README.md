@@ -1,6 +1,6 @@
-# HDM Wiki source
+# Re-Gear Wiki source
 
-This directory is the reviewed source for the Handheld Dock Mode GitHub Wiki.
+This directory is the reviewed source for the Re-Gear GitHub Wiki.
 It is not the engineering source of truth. Start at [Home](Home.md).
 
 Repository contracts own product, safety, architecture, support, and current

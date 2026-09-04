@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security report
-    url: https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/security/advisories/new
+    url: https://github.com/ronnierosal/Re-Gear/security/advisories/new
     about: Report vulnerabilities privately.

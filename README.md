@@ -10,14 +10,14 @@ Re-Gear aims to make handheld gaming console-simple: status first, low overhead,
 and no avoidable surprises. It verifies GPU, display, Gamescope, game, and
 hardware state before any future dock-mode action.
 
-[![CI](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/actions/workflows/ci.yml/badge.svg)](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/actions/workflows/ci.yml) [![Last commit](https://img.shields.io/github/last-commit/ronnierosal/Handheld-Docked-Mode-SteamOS)](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/commits/main/) ![Version](https://img.shields.io/badge/version-0.2.0-6f42c1) ![Platform](https://img.shields.io/badge/platform-SteamOS-1b2838?logo=steam) [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-2ea44f)](LICENSE)
+[![CI](https://github.com/ronnierosal/Re-Gear/actions/workflows/ci.yml/badge.svg)](https://github.com/ronnierosal/Re-Gear/actions/workflows/ci.yml) [![Last commit](https://img.shields.io/github/last-commit/ronnierosal/Re-Gear)](https://github.com/ronnierosal/Re-Gear/commits/main/) ![Version](https://img.shields.io/badge/version-0.2.0-6f42c1) ![Platform](https://img.shields.io/badge/platform-SteamOS-1b2838?logo=steam) [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-2ea44f)](LICENSE)
 
 [Current status](#-current-status) · [Safety](#-safety-first) · [Development](#-development) · [Documentation](#-documentation)
 
 </div>
 
 > [!IMPORTANT]
-> HDM is in active development and is not a general-availability release.
+> Re-Gear is in active development and is not a general-availability release.
 > Version 0.2.0 exposes diagnostics, eGPU sleep protection, reviewed support
 > bundles, supervised integration preparation, and explicitly approved guarded
 > release of eligible non-game eGPU clients. It does **not** expose a display/GPU
@@ -36,12 +36,12 @@ paper cuts by detecting problems, preventing avoidable failures, explaining
 state in player language, and safely guiding or performing verified recovery
 where authority and evidence allow. Docking is the first domain, not the
 product boundary; today’s implemented scope remains deliberately narrower.
-HDM presents player-friendly placement and journey status—such as **Portable**
+Re-Gear presents player-friendly placement and journey status—such as **Portable**
 or a future **TV Docked** target—instead of DRM connectors, PCI addresses, GPU
 selectors, or Gamescope arguments. Current native transition authority remains
 intentionally narrow and supervised.
 
-The project is deliberately fail-closed. If HDM cannot prove the exact hardware,
+The project is deliberately fail-closed. If Re-Gear cannot prove the exact hardware,
 active display, render GPU, game state, or rollback path, it reports the state
 as unknown or degraded and blocks the action.
 
@@ -72,7 +72,7 @@ It cannot restart Gamescope, switch a display, or select a GPU.
 
 ## 🚦 Current status
 
-HDM `0.2.0` is a development build. The implementation is intentionally split
+Re-Gear `0.2.0` is a development build. The implementation is intentionally split
 between production-safe features and dormant or simulated transition work.
 
 Evidence labels matter: **Implemented** means code and deterministic checks;
@@ -97,7 +97,7 @@ claim. Neither a simulation nor a clean UI promotes hardware support.
 | Automatic docking | Planned | Not available |
 
 The next release-facing gate is supervised validation of the corrected blocked-
-Sleep warning and the controller-visible support preview/save flow. Native HDM
+Sleep warning and the controller-visible support preview/save flow. Native Re-Gear
 TV Docked transition validation remains pending.
 
 See the [authoritative roadmap](docs/ROADMAP.md) for the complete evidence ledger
@@ -105,7 +105,7 @@ and ordered milestones.
 
 ## 🕹️ Player-facing placements
 
-HDM keeps observed placement separate from workflow progress so a pending or
+Re-Gear keeps observed placement separate from workflow progress so a pending or
 failed action can never overwrite hardware truth.
 
 | Placement | Meaning | Current state |
@@ -177,7 +177,7 @@ Each successful CI run retains one **controlled validation artifact** for 14
 days. It contains the ZIP, its SHA-256 manifest, and the exact source revision;
 it is not a GitHub Release, public installer, or automatic deployment. Use it
 only when its workflow commit, `source-revision.txt`, and the installed QAM
-**HDM build** label agree.
+**Re-Gear build** label agree.
 
 After unzipping a downloaded artifact, run
 `python scripts/verify_validation_artifact.py <artifact-directory>` from a
@@ -271,7 +271,7 @@ operating-system calls. Mechanisms live behind narrow ports, hardware
 capabilities come from exact profiles, and public Decky RPCs are checked against
 an explicit allowlist.
 
-HDM is a new SteamOS-first implementation. eGPUBridge supplied useful hardware
+Re-Gear is a new SteamOS-first implementation. eGPUBridge supplied useful hardware
 evidence, but its architecture and behavior are not inherited as proof.
 
 ## 📚 Documentation
@@ -315,7 +315,7 @@ See [Contributing](CONTRIBUTING.md) and the
 
 ## 📜 Licensing
 
-HDM's community distribution is licensed under the
+Re-Gear's community distribution is licensed under the
 [GNU General Public License version 3 or later](LICENSE) (`GPL-3.0-or-later`).
 Commercial/OEM integration, redistribution, bundling, customization, support,
 or branding under terms outside GPLv3+ requires a separate negotiated license;

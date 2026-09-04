@@ -1,5 +1,20 @@
 # Maintainer and agent handoff
 
+## Re-Gear repository checkpoint — 2026-09-03
+
+- Change: local merge `9aeb841` combines journey timing diagnostics with the
+  existing Re-Gear UI. GitHub repository renamed to `ronnierosal/Re-Gear` and
+  origin updated. Public copy, links, and current-state branding notes updated.
+- Verification: architecture, 805 backend tests (5 skipped), compilation,
+  TypeScript, 72 frontend tests, build, and package check passed. Two legacy
+  UI-copy assertions now expect Re-Gear. Generated bundle remained unchanged.
+- Hardware evidence: none; no deployment or transitions performed.
+- Boundaries: runtime identities and checkout directory retain their names.
+  Existing uncommitted research, index, and preview work remains separate.
+- Next safe task: review and authorize pushing the integrated local commits;
+  publishing Wiki source is a separate action. Device installation remains
+  subject to the supervised deployment gate.
+
 This is the operational runbook and checkpoint history. The short mutable
 repository/build/deployment snapshot is [Current state](CURRENT_STATE.md).
 Historical entries here are evidence in their original context, not proof of a

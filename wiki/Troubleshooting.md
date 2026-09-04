@@ -4,13 +4,13 @@
 **Evidence reviewed:** 2026-09-02<br>
 **Maturity:** diagnostic guidance; not permission to mutate hardware
 
-Use HDM's bounded snapshot and support preview described in
-[Diagnostics](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/DIAGNOSTICS.md).
+Use Re-Gear's bounded snapshot and support preview described in
+[Diagnostics](https://github.com/ronnierosal/Re-Gear/blob/main/docs/DIAGNOSTICS.md).
 Do not begin by posting raw logs or hardware identities.
 
 ## Common symptoms
 
-### The eGPU is connected but HDM does not recognize it
+### The eGPU is connected but Re-Gear does not recognize it
 
 Check the categorical host profile, eGPU profile, USB4 authorization, required
 topology functions, driver bindings, and link state. A GPU ID alone is not proof
@@ -58,7 +58,7 @@ Do not claim a fix is installed until the runtime reports the expected identity.
 
 ## Reporting an issue
 
-Include the symptom, expected behavior, HDM version/revision, evidence category,
+Include the symptom, expected behavior, Re-Gear version/revision, evidence category,
 reproduction steps, and the redacted support preview. State whether the result
 was simulated, installed, or intentionally tested on named hardware. Never
 include credentials, private addresses, raw identifiers, or an unrestricted log

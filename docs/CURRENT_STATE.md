@@ -1,5 +1,25 @@
 # Current state
 
+## Re-Gear integration update — 2026-09-03
+
+- The GitHub repository is now `ronnierosal/Re-Gear`; local `origin` uses
+  `https://github.com/ronnierosal/Re-Gear.git`. The checkout directory retains
+  its existing name.
+- Local merge `9aeb841` integrates remote journey timing diagnostics `3a5d162`
+  with UI and branding work through `12dac34`. This records local integration,
+  not publication or installation.
+- Re-Gear branding is implemented in the panel, dialogs, notifications, README,
+  and bundled artwork. Public documentation and Wiki source use the new brand
+  and repository links. Wiki source changes are not live Wiki publication.
+- Decky identity `Handheld Dock Mode`, install directory `HandheldDockMode`,
+  modules, state paths, and preference keys retain legacy names under the
+  [presentation-only branding contract](PRODUCT.md#brand-identity).
+- Integration checks passed: architecture, 805 backend tests (5 skipped),
+  compilation, TypeScript, 72 frontend tests, frontend build, and package check.
+  Two stale backend UI-copy assertions were updated for Re-Gear.
+- No deployment or hardware validation was performed for this update.
+  The implementation and device observations below remain dated evidence.
+
 Last repository audit baseline: **2026-09-02**. This page records a dated
 implementation baseline rather than attempting to name its own containing Git
 commit. Re-verify all mutable facts before a build, deployment, merge, or

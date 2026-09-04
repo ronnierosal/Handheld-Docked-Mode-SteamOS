@@ -6,9 +6,9 @@
 handoff implemented and simulated
 
 The full engineering record is the repository's
-[dated incident note](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/ALLY_X_GPD_G1_DOCKING_INCIDENT_2026-09-02.md).
+[dated incident note](https://github.com/ronnierosal/Re-Gear/blob/main/docs/ALLY_X_GPD_G1_DOCKING_INCIDENT_2026-09-02.md).
 Current capability truth remains in
-[Current State](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/CURRENT_STATE.md).
+[Current State](https://github.com/ronnierosal/Re-Gear/blob/main/docs/CURRENT_STATE.md).
 
 ## What users saw
 

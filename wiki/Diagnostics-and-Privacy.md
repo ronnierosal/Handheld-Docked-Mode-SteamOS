@@ -5,16 +5,16 @@
 **Maturity:** privacy-safe snapshot and reviewed support export implemented
 
 The authoritative contracts are
-[Diagnostics](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/DIAGNOSTICS.md)
-and [Support bundle](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/SUPPORT_BUNDLE.md).
+[Diagnostics](https://github.com/ronnierosal/Re-Gear/blob/main/docs/DIAGNOSTICS.md)
+and [Support bundle](https://github.com/ronnierosal/Re-Gear/blob/main/docs/SUPPORT_BUNDLE.md).
 
-HDM collects enough categorical state to explain hardware and workflow health
+Re-Gear collects enough categorical state to explain hardware and workflow health
 without exposing the user's environment by default. The Decky view and support
 projection use explicit allowlists instead of dumping raw system data.
 
 ## Appropriate diagnostic fields
 
-- HDM version and verified source revision
+- Re-Gear version and verified source revision
 - placement, health, game-state category, and support tier
 - categorical host/eGPU profile resolution
 - render, display, link, sleep, and readiness status
@@ -44,4 +44,4 @@ and local path. Those are metadata rather than credentials, but eliminating
 them from Git history would require a separately approved history rewrite.
 
 See the full
-[privacy audit](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/HARDWARE_PRIVACY_AUDIT_2026-09-02.md).
+[privacy audit](https://github.com/ronnierosal/Re-Gear/blob/main/docs/HARDWARE_PRIVACY_AUDIT_2026-09-02.md).

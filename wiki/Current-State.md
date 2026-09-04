@@ -5,7 +5,7 @@
 **Maturity:** development build; no general public release
 
 This is a readable snapshot, not the mutable engineering record. Verify the
-repository [current-state document](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/CURRENT_STATE.md)
+repository [current-state document](https://github.com/ronnierosal/Re-Gear/blob/main/docs/CURRENT_STATE.md)
 before building, installing, testing, or making a support claim.
 
 ## What exists today

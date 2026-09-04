@@ -6,8 +6,8 @@
 
 This page records useful outcomes without treating a merged code change as
 hardware certification. The repository
-[current state](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/CURRENT_STATE.md)
-and [roadmap](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/ROADMAP.md)
+[current state](https://github.com/ronnierosal/Re-Gear/blob/main/docs/CURRENT_STATE.md)
+and [roadmap](https://github.com/ronnierosal/Re-Gear/blob/main/docs/ROADMAP.md)
 own current status.
 
 | Issue | Fix | Evidence | Remaining gate |
@@ -32,7 +32,7 @@ be resolved as small profile-driven changes with synthetic alternate-profile
 tests, coordinated with the active hardware work.
 
 See the full
-[hardware and privacy audit](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/HARDWARE_PRIVACY_AUDIT_2026-09-02.md).
+[hardware and privacy audit](https://github.com/ronnierosal/Re-Gear/blob/main/docs/HARDWARE_PRIVACY_AUDIT_2026-09-02.md).
 
 The complete causal chain for the Ally X/GPD G1 session is documented in
 [Ally X and GPD G1 docking incident](Ally-X-and-GPD-G1-Docking-Incident).

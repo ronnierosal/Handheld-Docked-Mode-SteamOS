@@ -5,17 +5,17 @@
 **Maturity:** safety policy is authoritative; individual mechanisms remain evidence-gated
 
 Read the complete repository
-[safety invariants](https://github.com/ronnierosal/Handheld-Docked-Mode-SteamOS/blob/main/docs/SAFETY_INVARIANTS.md)
+[safety invariants](https://github.com/ronnierosal/Re-Gear/blob/main/docs/SAFETY_INVARIANTS.md)
 before any hardware-facing work.
 
 ## Current GPD G1 rule
 
-Physical live removal is unsupported. HDM must never describe the G1 as safe to
+Physical live removal is unsupported. Re-Gear must never describe the G1 as safe to
 unplug merely because no software clients are visible. Return to or retain a
 known-good Portable state, shut the handheld down, and only then disconnect the
 G1.
 
-## What HDM will not bypass
+## What Re-Gear will not bypass
 
 - A running game is not migrated between GPUs.
 - A Gamescope-restart transition is blocked when a game is running.
@@ -29,7 +29,7 @@ G1.
 
 Hardware tests begin from a verified baseline and add one device or transition
 at a time. Sleep protection is a separate capability from display switching or
-disconnect readiness. If HDM reports incomplete, stale, unavailable, or unknown
+disconnect readiness. If Re-Gear reports incomplete, stale, unavailable, or unknown
 sleep evidence for the first profile, it keeps the operation blocked rather
 than guessing.
 

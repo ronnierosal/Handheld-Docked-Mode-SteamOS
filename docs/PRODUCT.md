@@ -7,6 +7,9 @@ Use that spelling and capitalization in new UI and product copy. The existing
 status colors and functional icons remain unchanged; the README and plugin use
 the supplied Re-Gear brand artwork. Historical evidence retains its original name.
 
+The GitHub repository is `ronnierosal/Re-Gear`. Repository naming is independent
+of the compatibility-sensitive plugin and runtime identities below.
+
 This is a presentation-only rebrand. Decky identity `Handheld Dock Mode`,
 package/install directory `HandheldDockMode`, `hdm` modules and commands,
 `handheld-dock-mode` state/helper paths, stored preference keys, and managed-file
