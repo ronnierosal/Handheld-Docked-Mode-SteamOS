@@ -5,10 +5,14 @@ import { fileURLToPath } from "node:url";
 const config = deckyPlugin({});
 // Bundle the approved artwork locally; no network or plugin-path dependency.
 const brandImagePath = fileURLToPath(new URL("./docs/images/re-gear-icon.png", import.meta.url));
-config.plugins.push({
+config.plugins.unshift({
   name: "re-gear-brand-image",
+  resolveId(source) {
+    if (source === "../docs/images/re-gear-icon.png") return "\0re-gear-brand-image";
+    return null;
+  },
   load(id) {
-    if (id !== brandImagePath) return null;
+    if (id !== "\0re-gear-brand-image") return null;
     return `export default ${JSON.stringify("data:image/png;base64," + readFileSync(brandImagePath).toString("base64"))};`;
   },
 });

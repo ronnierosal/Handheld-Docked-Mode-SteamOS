@@ -32,3 +32,10 @@ test("UI and README use the supplied local Re-Gear artwork", () => {
   const image = readFileSync(new URL("../docs/images/re-gear-icon.png", import.meta.url));
   assert.deepEqual([...image.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 });
+
+test("committed bundle embeds the artwork without an unpackaged asset URL", () => {
+  const bundle = read("../dist/index.js");
+  const image = readFileSync(new URL("../docs/images/re-gear-icon.png", import.meta.url));
+  assert.ok(bundle.includes("data:image/png;base64," + image.toString("base64")));
+  assert.doesNotMatch(bundle, /\/assets\/re-gear-icon/);
+});
