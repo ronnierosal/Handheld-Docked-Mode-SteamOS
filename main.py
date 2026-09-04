@@ -7,6 +7,7 @@ import os
 import socket
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -177,6 +178,9 @@ from hdm.domain.inference import infer_placement  # noqa: E402
 from hdm.profiles.gpd_g1 import match_gpd_g1  # noqa: E402
 
 
+MAX_JOURNEY_ELAPSED_MS = 24 * 60 * 60 * 1000
+
+
 class Plugin:
     def __init__(self) -> None:
         self._sleep_guard = SleepGuardController()
@@ -204,6 +208,10 @@ class Plugin:
         self._topology_observation = None
         self._attach_readiness = AttachReadinessLifecycle()
         self._last_attach_readiness_code = self._attach_readiness.status().code
+        self._journey_clock_ns = time.monotonic_ns
+        self._journey_timing_lock = threading.Lock()
+        self._journey_started_ns: int | None = None
+        self._journey_stage_started_ns: int | None = None
         self._diagnostic_logging = DiagnosticLoggingController(
             self._events,
             boot_session_id=self._boot_session_id,
@@ -255,20 +263,120 @@ class Plugin:
             readiness_changed = status.code != self._last_attach_readiness_code
             self._last_attach_readiness_code = status.code
         if readiness_changed:
-            decky.logger.info(
-                "HDM attach readiness: stage=%s code=%s",
-                status.stage.value,
-                status.code,
-            )
+            self._record_attach_readiness_status(status)
         if detection.status is not TopologyDetectionStatus.DETECTED:
             return status
-        self._events.append(
+        self._append_journey_event(
             severity="info",
             code=detection.reason_code,
             component="topology",
             stage="observation",
+            create_timeline=detection.reason_code != "topology.egpu_removed",
+            reset_after=detection.reason_code == "topology.egpu_removed",
         )
         return status
+
+    def _record_attach_readiness_status(self, status) -> None:
+        if status.stage is AttachReadinessStage.IDLE:
+            return
+        self._append_journey_event(
+            severity=(
+                "warning"
+                if status.stage is AttachReadinessStage.ACTION_REQUIRED
+                else "info"
+            ),
+            code=status.code,
+            component="connection",
+            stage=status.stage.value,
+            details={"poll_after_ms": status.poll_after_ms},
+        )
+
+    def _append_journey_event(
+        self,
+        *,
+        severity: str,
+        code: str,
+        component: str,
+        stage: str,
+        details: dict[str, object] | None = None,
+        now_ns: int | None = None,
+        create_timeline: bool = True,
+        reset_after: bool = False,
+    ) -> None:
+        observed_ns = self._journey_now_ns() if now_ns is None else now_ns
+        timing = self._journey_timing_details(
+            observed_ns,
+            create=create_timeline,
+            reset_after=reset_after,
+        )
+        event_details = {**timing, **(details or {})}
+        try:
+            self._diagnostic_logging.append(
+                verbosity=DiagnosticVerbosity.NORMAL,
+                severity=severity,
+                code=code,
+                component=component,
+                stage=stage,
+                details=event_details,
+            )
+        except Exception:
+            try:
+                decky.logger.exception("HDM G1 journey support event failed")
+            except Exception:
+                pass
+        try:
+            decky.logger.info(
+                "HDM G1 journey: component=%s stage=%s code=%s elapsed_ms=%s stage_elapsed_ms=%s",
+                component,
+                stage,
+                code,
+                event_details.get("elapsed_ms", "unavailable"),
+                event_details.get("stage_elapsed_ms", "unavailable"),
+            )
+        except Exception:
+            pass
+
+    def _journey_timing_details(
+        self,
+        now_ns: int,
+        *,
+        create: bool,
+        reset_after: bool,
+    ) -> dict[str, int]:
+        with self._journey_timing_lock:
+            if self._journey_started_ns is None:
+                if not create:
+                    return {}
+                self._journey_started_ns = now_ns
+                self._journey_stage_started_ns = now_ns
+            stage_started = self._journey_stage_started_ns or now_ns
+            details = {
+                "elapsed_ms": self._bounded_elapsed_ms(
+                    self._journey_started_ns, now_ns
+                ),
+                "stage_elapsed_ms": self._bounded_elapsed_ms(
+                    stage_started, now_ns
+                ),
+            }
+            self._journey_stage_started_ns = now_ns
+            if reset_after:
+                self._journey_started_ns = None
+                self._journey_stage_started_ns = None
+            return details
+
+    def _journey_now_ns(self) -> int:
+        try:
+            value = self._journey_clock_ns()
+        except Exception:
+            return 0
+        return value if isinstance(value, int) and value >= 0 else 0
+
+    @staticmethod
+    def _bounded_elapsed_ms(started_ns: int, finished_ns: int) -> int:
+        return min(
+            MAX_JOURNEY_ELAPSED_MS,
+            max(0, (finished_ns - started_ns) // 1_000_000),
+        )
 
     async def get_peripheral_status(self, _request: object = None) -> dict[str, object]:
         """Read identity-free controller/audio evidence without any handoff action."""
@@ -425,11 +533,11 @@ class Plugin:
             if isinstance(inference, dict)
             else "unknown"
         )
-        timing_count = (
-            len(diagnostics.get("timings_ms", ()))
+        timing_rows = (
+            diagnostics.get("timings_ms", ())[:32]
             if isinstance(diagnostics, dict)
             and isinstance(diagnostics.get("timings_ms"), list)
-            else 0
+            else ()
         )
         self._diagnostic_logging.append(
             verbosity=DiagnosticVerbosity.VERBOSE,
@@ -442,7 +550,8 @@ class Plugin:
                 "game_state": str(snapshot.get("game_state", "unknown")),
                 "support_tier": str(snapshot.get("support_tier", "unknown")),
                 "blocker_codes": blocker_codes,
-                "timing_count": timing_count,
+                "timing_count": len(timing_rows),
+                "timings_ms": timing_rows,
             },
         )
 
@@ -772,18 +881,66 @@ class Plugin:
         self, approval_token: str
     ) -> dict[str, object]:
         """Execute only one prepared, exact idle TV switch attempt."""
+        return await self._execute_supervised_switch(
+            approval_token, PlacementState.DOCKED_EGPU
+        )
+
+    async def _execute_supervised_switch(
+        self, approval_token: str, requested_target: PlacementState
+    ) -> dict[str, object]:
+        started_ns = self._journey_now_ns()
+        self._append_journey_event(
+            severity="info",
+            code="connection.supervised_transition_started",
+            component="connection",
+            stage="supervised_transition",
+            details={"requested_target": requested_target.value},
+            now_ns=started_ns,
+        )
         try:
             result = await asyncio.to_thread(
                 self._presentation_transition_service().execute, approval_token
             )
         except Exception:
+            finished_ns = self._journey_now_ns()
+            self._append_journey_event(
+                severity="error",
+                code="transition.execution_failed",
+                component="connection",
+                stage="supervised_transition",
+                details={
+                    "requested_target": requested_target.value,
+                    "duration_ms": self._bounded_elapsed_ms(started_ns, finished_ns),
+                },
+                now_ns=finished_ns,
+            )
             return self._presentation_transition_failure("transition.execution_failed")
         outcome = result.outcome
         code = result.code
+        finished_ns = self._journey_now_ns()
+        succeeded = bool(
+            outcome and outcome.kind is TransitionOutcomeKind.SUCCEEDED
+        )
+        self._append_journey_event(
+            severity="info" if succeeded else "warning",
+            code=code,
+            component="connection",
+            stage="supervised_transition",
+            details={
+                "requested_target": requested_target.value,
+                "result_placement": (
+                    outcome.placement.value if outcome is not None else "unknown"
+                ),
+                "duration_ms": self._bounded_elapsed_ms(started_ns, finished_ns),
+                "accepted": result.accepted,
+                "succeeded": succeeded,
+            },
+            now_ns=finished_ns,
+        )
         self._events.append(
             severity=(
                 "info"
-                if outcome and outcome.kind is TransitionOutcomeKind.SUCCEEDED
+                if succeeded
                 else "warning"
             ),
             code=code,
@@ -824,7 +981,9 @@ class Plugin:
         self, approval_token: str
     ) -> dict[str, object]:
         """Execute only the approved return-to-Portable transition."""
-        return await self.execute_supervised_tv_switch(approval_token)
+        return await self._execute_supervised_switch(
+            approval_token, PlacementState.PORTABLE
+        )
 
     async def approve_safe_disconnect_shutdown(
         self, _request: object = None
@@ -853,6 +1012,14 @@ class Plugin:
         self, approval_token: str
     ) -> dict[str, object]:
         """Queue system power-off; never claim removal safe while still powered."""
+        started_ns = self._journey_now_ns()
+        self._append_journey_event(
+            severity="info",
+            code="safe_disconnect.shutdown_started",
+            component="safe_disconnect",
+            stage="shutdown",
+            now_ns=started_ns,
+        )
         try:
             result = await asyncio.to_thread(
                 self._safe_disconnect_shutdown_service().execute,
@@ -864,11 +1031,18 @@ class Plugin:
             result.code if result is not None else "safe_disconnect.execution_failed"
         )
         accepted = bool(result and result.accepted)
-        self._events.append(
+        finished_ns = self._journey_now_ns()
+        self._append_journey_event(
             severity="info" if accepted else "warning",
             code=code,
             component="safe_disconnect",
             stage="shutdown",
+            details={
+                "duration_ms": self._bounded_elapsed_ms(started_ns, finished_ns),
+                "accepted": accepted,
+                "poweroff_complete": False,
+            },
+            now_ns=finished_ns,
         )
         return {"schema_version": 1, "accepted": accepted, "code": code}
 
@@ -1060,11 +1234,22 @@ class Plugin:
         return {"schema_version": 1, "acknowledged": acknowledged}
 
     async def _main(self) -> None:
+        build_version = str(self._build_info.get("version", "unknown"))
+        build_revision = str(self._build_info.get("revision", "unavailable"))
+        decky.logger.info(
+            "HDM plugin started: version=%s revision=%s",
+            build_version,
+            build_revision,
+        )
         self._events.append(
             severity="info",
             code="plugin.started",
             component="lifecycle",
             stage="startup",
+            details={
+                "version": build_version,
+                "revision": build_revision,
+            },
         )
         try:
             recovery = await asyncio.to_thread(
@@ -1224,6 +1409,13 @@ class Plugin:
                     readiness = await asyncio.to_thread(
                         self._attach_readiness.arm_current, current
                     )
+                    with self._topology_lock:
+                        readiness_changed = (
+                            readiness.code != self._last_attach_readiness_code
+                        )
+                        self._last_attach_readiness_code = readiness.code
+                    if readiness_changed:
+                        self._record_attach_readiness_status(readiness)
                 decision = self._automatic_dock.update(
                     enabled=enabled,
                     readiness=readiness,
@@ -1237,15 +1429,57 @@ class Plugin:
                 elif readiness.stage is AttachReadinessStage.GAME_RUNNING:
                     delay_seconds = 5.0
                 if decision.should_switch:
-                    result = await asyncio.to_thread(
-                        self._presentation_transition_service().execute_automatic,
-                        PlacementState.DOCKED_EGPU,
-                        expected_generation=decision.expected_generation,
-                        standing_consent=enabled,
+                    transition_started_ns = self._journey_now_ns()
+                    self._append_journey_event(
+                        severity="info",
+                        code="connection.tv_transition_started",
+                        component="connection",
+                        stage="automatic_transition",
+                        details={"target": PlacementState.DOCKED_EGPU.value},
+                        now_ns=transition_started_ns,
                     )
+                    try:
+                        result = await asyncio.to_thread(
+                            self._presentation_transition_service().execute_automatic,
+                            PlacementState.DOCKED_EGPU,
+                            expected_generation=decision.expected_generation,
+                            standing_consent=enabled,
+                        )
+                    except Exception:
+                        transition_finished_ns = self._journey_now_ns()
+                        self._append_journey_event(
+                            severity="error",
+                            code="connection.tv_transition_exception",
+                            component="connection",
+                            stage="automatic_transition",
+                            details={
+                                "target": PlacementState.DOCKED_EGPU.value,
+                                "duration_ms": self._bounded_elapsed_ms(
+                                    transition_started_ns, transition_finished_ns
+                                ),
+                            },
+                            now_ns=transition_finished_ns,
+                        )
+                        raise
                     succeeded = bool(
                         result.outcome
                         and result.outcome.kind is TransitionOutcomeKind.SUCCEEDED
+                    )
+                    transition_finished_ns = self._journey_now_ns()
+                    self._append_journey_event(
+                        severity="info" if succeeded else "warning",
+                        code=result.code,
+                        component="connection",
+                        stage="automatic_transition",
+                        details={
+                            "target": PlacementState.DOCKED_EGPU.value,
+                            "duration_ms": self._bounded_elapsed_ms(
+                                transition_started_ns, transition_finished_ns
+                            ),
+                            "accepted": result.accepted,
+                            "succeeded": succeeded,
+                        },
+                        now_ns=transition_finished_ns,
                     )
                     self._automatic_dock.record_result(
                         result.code, succeeded=succeeded
@@ -1352,11 +1586,22 @@ class Plugin:
         status = await asyncio.to_thread(self._sleep_guard.reconcile, presence)
         current = (presence.value, status.active, status.error)
         if current != self._last_sleep_guard_log:
+            now_ns = self._journey_now_ns()
+            journey_details = (
+                self._journey_timing_details(
+                    now_ns,
+                    create=presence.value == "present",
+                    reset_after=presence.value == "absent",
+                )
+                if presence.value in {"present", "absent"}
+                else {}
+            )
             decky.logger.info(
-                "HDM sleep guard: presence=%s active=%s error=%s",
+                "HDM sleep guard: presence=%s active=%s error=%s elapsed_ms=%s",
                 presence.value,
                 status.active,
                 bool(status.error),
+                journey_details.get("elapsed_ms", "unavailable"),
             )
             self._events.append(
                 severity="warning" if status.error else "info",
@@ -1367,6 +1612,7 @@ class Plugin:
                     "presence": presence.value,
                     "active": status.active,
                     "error": bool(status.error),
+                    **journey_details,
                 },
             )
             self._last_sleep_guard_log = current

@@ -31,7 +31,10 @@ from hdm.application.game_evidence_support import (  # noqa: E402
     SupportRenderEvidence,
 )
 from hdm.application.support_bundle import WakeDiagnosticsSupportStatus  # noqa: E402
-from hdm.domain.control_plane import PlacementState  # noqa: E402
+from hdm.domain.control_plane import (  # noqa: E402
+    PlacementState,
+    TransitionOutcomeKind,
+)
 from hdm.domain.inference import infer_operating_mode  # noqa: E402
 from hdm.domain.serialization import snapshot_from_dict  # noqa: E402
 from hdm.domain.game_gpu_client import GameEgpuClientStatus  # noqa: E402
@@ -315,6 +318,149 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertEqual(delivered["attach_readiness"]["stage"], "ready_idle")
         self.assertEqual(delivered["diagnostics"]["build"], plugin._build_info)
 
+    def test_attach_readiness_changes_retain_bounded_journey_timings(self):
+        plugin, _service = self.plugin()
+        now_ns = [1_000_000_000]
+
+        def clock_ns():
+            value = now_ns[0]
+            now_ns[0] += 250_000_000
+            return value
+
+        plugin._journey_clock_ns = clock_ns
+        portable = snapshot_from_dict(
+            json.loads((ROOT / "tests" / "fixtures" / "portable.json").read_text())
+        )
+        docked = snapshot_from_dict(
+            json.loads((ROOT / "tests" / "fixtures" / "tv-docked.json").read_text())
+        )
+        docked = replace(
+            docked,
+            egpu_link=EgpuLinkObservation(
+                True, EgpuLinkState.UP, Confidence.OBSERVED, "egpu.link_observed"
+            ),
+        )
+
+        plugin._record_topology_observation(portable)
+        plugin._record_topology_observation(docked)
+        for index in range(4):
+            fresh = replace(
+                docked,
+                observed_at=f"2026-08-30T19:02:{25 + index:02d}-07:00",
+            )
+            plugin._record_topology_observation(fresh)
+
+        events = [
+            event for event in plugin._events.snapshot()
+            if event.component == "connection"
+        ]
+        self.assertEqual(
+            [event.code for event in events],
+            ["attach.observed", "attach.ready_stabilizing", "attach.ready_idle"],
+        )
+        for event in events:
+            self.assertIsInstance(event.details["elapsed_ms"], int)
+            self.assertIsInstance(event.details["stage_elapsed_ms"], int)
+            self.assertLessEqual(
+                event.details["elapsed_ms"], self.module.MAX_JOURNEY_ELAPSED_MS
+            )
+        self.assertNotIn("1002:7480", json.dumps([event.details for event in events]))
+
+    def test_supervised_transition_and_shutdown_record_operation_duration(self):
+        plugin, _service = self.plugin()
+        ticks = iter(
+            (
+                1_000_000_000,
+                1_500_000_000,
+                2_000_000_000,
+                2_125_000_000,
+            )
+        )
+        plugin._journey_clock_ns = lambda: next(ticks)
+
+        class TransitionService:
+            def execute(self, _token):
+                return types.SimpleNamespace(
+                    accepted=True,
+                    code="transition.succeeded",
+                    operation_id="operation-public-1",
+                    durable=True,
+                    outcome=types.SimpleNamespace(
+                        kind=TransitionOutcomeKind.SUCCEEDED,
+                        placement=PlacementState.PORTABLE,
+                    ),
+                )
+
+        class ShutdownService:
+            def execute(self, _token):
+                return types.SimpleNamespace(
+                    accepted=True,
+                    code="safe_disconnect.poweroff_request_accepted_unverified",
+                )
+
+        plugin._presentation_transition_service = lambda: TransitionService()
+        plugin._safe_disconnect_shutdown_service = lambda: ShutdownService()
+
+        transition = asyncio.run(
+            plugin.execute_supervised_portable_switch("approval-public-1")
+        )
+        shutdown = asyncio.run(
+            plugin.execute_safe_disconnect_shutdown("shutdown-public-1")
+        )
+        events = [
+            event for event in plugin._events.snapshot()
+            if event.component in {"connection", "safe_disconnect"}
+        ]
+        transition_result = next(
+            event
+            for event in events
+            if event.component == "connection"
+            and event.code == "transition.succeeded"
+        )
+        shutdown_result = next(
+            event
+            for event in events
+            if event.code == "safe_disconnect.poweroff_request_accepted_unverified"
+        )
+
+        self.assertTrue(transition["accepted"])
+        self.assertTrue(shutdown["accepted"])
+        self.assertEqual(transition_result.details["duration_ms"], 500)
+        self.assertEqual(transition_result.details["requested_target"], "portable")
+        self.assertEqual(transition_result.details["result_placement"], "portable")
+        self.assertEqual(shutdown_result.details["duration_ms"], 125)
+        self.assertFalse(shutdown_result.details["poweroff_complete"])
+
+    def test_journey_logging_failure_never_blocks_the_transition_path(self):
+        plugin, _service = self.plugin()
+        calls = []
+
+        class TransitionService:
+            def execute(self, token):
+                calls.append(token)
+                return types.SimpleNamespace(
+                    accepted=True,
+                    code="transition.succeeded",
+                    operation_id="operation-public-1",
+                    durable=True,
+                    outcome=types.SimpleNamespace(
+                        kind=TransitionOutcomeKind.SUCCEEDED,
+                        placement=PlacementState.DOCKED_EGPU,
+                    ),
+                )
+
+        def logging_failure(**_kwargs):
+            raise RuntimeError("private logging failure")
+
+        plugin._presentation_transition_service = lambda: TransitionService()
+        plugin._diagnostic_logging.append = logging_failure
+        result = asyncio.run(
+            plugin.execute_supervised_tv_switch("approval-public-1")
+        )
+
+        self.assertTrue(result["accepted"])
+        self.assertEqual(calls, ["approval-public-1"])
+
     def test_automatic_dock_opt_in_is_explicit_persistent_and_categorical(self):
         plugin, _service = self.plugin()
         preferences = AutomaticDockPreferences()
@@ -594,7 +740,12 @@ class MainProcessDeliveryTests(unittest.TestCase):
                 "gpus": [{"stable_id": "private-gpu"}],
             },
             "inference": {"mode": "docked_igpu"},
-            "diagnostics": {"timings_ms": [{"stage": "snapshot_total"}]},
+            "diagnostics": {
+                "timings_ms": [
+                    {"stage": "snapshot_total", "duration_ms": 12.5},
+                    {"stage": "disconnect_clients", "duration_ms": 4.25},
+                ]
+            },
         }
 
         plugin._record_verbose_snapshot(sample)
@@ -613,6 +764,9 @@ class MainProcessDeliveryTests(unittest.TestCase):
         self.assertEqual(len(verbose), 1)
         self.assertIn("test.blocker", encoded)
         self.assertIn("docked_igpu", encoded)
+        self.assertIn("snapshot_total", encoded)
+        self.assertIn("12.5", encoded)
+        self.assertEqual(verbose[0].details["timing_count"], 2)
         for private in ("1234", "private-gpu", "stable_id", "pid"):
             self.assertNotIn(private, encoded)
 

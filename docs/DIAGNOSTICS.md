@@ -309,9 +309,23 @@ Decky now exposes the four allowlisted durations, a Steam-native confirmation,
 an identity-free status/countdown, and an immediate disable action inside the
 opt-in troubleshooting section. While enabled, normal snapshot refresh records
 one additional sanitized categorical event containing only mode, game state,
-support tier, blocker codes, and a timing-count value. The existing 128-event
-rotation remains authoritative. No raw snapshot, arbitrary system log, durable
-consent, path, process identity, hardware identity, or upload is introduced.
+support tier, blocker codes, and up to 32 existing collector stage/duration
+rows. The existing 128-event rotation remains authoritative. No raw snapshot,
+arbitrary system log, durable consent, path, process identity, hardware
+identity, or upload is introduced.
+
+Low-frequency connection-journey changes are normal events and do not require
+verbose logging. Exact G1 presence, categorical attach-readiness changes,
+automatic or supervised presentation attempts/results, Portable-return results,
+and shutdown-request attempts/results record bounded monotonic `elapsed_ms`,
+`stage_elapsed_ms`, and operation `duration_ms` where applicable. They also
+write the same categorical code and timing to Decky's service journal. The
+timeline begins only after HDM observes relevant hardware or a transition
+request; it cannot measure the player's physical cable action. It resets after
+verified absence and never records PCI IDs, DRM nodes, connector names, stable
+identity, process identity, or physical-power-off success. A successful
+power-off request always records `poweroff_complete=false` because only the
+player can verify that fans and LEDs actually stopped.
 
 Logging consent and support-export consent remain separate. Verbose events stay
 in memory unless the player later creates and reviews a support bundle. The
